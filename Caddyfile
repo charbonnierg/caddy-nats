@@ -1,0 +1,42 @@
+{
+	cert_issuer acme {
+		disable_http_challenge
+		disable_tlsalpn_challenge
+		dir https://acme-staging-v02.api.letsencrypt.org/directory
+		dns digitalocean {DO_API_TOKEN}
+	}
+	nats-server {
+		sni local.quara.cloud
+		server_name server-01
+		host 127.0.0.1
+		port 4222
+		client_advertise local.quara.cloud:4222
+        leafnodes {
+            port 7422
+            advertise local.quara.cloud:7422
+            remotes {
+                nats-leaf://localhost:9999
+            }
+        }
+		jetstream {
+            domain server-01
+			max_memory 1073741824
+			max_file 1073741824
+		}
+		websocket {
+			host 127.0.0.1
+			port 10443
+			advertise local.quara.cloud:10443
+		}
+		mqtt {
+			host 127.0.0.1
+			port 8883
+            jetstream_domain server-01
+		}
+	}
+}
+
+files.local.quara-dev.com {
+	root * /testing/www
+	file_server
+}
