@@ -370,7 +370,59 @@ func (app *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						}
 					}
 				}
-
+			case "operator":
+				if !d.AllArgs(&opts.Operator) {
+					return d.ArgErr()
+				}
+			case "system_account":
+				if !d.AllArgs(&opts.SystemAccount) {
+					return d.ArgErr()
+				}
+			case "resolver_preload":
+				opts.ResolverPreload = []string{}
+				for nesting := d.Nesting(); d.NextBlock(nesting); {
+					if !d.NextArg() {
+						return d.ArgErr()
+					}
+					opts.ResolverPreload = append(opts.ResolverPreload, d.Val())
+				}
+			case "resolver":
+				opts.Resolver = &AccountResolver{}
+				if d.NextArg() {
+					switch d.Val() {
+					case "memory":
+						opts.Resolver.Memory = true
+						for nesting := d.Nesting(); d.NextBlock(nesting); {
+							return d.ArgErr()
+						}
+					case "full":
+						opts.Resolver.Full = true
+						for nesting := d.Nesting(); d.NextBlock(nesting); {
+							switch d.Val() {
+							case "path":
+								if !d.AllArgs(&opts.Resolver.Path) {
+									return d.ArgErr()
+								}
+							default:
+								return d.Errf("unrecognized subdirective: %s", d.Val())
+							}
+						}
+					case "cache":
+						opts.Resolver.Full = false
+						for nesting := d.Nesting(); d.NextBlock(nesting); {
+							switch d.Val() {
+							case "path":
+								if !d.AllArgs(&opts.Resolver.Path) {
+									return d.ArgErr()
+								}
+							default:
+								return d.Errf("unrecognized subdirective: %s", d.Val())
+							}
+						}
+					default:
+						return d.Errf("unrecognized subdirective: %s", d.Val())
+					}
+				}
 			default:
 				return d.Errf("unrecognized subdirective: %s", d.Val())
 			}

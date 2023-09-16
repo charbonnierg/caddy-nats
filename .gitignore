@@ -1,2 +1,5 @@
-/nats-magic
+/caddy
 configs/
+jwt/
+sandbox/
+build/

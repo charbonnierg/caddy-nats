@@ -2,7 +2,9 @@ package natsmagic
 
 import (
 	"crypto/tls"
+	"fmt"
 
+	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats-server/v2/server"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
@@ -80,6 +82,17 @@ func (o *NatsMagic) createServer() error {
 		opts.Trace,
 		opts.TraceVerbose,
 	)
+	for _, v := range o.MagicOptions.ResolverPreload {
+		acc, err := jwt.DecodeAccountClaims(v)
+		sub := acc.Subject
+		if err != nil {
+			return fmt.Errorf("preload account error for %s: %s", sub, err.Error())
+		}
+		err = opts.AccountResolver.Store(sub, v)
+		if err != nil {
+			return fmt.Errorf("preload account error for %s: %s", sub, err.Error())
+		}
+	}
 	o.ns = ns
 	return nil
 }

@@ -5,8 +5,8 @@ go 1.21.1
 require (
 	github.com/caddy-dns/digitalocean v0.0.0-20220527005842-9c71e343246b
 	github.com/caddyserver/caddy/v2 v2.7.4
+	github.com/nats-io/jwt/v2 v2.5.0
 	github.com/nats-io/nats-server/v2 v2.9.22
-	github.com/nats-io/nats.go v1.28.0
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/zap v1.25.0
 )
@@ -85,7 +85,6 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/nats-io/jwt/v2 v2.5.0 // indirect
 	github.com/nats-io/nkeys v0.4.4 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect

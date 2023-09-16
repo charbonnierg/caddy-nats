@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats-server/v2/server"
 )
 
@@ -42,34 +43,44 @@ type LeafNode struct {
 	Remotes   []Remote `json:"remotes,omitempty"`
 }
 
+type AccountResolver struct {
+	Path   string `json:"path,omitempty"`
+	Full   bool   `json:"full,omitempty"`
+	Memory bool   `json:"memory,omitempty"`
+}
+
 type Options struct {
-	ConfigFile      string        `json:"config_file,omitempty"`
-	ServerName      string        `json:"server_name,omitempty"`
-	ServerTags      []string      `json:"server_tags,omitempty"`
-	Host            string        `json:"host,omitempty"`
-	Port            int           `json:"port,omitempty"`
-	ClientAdvertise string        `json:"client_advertise,omitempty"`
-	Debug           bool          `json:"debug,omitempty"`
-	Trace           bool          `json:"trace,omitempty"`
-	TraceVerbose    bool          `json:"trace_verbose,omitempty"`
-	HTTPPort        int           `json:"http_port,omitempty"`
-	HTTPSPort       int           `json:"https_port,omitempty"`
-	HTTPBasePath    string        `json:"http_base_path,omitempty"`
-	NoLog           bool          `json:"disable_logging,omitempty"`
-	NoSublistCache  bool          `json:"disable_sublist_cache,omitempty"`
-	MaxConn         int           `json:"max_connections,omitempty"`
-	MaxPayload      int           `json:"max_payload,omitempty"`
-	MaxPending      int           `json:"max_pending,omitempty"`
-	MaxSubs         int           `json:"max_subscriptions,omitempty"`
-	MaxControlLine  int           `json:"max_control_line,omitempty"`
-	PingInterval    time.Duration `json:"ping_interval,omitempty"`
-	WriteDeadline   time.Duration `json:"write_deadline,omitempty"`
-	PingMax         int           `json:"ping_max,omitempty"`
-	NoAuthUser      string        `json:"no_auth_user,omitempty"`
-	Websocket       *Websocket    `json:"websocket,omitempty"`
-	MQTT            *MQTT         `json:"mqtt,omitempty"`
-	JetStream       *JetStream    `json:"jetstream,omitempty"`
-	LeafNode        *LeafNode     `json:"leafnode,omitempty"`
+	ConfigFile      string           `json:"config_file,omitempty"`
+	ServerName      string           `json:"server_name,omitempty"`
+	ServerTags      []string         `json:"server_tags,omitempty"`
+	Host            string           `json:"host,omitempty"`
+	Port            int              `json:"port,omitempty"`
+	ClientAdvertise string           `json:"client_advertise,omitempty"`
+	Debug           bool             `json:"debug,omitempty"`
+	Trace           bool             `json:"trace,omitempty"`
+	TraceVerbose    bool             `json:"trace_verbose,omitempty"`
+	HTTPPort        int              `json:"http_port,omitempty"`
+	HTTPSPort       int              `json:"https_port,omitempty"`
+	HTTPBasePath    string           `json:"http_base_path,omitempty"`
+	NoLog           bool             `json:"disable_logging,omitempty"`
+	NoSublistCache  bool             `json:"disable_sublist_cache,omitempty"`
+	MaxConn         int              `json:"max_connections,omitempty"`
+	MaxPayload      int              `json:"max_payload,omitempty"`
+	MaxPending      int              `json:"max_pending,omitempty"`
+	MaxSubs         int              `json:"max_subscriptions,omitempty"`
+	MaxControlLine  int              `json:"max_control_line,omitempty"`
+	PingInterval    time.Duration    `json:"ping_interval,omitempty"`
+	WriteDeadline   time.Duration    `json:"write_deadline,omitempty"`
+	PingMax         int              `json:"ping_max,omitempty"`
+	NoAuthUser      string           `json:"no_auth_user,omitempty"`
+	Operator        string           `json:"operator,omitempty"`
+	SystemAccount   string           `json:"system_account,omitempty"`
+	Resolver        *AccountResolver `json:"resolver,omitempty"`
+	ResolverPreload []string         `json:"resolver_preload,omitempty"`
+	Websocket       *Websocket       `json:"websocket,omitempty"`
+	MQTT            *MQTT            `json:"mqtt,omitempty"`
+	JetStream       *JetStream       `json:"jetstream,omitempty"`
+	LeafNode        *LeafNode        `json:"leafnode,omitempty"`
 }
 
 func (o *Options) GetServerOptions() *server.Options {
@@ -131,6 +142,42 @@ func (o *Options) GetServerOptions() *server.Options {
 				LocalAccount: remote.Account,
 				Credentials:  remote.Credentials,
 			}
+		}
+	}
+	if o.Operator != "" {
+		claims, err := jwt.DecodeOperatorClaims(o.Operator)
+		if err != nil {
+			panic(err)
+		}
+		opts.TrustedOperators = []*jwt.OperatorClaims{claims}
+	}
+	if o.SystemAccount != "" {
+		opts.SystemAccount = o.SystemAccount
+	}
+	if o.Resolver != nil {
+		if o.Resolver.Memory {
+			opts.AccountResolver = &server.MemAccResolver{}
+		} else if o.Resolver.Full {
+			res, err := server.NewDirAccResolver(
+				o.Resolver.Path,
+				int64(1000),
+				time.Duration(2)*time.Minute,
+				server.NoDelete,
+			)
+			if err != nil {
+				panic(err)
+			}
+			opts.AccountResolver = res
+		} else {
+			res, err := server.NewCacheDirAccResolver(
+				o.Resolver.Path,
+				int64(1000),
+				time.Duration(2)*time.Minute,
+			)
+			if err != nil {
+				panic(err)
+			}
+			opts.AccountResolver = res
 		}
 	}
 	return opts

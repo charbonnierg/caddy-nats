@@ -2,12 +2,10 @@ package natsmagic
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
-	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
 
@@ -31,8 +29,8 @@ type App struct {
 	logger *zap.Logger
 	ctx    caddy.Context
 	server *NatsMagic
-	conn   *nats.Conn
-	quit   chan struct{}
+	// conn   *nats.Conn
+	quit chan struct{}
 }
 
 // Register caddy module app
@@ -92,30 +90,30 @@ func (a *App) Start() error {
 	if err != nil {
 		return fmt.Errorf("starting server: %v", err)
 	}
-	conn, err := nats.Connect("", nats.InProcessServer(a.server.ns))
-	if err != nil {
-		return fmt.Errorf("connecting to server: %v", err)
-	}
-	a.conn = conn
-	ticker := time.NewTicker(5 * time.Second)
-	a.quit = make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				a.conn.Publish("hello", []byte("world"))
-			case <-a.quit:
-				ticker.Stop()
-				return
-			}
-		}
-	}()
+	// conn, err := nats.Connect("", nats.InProcessServer(a.server.ns))
+	// if err != nil {
+	// 	return fmt.Errorf("connecting to server: %v", err)
+	// }
+	// a.conn = conn
+	// ticker := time.NewTicker(5 * time.Second)
+	// a.quit = make(chan struct{})
+	// go func() {
+	// 	for {
+	// 		select {
+	// 		case <-ticker.C:
+	// 			a.conn.Publish("hello", []byte("world"))
+	// 		case <-a.quit:
+	// 			ticker.Stop()
+	// 			return
+	// 		}
+	// 	}
+	// }()
 	return nil
 }
 
 // Stop caddy module app
 func (a *App) Stop() error {
-	a.quit <- struct{}{}
+	// a.quit <- struct{}{}
 	return a.server.Stop()
 }
 
