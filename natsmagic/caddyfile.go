@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
@@ -13,9 +14,12 @@ import (
 
 func ParseNatsOptions(d *caddyfile.Dispenser, existingVal interface{}) (interface{}, error) {
 	app := new(App)
-	app.Options = new(Options)
-	app.StandardPolicies = caddytls.ConnectionPolicies{}
-
+	app.NATS = new(NatsConfig)
+	app.Policies = new(AppPolicies)
+	app.Policies.StandardPolicies = caddytls.ConnectionPolicies{}
+	app.Policies.WebsocketPolicies = caddytls.ConnectionPolicies{}
+	app.Policies.LeafnodePolicies = caddytls.ConnectionPolicies{}
+	app.Policies.MQTTPolicies = caddytls.ConnectionPolicies{}
 	if existingVal != nil {
 		var ok bool
 		caddyFileApp, ok := existingVal.(httpcaddyfile.App)
@@ -37,9 +41,7 @@ func ParseNatsOptions(d *caddyfile.Dispenser, existingVal interface{}) (interfac
 }
 
 func (app *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	opts := app.Options
-	allDomains := [][]string{}
-	domains := []string{}
+	opts := app.NATS
 	for d.Next() {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
@@ -47,10 +49,20 @@ func (app *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.NextArg() {
 					return d.ArgErr()
 				}
+				domains := []string{}
 				domains = append(domains, d.Val())
 				for d.NextArg() {
 					domains = append(domains, d.Val())
 				}
+				policy := &caddytls.ConnectionPolicy{
+					MatchersRaw: caddy.ModuleMap{
+						"sni": caddyconfig.JSON(domains, nil),
+					},
+				}
+				app.Policies.StandardPolicies = append(app.Policies.StandardPolicies, policy)
+				opts.SNI = domains[0]
+			case "no_tls":
+				opts.NoTLS = true
 			case "config_file":
 				if !d.AllArgs(&opts.ConfigFile) {
 					return d.ArgErr()
@@ -263,6 +275,23 @@ func (app *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							if !d.AllArgs(&opts.MQTT.JSDomain) {
 								return d.ArgErr()
 							}
+						case "no_tls":
+							opts.MQTT.NoTLS = true
+						case "sni":
+							if !d.NextArg() {
+								return d.ArgErr()
+							}
+							domains := []string{}
+							domains = append(domains, d.Val())
+							for d.NextArg() {
+								domains = append(domains, d.Val())
+							}
+							policy := &caddytls.ConnectionPolicy{
+								MatchersRaw: caddy.ModuleMap{
+									"sni": caddyconfig.JSON(domains, nil),
+								},
+							}
+							app.Policies.MQTTPolicies = append(app.Policies.MQTTPolicies, policy)
 						default:
 							return d.Errf("unrecognized subdirective: %s", d.Val())
 						}
@@ -299,6 +328,21 @@ func (app *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							if !d.AllArgs(&opts.Websocket.Advertise) {
 								return d.ArgErr()
 							}
+						case "sni":
+							if !d.NextArg() {
+								return d.ArgErr()
+							}
+							domains := []string{}
+							domains = append(domains, d.Val())
+							for d.NextArg() {
+								domains = append(domains, d.Val())
+							}
+							policy := &caddytls.ConnectionPolicy{
+								MatchersRaw: caddy.ModuleMap{
+									"sni": caddyconfig.JSON(domains, nil),
+								},
+							}
+							app.Policies.WebsocketPolicies = append(app.Policies.WebsocketPolicies, policy)
 						case "no_tls":
 							opts.Websocket.NoTLS = true
 						default:
@@ -337,6 +381,21 @@ func (app *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 							if !d.AllArgs(&opts.LeafNode.Advertise) {
 								return d.ArgErr()
 							}
+						case "sni":
+							if !d.NextArg() {
+								return d.ArgErr()
+							}
+							domains := []string{}
+							domains = append(domains, d.Val())
+							for d.NextArg() {
+								domains = append(domains, d.Val())
+							}
+							policy := &caddytls.ConnectionPolicy{
+								MatchersRaw: caddy.ModuleMap{
+									"sni": caddyconfig.JSON(domains, nil),
+								},
+							}
+							app.Policies.LeafnodePolicies = append(app.Policies.LeafnodePolicies, policy)
 						case "no_tls":
 							opts.LeafNode.NoTLS = true
 						case "remotes":
@@ -423,19 +482,33 @@ func (app *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Errf("unrecognized subdirective: %s", d.Val())
 					}
 				}
+			case "metrics":
+				opts.Metrics = &Metrics{}
+				for nesting := d.Nesting(); d.NextBlock(nesting); {
+					switch d.Val() {
+					case "host":
+						if !d.AllArgs(&opts.Metrics.Host) {
+							return d.ArgErr()
+						}
+					case "port":
+						if !d.NextArg() {
+							return d.ArgErr()
+						}
+						t, err := strconv.Atoi(d.Val())
+						if err != nil {
+							return d.Errf("invalid metrics port: %v", err)
+						}
+						opts.Metrics.Port = t
+					case "base_path":
+						if !d.AllArgs(&opts.Metrics.BasePath) {
+							return d.ArgErr()
+						}
+					}
+				}
 			default:
 				return d.Errf("unrecognized subdirective: %s", d.Val())
 			}
 		}
 	}
-	automations := make([]caddytls.AutomationPolicy, len(allDomains))
-	allDomains = append(allDomains, domains)
-	for _, domains := range allDomains {
-		automation := caddytls.AutomationPolicy{
-			SubjectsRaw: domains,
-		}
-		automations = append(automations, automation)
-	}
-	app.Automations = automations
 	return nil
 }

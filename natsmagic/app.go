@@ -1,9 +1,11 @@
 package natsmagic
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	"go.uber.org/zap"
@@ -12,23 +14,70 @@ import (
 // Register caddy module when file is imported
 func init() {
 	caddy.RegisterModule(App{})
-	httpcaddyfile.RegisterGlobalOption("nats-server", ParseNatsOptions)
+	httpcaddyfile.RegisterGlobalOption("nats_server", ParseNatsOptions)
+}
+
+type AppPolicies struct {
+	StandardPolicies  caddytls.ConnectionPolicies `json:"standard,omitempty"`
+	WebsocketPolicies caddytls.ConnectionPolicies `json:"websocket,omitempty"`
+	LeafnodePolicies  caddytls.ConnectionPolicies `json:"leafnode,omitempty"`
+	MQTTPolicies      caddytls.ConnectionPolicies `json:"mqtt,omitempty"`
+}
+
+func (p *AppPolicies) Subjects() []string {
+	var subjects []string
+	for _, policy := range p.StandardPolicies {
+		subs := []string{}
+		v, ok := policy.MatchersRaw["sni"]
+		if !ok {
+			continue
+		}
+		json.Unmarshal(v, &subs)
+		subjects = append(subjects, subs...)
+	}
+	for _, policy := range p.WebsocketPolicies {
+		subs := []string{}
+		v, ok := policy.MatchersRaw["sni"]
+		if !ok {
+			continue
+		}
+		json.Unmarshal(v, &subs)
+		subjects = append(subjects, subs...)
+	}
+	for _, policy := range p.LeafnodePolicies {
+		subs := []string{}
+		v, ok := policy.MatchersRaw["sni"]
+		if !ok {
+			continue
+		}
+		json.Unmarshal(v, &subs)
+		subjects = append(subjects, subs...)
+	}
+	for _, policy := range p.MQTTPolicies {
+		subs := []string{}
+		v, ok := policy.MatchersRaw["sni"]
+		if !ok {
+			continue
+		}
+		json.Unmarshal(v, &subs)
+		subjects = append(subjects, subs...)
+	}
+	return subjects
 }
 
 // App is the Caddy module that handles the configuration
 // and the lifecycle of the embedded NATS server
 type App struct {
 	// The NATS server configuration
-	Options *Options `json:"options,omitempty"`
-	// The automation policy
-	Automations []caddytls.AutomationPolicy `json:"automations,omitempty"`
+	NATS *NatsConfig `json:"nats,omitempty"`
 	// The TLS configuration
-	StandardPolicies caddytls.ConnectionPolicies `json:"standard_policies,omitempty"`
+	Policies *AppPolicies `json:"policies,omitempty"`
 	// Private properties
-	tls    *caddytls.TLS
-	logger *zap.Logger
-	ctx    caddy.Context
-	server *NatsMagic
+	tls      *caddytls.TLS
+	logger   *zap.Logger
+	ctx      caddy.Context
+	automate *caddytls.AutomateLoader
+	server   *NatsMagic
 	// conn   *nats.Conn
 	quit chan struct{}
 }
@@ -50,37 +99,58 @@ func (a *App) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("getting tls app: %v", err)
 	}
 	a.tls = tlsAppIface.(*caddytls.TLS)
-	for _, automation := range a.Automations {
-		if len(automation.IssuersRaw) == 0 && len(a.tls.Automation.Policies) > 0 {
-			automation.Issuers = append(automation.Issuers, a.tls.Automation.Policies[0].Issuers...)
-		}
-		if err := a.tls.AddAutomationPolicy(&automation); err != nil {
-			return fmt.Errorf("adding automation policy: %v", err)
-		}
+	subjects := a.Policies.Subjects()
+	v, err := ctx.LoadModuleByID("tls.certificates.automate", caddyconfig.JSON(subjects, nil))
+	if err != nil {
+		return fmt.Errorf("loading tls automate module: %v", err)
 	}
-	for _, automation := range a.Automations {
-		if len(automation.SubjectsRaw) > 0 {
-			a.tls.Manage(automation.SubjectsRaw)
-		}
+	a.automate = v.(*caddytls.AutomateLoader)
+	if err := a.tls.Manage(*a.automate); err != nil {
+		return fmt.Errorf("managing domains: %v", err)
 	}
-	a.server = NewServer(a.Options)
+	a.server = NewServer(a.NATS)
 	return nil
+}
+
+func setDefaultPolicy(policies caddytls.ConnectionPolicies) caddytls.ConnectionPolicies {
+	if len(policies) == 0 {
+		return append(policies, new(caddytls.ConnectionPolicy))
+	}
+	return policies
 }
 
 // Validate caddy module app
 func (a *App) Validate() error {
 	// ensure there is at least one policy, which will act as default
-	if len(a.StandardPolicies) == 0 {
-		a.StandardPolicies = append(a.StandardPolicies, new(caddytls.ConnectionPolicy))
+	if !a.NATS.NoTLS {
+		a.Policies.StandardPolicies = setDefaultPolicy(a.Policies.StandardPolicies)
+		if err := a.Policies.StandardPolicies.Provision(a.ctx); err != nil {
+			return err
+		}
 	}
-	err := a.StandardPolicies.Provision(a.ctx)
-	if err != nil {
-		return fmt.Errorf("setting up connection policies: %v", err)
+	if !a.NATS.Websocket.NoTLS {
+		a.Policies.WebsocketPolicies = setDefaultPolicy(a.Policies.WebsocketPolicies)
+		if err := a.Policies.WebsocketPolicies.Provision(a.ctx); err != nil {
+			return err
+		}
 	}
+	if !a.NATS.LeafNode.NoTLS {
+		a.Policies.LeafnodePolicies = setDefaultPolicy(a.Policies.LeafnodePolicies)
+		if err := a.Policies.LeafnodePolicies.Provision(a.ctx); err != nil {
+			return err
+		}
+	}
+	if !a.NATS.MQTT.NoTLS {
+		a.Policies.MQTTPolicies = setDefaultPolicy(a.Policies.MQTTPolicies)
+		if err := a.Policies.MQTTPolicies.Provision(a.ctx); err != nil {
+			return err
+		}
+	}
+	a.server.SetStandardTLSConfig(a.Policies.StandardPolicies.TLSConfig(a.ctx))
+	a.server.SetWebsocketTLSConfig(a.Policies.WebsocketPolicies.TLSConfig(a.ctx))
+	a.server.SetLeafnodeTLSConfig(a.Policies.LeafnodePolicies.TLSConfig(a.ctx))
+	a.server.SetMQTTTLSConfig(a.Policies.MQTTPolicies.TLSConfig(a.ctx))
 	a.server.SetLogger(a.logger)
-	if len(a.Automations) > 0 {
-		a.server.SetTLSConfig(a.StandardPolicies.TLSConfig(a.ctx))
-	}
 	return nil
 }
 
@@ -95,19 +165,6 @@ func (a *App) Start() error {
 	// 	return fmt.Errorf("connecting to server: %v", err)
 	// }
 	// a.conn = conn
-	// ticker := time.NewTicker(5 * time.Second)
-	// a.quit = make(chan struct{})
-	// go func() {
-	// 	for {
-	// 		select {
-	// 		case <-ticker.C:
-	// 			a.conn.Publish("hello", []byte("world"))
-	// 		case <-a.quit:
-	// 			ticker.Stop()
-	// 			return
-	// 		}
-	// 	}
-	// }()
 	return nil
 }
 

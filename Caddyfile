@@ -1,11 +1,15 @@
 {
+	debug
 	cert_issuer acme {
 		disable_http_challenge
 		disable_tlsalpn_challenge
 		dir https://acme-staging-v02.api.letsencrypt.org/directory
-		dns digitalocean {DO_API_TOKEN}
+		dns digitalocean {$DO_API_TOKEN}
 	}
-	nats-server {
+	servers {
+		metrics
+	}
+	nats_server {
 		operator eyJhbGciOiJlZDI1NTE5LW5rZXkiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoidGVzdC1vcGVyYXRvciIsInN1YiI6Ik9CM0lOWTRRTTJVRzRJWTVIVjJST0JDSkdGUVFEMzZSQVBLTFBENzdaTUhJQ09DQ1hBTU1QR1VDIiwiaXNzIjoiT0IzSU5ZNFFNMlVHNElZNUhWMlJPQkNKR0ZRUUQzNlJBUEtMUEQ3N1pNSElDT0NDWEFNTVBHVUMiLCJqdGkiOiJJRFY0U1RWSDJNNEszUFlPRjM1UElPVkhINk5VNURWTjdZRVJUTlZSRzNaUDZKRFJZM1JBIiwiaWF0IjoxNjkzODE4ODk4LCJuYXRzIjp7InR5cGUiOiJvcGVyYXRvciIsInZlcnNpb24iOjJ9fQ.9srzttM1i9X-TxUVZuScKwmL36LdBmYWRQji4tVfzagwxoeERIYm-UJDo65DoCXLVLsNLrgUK9gXP0IIwQKJAw
 		system_account AAYRWE22ABPU4MIATUWZKBCIUY7GMANWPNVNQVMXOD2SYLHCNNH3N4T5
 		resolver_preload {
@@ -16,11 +20,14 @@
 		}
 		sni local.quara.cloud
 		server_name server-01
+		host 127.0.0.1
 		port 4222
+		http_port 8222
 		client_advertise local.quara.cloud:4222
 		leafnodes {
 			port 7422
-			advertise local.quara.cloud:7422
+			advertise leaf.local.quara.cloud:7422
+			sni leaf.local.quara.cloud
 		}
 		jetstream {
 			domain server-01
@@ -30,15 +37,46 @@
 		websocket {
 			port 10443
 			advertise local.quara.cloud:10443
+			sni ws.local.quara.cloud
 		}
 		mqtt {
 			port 8883
 			jetstream_domain server-01
+			sni mqtt.local.quara.cloud
+		}
+		metrics {
+			host 127.0.0.1
+			port 2020
+			base_path /metrics
 		}
 	}
 }
 
-files.local.quara-dev.com {
+app.local.quara-dev.com {
+	handle_path /ws {
+		reverse_proxy {
+			to localhost:10443
+			transport http {
+				tls
+				tls_server_name ws.local.quara.cloud
+			}
+		}
+	}
 	root * /testing/www
 	file_server
+}
+
+metrics.local.quara-dev.com {
+	basicauth /* {
+		Bob $2a$14$Zkx19XLiW6VYouLHR5NmfOFU0z2GTNmpkT/5qqR7hx4IjWJPDhjvG
+	}
+	handle_path /caddy {
+		metrics
+	}
+	handle_path /nats {
+		rewrite * /metrics
+		reverse_proxy {
+			to localhost:2020
+		}
+	}
 }
