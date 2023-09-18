@@ -1,0 +1,21 @@
+# .goreleaser.yml
+builds:
+  - id: caddy-nats
+    main: ./cmd/caddy/main.go
+    binary: caddy
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: darwin
+        goarch: arm
+  

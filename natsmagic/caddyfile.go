@@ -24,7 +24,7 @@ func ParseNatsOptions(d *caddyfile.Dispenser, existingVal interface{}) (interfac
 		var ok bool
 		caddyFileApp, ok := existingVal.(httpcaddyfile.App)
 		if !ok {
-			return nil, d.Errf("existing nats values of unexpected type: %T", existingVal)
+			return nil, d.Errf("existing nats_server values of unexpected type: %T", existingVal)
 		}
 		err := json.Unmarshal(caddyFileApp.Value, app)
 		if err != nil {
@@ -35,7 +35,7 @@ func ParseNatsOptions(d *caddyfile.Dispenser, existingVal interface{}) (interfac
 	err := app.UnmarshalCaddyfile(d)
 
 	return httpcaddyfile.App{
-		Name:  "nats",
+		Name:  "nats.server",
 		Value: caddyconfig.JSON(app, nil),
 	}, err
 }
@@ -430,15 +430,17 @@ func (app *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					}
 				}
 			case "operator":
-				if !d.AllArgs(&opts.Operator) {
+				opts.Operators = []string{}
+				op := ""
+				if !d.AllArgs(&op) {
 					return d.ArgErr()
 				}
+				opts.Operators = append(opts.Operators, op)
 			case "system_account":
 				if !d.AllArgs(&opts.SystemAccount) {
 					return d.ArgErr()
 				}
 			case "resolver_preload":
-				opts.ResolverPreload = []string{}
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
 					if !d.NextArg() {
 						return d.ArgErr()

@@ -92,7 +92,7 @@ type NatsConfig struct {
 	WriteDeadline   time.Duration    `json:"write_deadline,omitempty"`
 	PingMax         int              `json:"ping_max,omitempty"`
 	NoAuthUser      string           `json:"no_auth_user,omitempty"`
-	Operator        string           `json:"operator,omitempty"`
+	Operators       []string         `json:"operator,omitempty"`
 	SystemAccount   string           `json:"system_account,omitempty"`
 	Resolver        *AccountResolver `json:"resolver,omitempty"`
 	ResolverPreload []string         `json:"resolver_preload,omitempty"`
@@ -164,12 +164,15 @@ func (o *NatsConfig) GetServerOptions() *server.Options {
 			}
 		}
 	}
-	if o.Operator != "" {
-		claims, err := jwt.DecodeOperatorClaims(o.Operator)
-		if err != nil {
-			panic(err)
+	if len(o.Operators) > 0 {
+		opts.TrustedOperators = make([]*jwt.OperatorClaims, len(o.Operators))
+		for i, operator := range o.Operators {
+			claims, err := jwt.DecodeOperatorClaims(operator)
+			if err != nil {
+				panic(err)
+			}
+			opts.TrustedOperators[i] = claims
 		}
-		opts.TrustedOperators = []*jwt.OperatorClaims{claims}
 	}
 	if o.SystemAccount != "" {
 		opts.SystemAccount = o.SystemAccount

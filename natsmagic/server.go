@@ -52,11 +52,11 @@ func (o *NatsMagic) SetMQTTTLSConfig(tlsConfig *tls.Config) {
 
 func (o *NatsMagic) Start() error {
 	if err := o.createServer(); err != nil {
-		return err
+		return fmt.Errorf("creating server: %s", err.Error())
 	}
 	// Start things up. Block here until done.
 	if err := server.Run(o.ns); err != nil {
-		return err
+		return fmt.Errorf("running server: %s", err.Error())
 	}
 	// Adjust MAXPROCS if running under linux/cgroups quotas.
 	undo, err := maxprocs.Set(maxprocs.Logger(o.ns.Debugf))
@@ -101,6 +101,17 @@ func (o *NatsMagic) Stop() error {
 func (o *NatsMagic) createServer() error {
 	// Clone options
 	opts := o.Options.Clone()
+	for _, v := range o.MagicOptions.ResolverPreload {
+		acc, err := jwt.DecodeAccountClaims(v)
+		sub := acc.Subject
+		if err != nil {
+			return fmt.Errorf("preload account error for %s: %s", sub, err.Error())
+		}
+		err = opts.AccountResolver.Store(sub, v)
+		if err != nil {
+			return fmt.Errorf("preload account error for %s: %s", sub, err.Error())
+		}
+	}
 	// Process config file when not empty
 	if opts.ConfigFile != "" {
 		if err := opts.ProcessConfigFile(opts.ConfigFile); err != nil {
@@ -121,17 +132,6 @@ func (o *NatsMagic) createServer() error {
 		opts.Trace,
 		opts.TraceVerbose,
 	)
-	for _, v := range o.MagicOptions.ResolverPreload {
-		acc, err := jwt.DecodeAccountClaims(v)
-		sub := acc.Subject
-		if err != nil {
-			return fmt.Errorf("preload account error for %s: %s", sub, err.Error())
-		}
-		err = opts.AccountResolver.Store(sub, v)
-		if err != nil {
-			return fmt.Errorf("preload account error for %s: %s", sub, err.Error())
-		}
-	}
 	o.ns = ns
 	return nil
 }

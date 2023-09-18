@@ -1,4 +1,5 @@
 /caddy
+*.log
 configs/
 jwt/
 sandbox/

@@ -1,13 +1,13 @@
 package natsmagic
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
+	"github.com/charbonnierg/caddy-nats/natsissuer"
 	"go.uber.org/zap"
 )
 
@@ -15,54 +15,6 @@ import (
 func init() {
 	caddy.RegisterModule(App{})
 	httpcaddyfile.RegisterGlobalOption("nats_server", ParseNatsOptions)
-}
-
-type AppPolicies struct {
-	StandardPolicies  caddytls.ConnectionPolicies `json:"standard,omitempty"`
-	WebsocketPolicies caddytls.ConnectionPolicies `json:"websocket,omitempty"`
-	LeafnodePolicies  caddytls.ConnectionPolicies `json:"leafnode,omitempty"`
-	MQTTPolicies      caddytls.ConnectionPolicies `json:"mqtt,omitempty"`
-}
-
-func (p *AppPolicies) Subjects() []string {
-	var subjects []string
-	for _, policy := range p.StandardPolicies {
-		subs := []string{}
-		v, ok := policy.MatchersRaw["sni"]
-		if !ok {
-			continue
-		}
-		json.Unmarshal(v, &subs)
-		subjects = append(subjects, subs...)
-	}
-	for _, policy := range p.WebsocketPolicies {
-		subs := []string{}
-		v, ok := policy.MatchersRaw["sni"]
-		if !ok {
-			continue
-		}
-		json.Unmarshal(v, &subs)
-		subjects = append(subjects, subs...)
-	}
-	for _, policy := range p.LeafnodePolicies {
-		subs := []string{}
-		v, ok := policy.MatchersRaw["sni"]
-		if !ok {
-			continue
-		}
-		json.Unmarshal(v, &subs)
-		subjects = append(subjects, subs...)
-	}
-	for _, policy := range p.MQTTPolicies {
-		subs := []string{}
-		v, ok := policy.MatchersRaw["sni"]
-		if !ok {
-			continue
-		}
-		json.Unmarshal(v, &subs)
-		subjects = append(subjects, subs...)
-	}
-	return subjects
 }
 
 // App is the Caddy module that handles the configuration
@@ -85,7 +37,7 @@ type App struct {
 // Register caddy module app
 func (App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats",
+		ID:  "nats.server",
 		New: func() caddy.Module { return new(App) },
 	}
 }
@@ -94,11 +46,25 @@ func (App) CaddyModule() caddy.ModuleInfo {
 func (a *App) Provision(ctx caddy.Context) error {
 	a.ctx = ctx
 	a.logger = ctx.Logger()
+	a.logger.Info("Provisioning NATS server")
 	tlsAppIface, err := ctx.App("tls")
 	if err != nil {
 		return fmt.Errorf("getting tls app: %v", err)
 	}
 	a.tls = tlsAppIface.(*caddytls.TLS)
+	issuer_, err := ctx.App("nats.issuer")
+	if err == nil {
+		issuer := issuer_.(*natsissuer.App)
+		sys, err := issuer.GetSystemAccountPublicKey()
+		if err != nil {
+			return fmt.Errorf("getting system account public key: %v", err)
+		}
+		a.NATS.Operators = []string{}
+		a.NATS.Operators = append(a.NATS.Operators, issuer.Operators...)
+		a.NATS.SystemAccount = sys
+		a.NATS.ResolverPreload = append(a.NATS.ResolverPreload, issuer.Accounts...)
+		a.NATS.ResolverPreload = append(a.NATS.ResolverPreload, issuer.SystemAccount)
+	}
 	subjects := a.Policies.Subjects()
 	v, err := ctx.LoadModuleByID("tls.certificates.automate", caddyconfig.JSON(subjects, nil))
 	if err != nil {
