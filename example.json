@@ -12,10 +12,7 @@
                 "policies": [
                     {
                         "subjects": [
-                            "local.quara-dev.com",
-                            "leaf.local.quara-dev.com",
-                            "ws.local.quara-dev.com",
-                            "metrics.local.quara-dev.com"
+                            "localhost"
                         ],
                         "issuers": [
                             {
@@ -29,9 +26,9 @@
         },
         "nats": {
             "auth_service": {
-                "auth_signing_key": "SAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "auth_signing_key": "SAAI52MPHA2UIOFTBIKFMQYGQGE7GSZI77NIE5M5XC5SFHFTXVWDJFQUDM",
                 "handler": {
-                    "module": "always_deny"
+                    "module": "always_allow"
                 }
             },
             "server": {
@@ -40,24 +37,38 @@
                     "env": "demo"
                 },
                 "debug": true,
+                "trace": true,
                 "http_port": 8222,
                 "tls": {
                     "subjects": [
-                        "local.quara-dev.com"
+                        "localhost"
                     ]
                 },
+                "system_account": "SYS",
+                "accounts": [
+                    {
+                        "name": "AUTH",
+                        "users": [
+                            {
+                                "user": "auth",
+                                "password": "auth"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "APP"
+                    },
+                    {
+                        "name": "SYS"
+                    }
+                ],
                 "authorization": {
-                    "users": [
-                        {
-                            "user": "auth",
-                            "password": "auth"
-                        }
-                    ],
                     "auth_callout": {
                         "issuer": "ABZMXJGERX2OQDNDVOVZA7QW3QQVMZ5WERHZXVREUWCNXQQ2BZZFLVDT",
                         "auth_users": [
                             "auth"
-                        ]
+                        ],
+                        "account": "AUTH"
                     }
                 },
                 "jetstream": {},
@@ -65,14 +76,14 @@
                 "leafnode": {
                     "tls": {
                         "subjects": [
-                            "leaf.local.quara-dev.com"
+                            "localhost"
                         ]
                     }
                 },
                 "websocket": {
                     "tls": {
                         "subjects": [
-                            "ws.local.quara-dev.com"
+                            "localhost"
                         ]
                     }
                 },
@@ -94,7 +105,7 @@
                             "match": [
                                 {
                                     "host": [
-                                        "metrics.local.quara-dev.com"
+                                        "localhost"
                                     ]
                                 }
                             ],

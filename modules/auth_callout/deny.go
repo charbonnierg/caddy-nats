@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/charbonnierg/caddy-nats/modules"
 	"github.com/nats-io/jwt/v2"
 )
 
@@ -23,6 +24,14 @@ func (DenyAuthCallout) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+func (a *DenyAuthCallout) Provision(app *modules.App) error {
+	return nil
+}
+
 func (a *DenyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.AuthorizationResponseClaims, error) {
 	return nil, errors.New("access denied")
 }
+
+var (
+	_ modules.AuthCallout = (*DenyAuthCallout)(nil)
+)

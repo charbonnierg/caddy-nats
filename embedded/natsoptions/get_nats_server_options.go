@@ -76,6 +76,10 @@ func (o *Options) GetServerOptions() (*server.Options, error) {
 	if err := o.setMqttOpts(&serverOpts); err != nil {
 		return nil, err
 	}
+	// Verify and set system account
+	if err := o.setSystemAccountOpt(&serverOpts); err != nil {
+		return nil, err
+	}
 	// Verify and set operator mode options
 	if err := o.setOperatorModeOpts(&serverOpts); err != nil {
 		return nil, err
@@ -230,14 +234,11 @@ func (o *Options) setResolverOpts(opts *server.Options) error {
 	return nil
 }
 
-func (o *Options) setOperatorModeOpts(opts *server.Options) error {
-	if o.Operators == nil {
-		if o.SystemAccount != "" {
-			return errors.New("system_account is set but operators are not configured")
-		}
+func (o *Options) setSystemAccountOpt(opts *server.Options) error {
+	if o.SystemAccount == "" {
 		return nil
 	}
-	if o.SystemAccount != "" {
+	if o.Operators != nil {
 		// Parse system account jwt
 		claims, err := jwt.DecodeAccountClaims(o.SystemAccount)
 		if err != nil {
@@ -245,6 +246,16 @@ func (o *Options) setOperatorModeOpts(opts *server.Options) error {
 		}
 		opts.SystemAccount = claims.Subject
 		o.systemAccount = claims
+	} else {
+		// Don't attempt to parse, system account may be a simple name
+		opts.SystemAccount = o.SystemAccount
+	}
+	return nil
+}
+
+func (o *Options) setOperatorModeOpts(opts *server.Options) error {
+	if o.Operators == nil {
+		return nil
 	}
 	operators := []*jwt.OperatorClaims{}
 	for _, token := range o.Operators {
@@ -374,7 +385,7 @@ func (o *Options) addAccount(opts *server.Options, account *Account) error {
 	if account.Name == "" {
 		return errors.New("authorization.accounts.name cannot be empty")
 	}
-	if len(account.Users) == 0 {
+	if len(account.Users) == 0 && o.Authorization == nil {
 		return errors.New("authorization.accounts.users cannot be empty")
 	}
 	acc := server.NewAccount(account.Name)

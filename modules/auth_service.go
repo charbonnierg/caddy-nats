@@ -22,6 +22,7 @@ var (
 // It is used to handle authorization requests.
 // Modules in the "nats.auth_callout" namespace must implement this interface.
 type AuthCallout interface {
+	Provision(app *App) error
 	Handle(request *jwt.AuthorizationRequestClaims) (*jwt.AuthorizationResponseClaims, error)
 }
 
@@ -36,6 +37,7 @@ type AuthService struct {
 	app            *App
 	conn           *nats.Conn
 	sub            *nats.Subscription
+	pk             string
 	sk             nkeys.KeyPair
 	handler        AuthCallout
 	subject        string
@@ -57,6 +59,11 @@ func (s *AuthService) Provision(app *App) error {
 		return errors.New("failed to decode auth signing key")
 	}
 	s.sk = sk
+	pk, err := sk.PublicKey()
+	if err != nil {
+		return errors.New("failed to get auth signing key public key")
+	}
+	s.pk = pk
 	unm, err := app.ctx.LoadModule(s, "HandlerRaw")
 	if err != nil {
 		return fmt.Errorf("failed to load auth callout handler: %s", err.Error())
@@ -64,6 +71,9 @@ func (s *AuthService) Provision(app *App) error {
 	handler, ok := unm.(AuthCallout)
 	if !ok {
 		return errors.New("auth callout handler invalid type")
+	}
+	if err := handler.Provision(app); err != nil {
+		return fmt.Errorf("failed to provision auth callout handler: %s", err.Error())
 	}
 	s.handler = handler
 
@@ -208,6 +218,7 @@ func (s *AuthService) handleError(msg *nats.Msg, request *jwt.AuthorizationReque
 func (s *AuthService) handleSuccess(msg *nats.Msg, request *jwt.AuthorizationRequestClaims, resp *jwt.AuthorizationResponseClaims) {
 	resp.Subject = request.UserNkey
 	resp.Audience = request.Server.ID
+	resp.IssuerAccount = s.pk
 	payload, err := resp.Encode(s.sk)
 	if err != nil {
 		s.logger.Error("failed to encode authorization response", zap.Error(err))
