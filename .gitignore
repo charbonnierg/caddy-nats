@@ -1,0 +1,17 @@
+/nsc-store
+/sandbox-jwt
+/sandbox-jetstream
+/nats-server
+/nsc
+/OTHER_BAD_GENERIC.creds
+/qnats
+/resolver.conf
+/nats.conf
+/nats1.conf
+/nats2.conf
+/config.json
+/caddy
+/caddy.json
+/Caddyfile
+/config-operator.json
+/cmd/qnats

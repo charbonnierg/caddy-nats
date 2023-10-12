@@ -1,0 +1,114 @@
+{
+    "logging": {
+        "logs": {
+            "default": {
+                "level": "DEBUG"
+            }
+        }
+    },
+    "apps": {
+        "tls": {
+            "automation": {
+                "policies": [
+                    {
+                        "subjects": [
+                            "local.quara-dev.com",
+                            "leaf.local.quara-dev.com",
+                            "ws.local.quara-dev.com",
+                            "metrics.local.quara-dev.com"
+                        ],
+                        "issuers": [
+                            {
+                                "module": "internal"
+                            }
+                        ],
+                        "disable_ocsp_stapling": true
+                    }
+                ]
+            }
+        },
+        "nats": {
+            "auth_service": {
+                "auth_signing_key": "SAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "handler": {
+                    "module": "always_deny"
+                }
+            },
+            "server": {
+                "name": "test",
+                "tags": {
+                    "env": "demo"
+                },
+                "debug": true,
+                "http_port": 8222,
+                "tls": {
+                    "subjects": [
+                        "local.quara-dev.com"
+                    ]
+                },
+                "authorization": {
+                    "users": [
+                        {
+                            "user": "auth",
+                            "password": "auth"
+                        }
+                    ],
+                    "auth_callout": {
+                        "issuer": "ABZMXJGERX2OQDNDVOVZA7QW3QQVMZ5WERHZXVREUWCNXQQ2BZZFLVDT",
+                        "auth_users": [
+                            "auth"
+                        ]
+                    }
+                },
+                "jetstream": {},
+                "mqtt": {},
+                "leafnode": {
+                    "tls": {
+                        "subjects": [
+                            "leaf.local.quara-dev.com"
+                        ]
+                    }
+                },
+                "websocket": {
+                    "tls": {
+                        "subjects": [
+                            "ws.local.quara-dev.com"
+                        ]
+                    }
+                },
+                "metrics": {
+                    "connz": true,
+                    "connz_detailed": true
+                }
+            }
+        },
+        "http": {
+            "servers": {
+                "https": {
+                    "listen": [
+                        ":80",
+                        ":443"
+                    ],
+                    "routes": [
+                        {
+                            "match": [
+                                {
+                                    "host": [
+                                        "metrics.local.quara-dev.com"
+                                    ]
+                                }
+                            ],
+                            "handle": [
+                                {
+                                    "handler": "metrics"
+                                }
+                            ],
+                            "terminal": true
+                        }
+                    ],
+                    "metrics": {}
+                }
+            }
+        }
+    }
+}

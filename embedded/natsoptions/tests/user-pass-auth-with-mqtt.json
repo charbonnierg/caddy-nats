@@ -1,0 +1,9 @@
+{
+    "server_name": "test",
+    "authorization": {
+        "user": "test",
+        "password": "test"
+    },
+    "jetstream": {},
+    "mqtt": {}
+}
