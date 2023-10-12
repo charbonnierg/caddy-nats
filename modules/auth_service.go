@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/charbonnierg/caddy-nats/embedded/natsoptions"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -33,18 +34,22 @@ type AuthCallout interface {
 // The credentials are the credentials for the authorization callout issuer when
 // using operator mode. Credentials are not used in server mode.
 type AuthService struct {
-	logger         *zap.Logger
-	app            *App
-	conn           *nats.Conn
-	sub            *nats.Subscription
-	pk             string
-	sk             nkeys.KeyPair
-	handler        AuthCallout
-	subject        string
-	HandlerRaw     json.RawMessage `json:"handler" caddy:"namespace=nats.auth_callout inline_key=module"`
-	AuthSigningKey string          `json:"auth_signing_key"`
-	SubjectRaw     string          `json:"subject,omitempty"`
-	Credentials    string          `json:"credentials,omitempty"`
+	logger          *zap.Logger
+	app             *App
+	conn            *nats.Conn
+	sub             *nats.Subscription
+	pk              string
+	xkp             nkeys.KeyPair
+	sk              nkeys.KeyPair
+	password        string
+	handler         AuthCallout
+	subject         string
+	HandlerRaw      json.RawMessage `json:"handler" caddy:"namespace=nats.auth_callout inline_key=module"`
+	InternalAccount string          `json:"internal_account,omitempty"`
+	InternalUser    string          `json:"internal_user,omitempty"`
+	AuthSigningKey  string          `json:"auth_signing_key"`
+	SubjectRaw      string          `json:"subject,omitempty"`
+	Credentials     string          `json:"credentials,omitempty"`
 }
 
 // Provision will provision the auth callout service.
@@ -54,6 +59,52 @@ type AuthService struct {
 func (s *AuthService) Provision(app *App) error {
 	s.logger = app.logger.Named("auth_callout")
 	s.app = app
+	if s.AuthSigningKey != "" && s.InternalAccount != "" {
+		return errors.New("auth signing key and internal account are mutually exclusive")
+	}
+	if s.InternalUser != "" && s.InternalAccount == "" {
+		return errors.New("internal account is required when using internal user")
+	}
+	if s.InternalAccount != "" && app.Options.Authorization != nil {
+		return errors.New("internal account is not allowed when custom authorization map is used")
+	}
+	if s.InternalAccount != "" && app.Options.Accounts == nil {
+		return errors.New("internal account is not allowed when no accounts are defined")
+	}
+	if s.InternalAccount != "" {
+		if s.InternalUser == "" {
+			s.InternalUser = "auth"
+		}
+		sk, err := nkeys.CreateAccount()
+		if err != nil {
+			return errors.New("failed to create internal auth account")
+		}
+		seed, err := sk.Seed()
+		if err != nil {
+			return errors.New("failed to get internal auth account seed")
+		}
+		pk, err := sk.PublicKey()
+		if err != nil {
+			return errors.New("failed to get internal auth account public key")
+		}
+		xkey, err := nkeys.CreateCurveKeys()
+		if err != nil {
+			return errors.New("failed to create internal auth user xkey")
+		}
+		s.xkp = xkey
+		auth := natsoptions.AuthorizationMap{
+			AuthCallout: &natsoptions.AuthCalloutMap{
+				Issuer: pk,
+				// XKey:      xpk,
+				Account:   s.InternalAccount,
+				AuthUsers: []string{s.InternalUser},
+			},
+		}
+		app.Options.Authorization = &auth
+		s.password = string(seed)
+		app.Options.Accounts = append(app.Options.Accounts, &natsoptions.Account{Name: s.InternalAccount, Users: []natsoptions.User{{User: s.InternalUser, Password: s.password}}})
+		s.AuthSigningKey = string(seed)
+	}
 	sk, err := nkeys.FromSeed([]byte(s.AuthSigningKey))
 	if err != nil {
 		return errors.New("failed to decode auth signing key")

@@ -59,6 +59,12 @@ func (a *App) Provision(ctx caddy.Context) error {
 		return errors.New("tls app invalid type")
 	}
 	a.tlsApp = tlsApp
+	// Provision auth service
+	if a.AuthService != nil {
+		if err := a.AuthService.Provision(a); err != nil {
+			return err
+		}
+	}
 	// We could update options here if we want
 	// For example we could set the TLS config override
 	// of the standard NATS server to use ACME certificates:
@@ -74,12 +80,6 @@ func (a *App) Provision(ctx caddy.Context) error {
 	// Fail if runner creation failed
 	if err != nil {
 		return err
-	}
-	// Provision auth service
-	if a.AuthService != nil {
-		if err := a.AuthService.Provision(a); err != nil {
-			return err
-		}
 	}
 	return nil
 }

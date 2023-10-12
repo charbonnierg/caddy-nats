@@ -26,7 +26,7 @@
         },
         "nats": {
             "auth_service": {
-                "auth_signing_key": "SAAI52MPHA2UIOFTBIKFMQYGQGE7GSZI77NIE5M5XC5SFHFTXVWDJFQUDM",
+                "internal_account": "AUTH",
                 "handler": {
                     "module": "always_allow"
                 }
@@ -47,30 +47,12 @@
                 "system_account": "SYS",
                 "accounts": [
                     {
-                        "name": "AUTH",
-                        "users": [
-                            {
-                                "user": "auth",
-                                "password": "auth"
-                            }
-                        ]
-                    },
-                    {
                         "name": "APP"
                     },
                     {
                         "name": "SYS"
                     }
                 ],
-                "authorization": {
-                    "auth_callout": {
-                        "issuer": "ABZMXJGERX2OQDNDVOVZA7QW3QQVMZ5WERHZXVREUWCNXQQ2BZZFLVDT",
-                        "auth_users": [
-                            "auth"
-                        ],
-                        "account": "AUTH"
-                    }
-                },
                 "jetstream": {},
                 "mqtt": {},
                 "leafnode": {

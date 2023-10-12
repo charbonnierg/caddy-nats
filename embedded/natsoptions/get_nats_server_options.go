@@ -385,9 +385,6 @@ func (o *Options) addAccount(opts *server.Options, account *Account) error {
 	if account.Name == "" {
 		return errors.New("authorization.accounts.name cannot be empty")
 	}
-	if len(account.Users) == 0 && o.Authorization == nil {
-		return errors.New("authorization.accounts.users cannot be empty")
-	}
 	acc := server.NewAccount(account.Name)
 	// Add mappings
 	for _, mapping := range account.Mappings {
