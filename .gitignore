@@ -1,4 +1,5 @@
 /nsc-store
+/dist
 /sandbox-jwt
 /sandbox-jetstream
 /nats-server

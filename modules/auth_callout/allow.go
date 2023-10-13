@@ -47,6 +47,7 @@ func (a *AllowAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt
 	// We don't look at the password
 	// But in a more useful module, password could be an OpenID token maybe ?
 	userClaims := jwt.NewUserClaims(request.UserNkey)
+	// The target account must be specified as JWT audience
 	userClaims.Audience = request.ConnectOptions.Username
 	// Encode using signing key
 	encoded, err := userClaims.Encode(a.sk)

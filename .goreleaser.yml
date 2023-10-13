@@ -1,0 +1,22 @@
+# .goreleaser.yml
+builds:
+  - id: caddy
+    main: "./cmd/caddy/main.go"
+    goos:
+      #      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+        #      - arm64
+        #      - arm
+    goarm:
+      - "7"
+        #ignore:
+        #  - goos: windows
+        #    goarch: arm
+        #  - goos: darwin
+        #    goarch: arm
+    env:
+      - "CGO_ENABLED=0"
+

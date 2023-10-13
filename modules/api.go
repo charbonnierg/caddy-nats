@@ -5,12 +5,17 @@ package modules
 import (
 	"fmt"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/nats-io/nats.go"
 )
 
 // Reload will reload the NATS server configuration.
 func (a *App) Reload() error {
 	return a.runner.Reload()
+}
+
+func (a *App) Context() caddy.Context {
+	return a.ctx
 }
 
 // CreateClient will create a NATS client connected to the NATS server.
