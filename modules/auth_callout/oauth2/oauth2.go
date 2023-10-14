@@ -33,6 +33,9 @@ func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+// Provision sets up the auth callout handler.
+// It is called by the auth callout caddy module when the handler is loaded from config.
+// It should not be called directly by other modules.
 func (c *OAuth2ProxyAuthCallout) Provision(app *modules.App) error {
 	c.logger = app.Context().Logger().Named("oauth2")
 	oauthApp, err := oauthproxy.LoadApp(app.Context())
@@ -58,30 +61,52 @@ func (c *OAuth2ProxyAuthCallout) Provision(app *modules.App) error {
 	return nil
 }
 
+// Handle is called by auth callout caddy module to authenticate a user.
+// It returns unsigned response claims, as the signing key is configured in the caddy module.
+// However, it must sign the user claims using either the signing key configured in the caddy module
+// in server mode, or the signing key of the target account in operator mode. Since only a single static
+// signing key is supported in configuration for now, it is not possible to issue JWT for different accounts
+// in operator mode.
 func (c *OAuth2ProxyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.AuthorizationResponseClaims, error) {
-	resp := jwt.NewAuthorizationResponseClaims(request.UserNkey)
-	// Use the username as the issuer account.
-	// We don't look at the password
-	// But in a more useful module, password could be an OpenID token maybe ?
+	// Initialize response claims
+	responseClaims := jwt.NewAuthorizationResponseClaims(request.UserNkey)
+	// Initialize user claims
 	userClaims := jwt.NewUserClaims(request.UserNkey)
-	// Username is the account. It must be set as the audience of user claims
-	acc := request.ConnectOptions.Username
-	userClaims.Audience = acc
-	// Password is an HTTP cookie
+	// Target account must be present as username in connect opts
+	targetAccount := request.ConnectOptions.Username
+	// Set audience to target account
+	userClaims.Audience = targetAccount
+	// OAuth2 session state must be presented as password in connect opts (encrypted cookie string)
 	sessionState, err := c.endpoint.DecodeSessionStateFromString(request.ConnectOptions.Password)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode session state: %v", err)
 	}
 	// We've got a session state, we can now set the user claims
-	c.logger.Info("authenticated user", zap.String("email", sessionState.Email), zap.String("account", acc))
+	c.logger.Info("authenticated user", zap.String("email", sessionState.Email), zap.String("account", targetAccount))
 	userClaims.Name = sessionState.Email
-	// Encode using signing key
+
+	// We should decide whether to allow the user to connect to the target account
+	// For now, we allow all users to connect to all accounts
+	// ...
+
+	// Encode user claims using signing key (the nkey seed associated with the issuer public key in server mode, or a signing key of target account in operator mode)
+	// This will work poorly in operator mode, as a single signing key is used for all accounts.
+	// But NATS auth callout ADR explicitely states that the callout service can issue JWT for DIFFERENT accounts
+	// as long as they are signed by the target account.
+	// Ideally, caddy modules could be used to fetch signing key from a remote service, but that's out of scope for now.
 	encoded, err := userClaims.Encode(c.sk)
 	if err != nil {
 		return nil, err
 	}
-	resp.Jwt = encoded
-	return resp, nil
+	// Set encoded user claims as JWT in response claims
+	responseClaims.Jwt = encoded
+	// Return response claims (no need to sign them, as the caddy module will do it for us)
+	// In operator mode, this must be the signing key of the auth account in which auth callout is configured.
+	// In server mode, this is the nkey seed associated with the issuer public key.
+	// In both cases, a single signing key is used for all responses, because:
+	//   - in server mode there is a single issuer, it makes sense to configure a single signing key.
+	//   - in operator mode, a service can only connect to a single account, it also makes sense to configure a single signing key.
+	return responseClaims, nil
 }
 
 var (

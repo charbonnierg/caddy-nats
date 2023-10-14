@@ -20,6 +20,10 @@ func init() {
 	caddy.RegisterModule(new(App))
 }
 
+// App is the nats app module.
+// It is the root module of the nats Caddy module.
+// It may define options for a nats server, in which case it will start a nats server.
+// It may also define an auth service, in which case it will start an auth service (as described in NATS ADR-26)
 type App struct {
 	ctx                caddy.Context
 	tlsApp             *caddytls.TLS
@@ -32,6 +36,8 @@ type App struct {
 	ReadyTimeout       time.Duration        `json:"ready_timeout,omitempty"`
 }
 
+// CaddyModule returns the Caddy module information.
+// It implements the caddy.Module interface.
 func (App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "nats",
@@ -39,6 +45,10 @@ func (App) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+// Provision sets up the app when it is first loaded.
+// It validates and sets up a nats server if options are defined.
+// It also provisions caddy TLS connection policies for the nats server when needed,
+// in order to generate TLS configs for the nats server.
 func (a *App) Provision(ctx caddy.Context) error {
 	var err error
 	a.ctx = ctx
@@ -84,6 +94,8 @@ func (a *App) Provision(ctx caddy.Context) error {
 	return nil
 }
 
+// Start starts the app. It implements the caddy.App interface.
+// It starts the nats server and the auth service if defined.
 func (a *App) Start() error {
 	a.logger.Info("Managing TLS certificates", zap.Strings("subjects", a.subjects))
 	if a.subjects != nil {
@@ -104,6 +116,8 @@ func (a *App) Start() error {
 	return nil
 }
 
+// Stop stops the app. It implements the caddy.App interface.
+// It stops the nats server and the auth service if defined.
 func (a *App) Stop() error {
 	// Stop auth service
 	if a.AuthService != nil {
