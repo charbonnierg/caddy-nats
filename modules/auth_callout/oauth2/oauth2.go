@@ -10,6 +10,7 @@ import (
 	"github.com/charbonnierg/caddy-nats/oauthproxy"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nkeys"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -18,6 +19,7 @@ func init() {
 
 // A minimal auth callout handler that always denies access.
 type OAuth2ProxyAuthCallout struct {
+	logger     *zap.Logger
 	sk         nkeys.KeyPair
 	endpoint   *oauthproxy.Endpoint
 	Endpoint   string `json:"endpoint"`
@@ -32,13 +34,14 @@ func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
 }
 
 func (c *OAuth2ProxyAuthCallout) Provision(app *modules.App) error {
+	c.logger = app.Context().Logger().Named("oauth2")
 	oauthApp, err := oauthproxy.LoadApp(app.Context())
 	if err != nil {
 		return err
 	}
-	endpoint := oauthApp.GetEndpoint(c.Endpoint)
-	if endpoint == nil {
-		return fmt.Errorf("oauth2_proxy endpoint %s not found", c.Endpoint)
+	endpoint, err := oauthApp.GetEndpoint(c.Endpoint)
+	if err != nil {
+		return err
 	}
 	c.endpoint = endpoint
 	var seed []byte
@@ -62,18 +65,15 @@ func (c *OAuth2ProxyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims)
 	// But in a more useful module, password could be an OpenID token maybe ?
 	userClaims := jwt.NewUserClaims(request.UserNkey)
 	// Username is the account. It must be set as the audience of user claims
-	userClaims.Audience = request.ConnectOptions.Username
+	acc := request.ConnectOptions.Username
+	userClaims.Audience = acc
 	// Password is an HTTP cookie
-	cookie, err := parseCookies(request.ConnectOptions.Password)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse cookie: %v", err)
-	}
-	// Decode the cookie
-	sessionState, err := c.endpoint.DecodeSessionState(cookie)
+	sessionState, err := c.endpoint.DecodeSessionStateFromString(request.ConnectOptions.Password)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode session state: %v", err)
 	}
 	// We've got a session state, we can now set the user claims
+	c.logger.Info("authenticated user", zap.String("email", sessionState.Email), zap.String("account", acc))
 	userClaims.Name = sessionState.Email
 	// Encode using signing key
 	encoded, err := userClaims.Encode(c.sk)

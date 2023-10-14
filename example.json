@@ -134,7 +134,7 @@
                             ],
                             "handle": [
                                 {
-                                    "handler": "oauth2_proxy",
+                                    "handler": "oauth2_session",
                                     "endpoint": {
                                         "name": "az"
                                     }

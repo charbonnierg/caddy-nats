@@ -3,6 +3,7 @@
 package oauthproxy
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -24,6 +25,7 @@ func joinCookies(cookies []*http.Cookie, cookieName string) (*http.Cookie, error
 	return c, nil
 }
 
+// copyCookie copies a cookie
 func copyCookie(c *http.Cookie) *http.Cookie {
 	return &http.Cookie{
 		Name:       c.Name,
@@ -39,4 +41,16 @@ func copyCookie(c *http.Cookie) *http.Cookie {
 		Unparsed:   c.Unparsed,
 		SameSite:   c.SameSite,
 	}
+}
+
+// parseCookies parses a cookie string into a slice of cookies
+func parseCookies(value string) ([]*http.Cookie, error) {
+	header := http.Header{}
+	header.Add("Cookie", value)
+	request := http.Request{Header: header}
+	cookies := request.Cookies()
+	if len(cookies) == 0 {
+		return nil, errors.New("list of cookies must be > 0")
+	}
+	return cookies, nil
 }

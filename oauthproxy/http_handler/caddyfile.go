@@ -9,16 +9,16 @@ import (
 
 // ParsePublishHandler parses the nats_publish directive. Syntax:
 //
-//	oauth2_proxy {
+//	oauth2_session {
 //
 // }
 func ParseOauth2ProxyDirective(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	var p = Proxy{}
+	var p = OAuth2Session{}
 	err := p.UnmarshalCaddyfile(h.Dispenser)
 	return p, err
 }
 
-func (p *Proxy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func (p *OAuth2Session) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		if !d.Args(&p.EndpointRaw.Name) {
 			return d.ArgErr()

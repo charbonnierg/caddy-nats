@@ -12,23 +12,30 @@ import (
 )
 
 func init() {
-	caddy.RegisterModule(Proxy{})
-	httpcaddyfile.RegisterHandlerDirective("oauth2_proxy", ParseOauth2ProxyDirective)
+	caddy.RegisterModule(OAuth2Session{})
+	httpcaddyfile.RegisterHandlerDirective("oauth2_session", ParseOauth2ProxyDirective)
 }
 
-type Proxy struct {
+// OAuth2Session is a Caddy module that represents an oauth2 middleware endpoint.
+// It implements the caddyhttp.MiddlewareHandler interface.
+type OAuth2Session struct {
 	endpoint    *oauthproxy.Endpoint
 	EndpointRaw oauthproxy.Endpoint `json:"endpoint,omitempty"`
 }
 
-func (Proxy) CaddyModule() caddy.ModuleInfo {
+// CaddyModule returns the Caddy module information.
+// It implements the caddy.Module interface.
+func (OAuth2Session) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.oauth2_proxy",
-		New: func() caddy.Module { return new(Proxy) },
+		New: func() caddy.Module { return new(OAuth2Session) },
 	}
 }
 
-func (p *Proxy) Provision(ctx caddy.Context) error {
+// Provision implements caddy.Provisioner.
+// It is called when the module is provisioned on startup.
+// It will get or add the oauth2 endpoint to the app.
+func (p *OAuth2Session) Provision(ctx caddy.Context) error {
 	app, err := oauthproxy.LoadApp(ctx)
 	if err != nil {
 		return err
@@ -36,8 +43,8 @@ func (p *Proxy) Provision(ctx caddy.Context) error {
 	if p.EndpointRaw.Name == "" {
 		return fmt.Errorf("missing endpoint name")
 	}
-	endpoint := app.GetEndpoint(p.EndpointRaw.Name)
-	if endpoint == nil {
+	endpoint, err := app.GetEndpoint(p.EndpointRaw.Name)
+	if err != nil {
 		err := app.AddEndpoint(&p.EndpointRaw)
 		if err != nil {
 			return err
@@ -49,12 +56,14 @@ func (p *Proxy) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-func (p Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+// ServeHTTP implements caddyhttp.MiddlewareHandler.
+// It delegates the request to the oauth2-proxy policy.
+func (p OAuth2Session) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	return p.endpoint.ServeHTTP(w, r, next)
 }
 
 var (
-	_ caddy.Provisioner           = (*Proxy)(nil)
-	_ caddyfile.Unmarshaler       = (*Proxy)(nil)
-	_ caddyhttp.MiddlewareHandler = (*Proxy)(nil)
+	_ caddy.Provisioner           = (*OAuth2Session)(nil)
+	_ caddyfile.Unmarshaler       = (*OAuth2Session)(nil)
+	_ caddyhttp.MiddlewareHandler = (*OAuth2Session)(nil)
 )

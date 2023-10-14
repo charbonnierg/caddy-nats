@@ -14,6 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// Endpoint is a Caddy module that represents an oauth2-proxy endpoint.
+// It implements the caddyhttp.MiddlewareHandler interface.
 type Endpoint struct {
 	logger           *zap.Logger
 	cipher           encryption.Cipher
@@ -26,6 +28,8 @@ type Endpoint struct {
 	WhitelistDomains []string           `json:"whitelist_domains,omitempty"`
 }
 
+// CaddyModule returns the Caddy module information.
+// It implements the caddy.Module interface.
 func (Endpoint) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "oauthproxy.endpoint",
@@ -33,12 +37,17 @@ func (Endpoint) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+// ServeHTTP sets the next handler in the request context and calls the oauth2-proxy handler.
+// It implements the caddyhttp.MiddlewareHandler interface.
 func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	r = r.WithContext(context.WithValue(r.Context(), nextKey{}, next))
 	e.proxy.ServeHTTP(w, r)
 	return nil
 }
 
+// Provision loads and validate the endpoint configuration.
+// It is called when AddEndpoint method of the app is called and should
+// not be called directly by other host modules.
 func (e *Endpoint) Provision(ctx caddy.Context) error {
 	// Initialize options
 	if e.opts == nil {
@@ -110,6 +119,8 @@ func (e *Endpoint) Provision(ctx caddy.Context) error {
 	return nil
 }
 
+// setup sets up the oauth2-proxy instance for this endpoint.
+// It is called when the app is started, not when the endpoint is provisioned.
 func (e *Endpoint) setup() error {
 	chainer := chainer{logger: e.logger}
 	validator := server.NewValidator(e.opts.EmailDomains, e.opts.AuthenticatedEmailsFile)
@@ -121,12 +132,87 @@ func (e *Endpoint) setup() error {
 	return nil
 }
 
+// rough approximation of equality between two endpoints
+// this could be done more thoroughly, but it's not worth the effort
+// at the moment.
+func (e *Endpoint) equals(other *Endpoint) bool {
+	if e.Name != other.Name {
+		return false
+	}
+	if len(e.CookieDomains) != len(other.CookieDomains) {
+		return false
+	}
+	for i, domain := range e.CookieDomains {
+		if domain != other.CookieDomains[i] {
+			return false
+		}
+	}
+	if len(e.ExtraJwtIssuers) != len(other.ExtraJwtIssuers) {
+		return false
+	}
+	for i, issuer := range e.ExtraJwtIssuers {
+		if issuer != other.ExtraJwtIssuers[i] {
+			return false
+		}
+	}
+	if len(e.Providers) != len(other.Providers) {
+		return false
+	}
+	for i, provider := range e.Providers {
+		if provider.ID != other.Providers[i].ID {
+			return false
+		}
+		if provider.Type != other.Providers[i].Type {
+			return false
+		}
+		if provider.Name != other.Providers[i].Name {
+			return false
+		}
+		if provider.ClientID != other.Providers[i].ClientID {
+			return false
+		}
+		if provider.ClientSecret != other.Providers[i].ClientSecret {
+			return false
+		}
+		if provider.ClientSecretFile != other.Providers[i].ClientSecretFile {
+			return false
+		}
+		if provider.Scope != other.Providers[i].Scope {
+			return false
+		}
+		if provider.LoginURL != other.Providers[i].LoginURL {
+			return false
+		}
+		if provider.RedeemURL != other.Providers[i].RedeemURL {
+			return false
+		}
+		if provider.ProfileURL != other.Providers[i].ProfileURL {
+			return false
+		}
+		if provider.ValidateURL != other.Providers[i].ValidateURL {
+			return false
+		}
+		if provider.CodeChallengeMethod != other.Providers[i].CodeChallengeMethod {
+			return false
+		}
+	}
+	return true
+}
+
+// nextKey is a struct used as key to store the next handler in the request context.
+// Context docs recommends to use a private struct rather than a string to avoid
+// collisions with other packages.
 type nextKey struct{}
 
+// chainer is a struct that implements the http.Handler interface.
+// It is used to chain the oauth2-proxy handler with the next handler.
+// It fetches the next handler from the request context and calls it.
 type chainer struct {
 	logger *zap.Logger
 }
 
+// ServeHTTP fetches the next handler from the request context and calls it.
+// It is called by oauth2-proxy when the request is authorized as the upstream handler.
 func (h chainer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("serving authorized request", zap.Any("access_token", r.Header["X-Forwarded-Access-Token"]), zap.Any("id_token", r.Header["Authorization"]))
 	nextRaw := r.Context().Value(nextKey{})
