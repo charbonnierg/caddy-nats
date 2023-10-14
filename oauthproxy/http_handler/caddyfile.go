@@ -6,6 +6,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/charbonnierg/caddy-nats/oauthproxy"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
@@ -20,6 +21,7 @@ func ParseOauth2ProxyDirective(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHand
 	return p, err
 }
 
+// TODO: This parser should mostly be defined on the option struct itself
 func (p *OAuth2Session) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		if !d.Args(&p.EndpointRaw.Name) {
@@ -27,21 +29,23 @@ func (p *OAuth2Session) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		}
 		ep := &p.EndpointRaw
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
+			op := &oauthproxy.Options{}
+			ep.Options = op
 			switch d.Val() {
 			case "cookie_domains":
 				remainings := d.RemainingArgs()
-				ep.CookieDomains = []string{}
+				op.Cookie.Domains = []string{}
 				for _, remaining := range remainings {
 					if remaining != "" {
-						ep.CookieDomains = append(ep.CookieDomains, remaining)
+						op.Cookie.Domains = append(op.Cookie.Domains, remaining)
 					}
 				}
 			case "whitelist_domains":
 				reremainings := d.RemainingArgs()
-				ep.WhitelistDomains = []string{}
+				op.WhitelistDomains = []string{}
 				for _, reremaining := range reremainings {
 					if reremaining != "" {
-						ep.WhitelistDomains = append(ep.WhitelistDomains, reremaining)
+						op.WhitelistDomains = append(op.WhitelistDomains, reremaining)
 					}
 				}
 			case "provider":
@@ -141,7 +145,7 @@ func (p *OAuth2Session) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Errf("unrecognized subdirective %s", d.Val())
 					}
 				}
-
+				op.Providers = append(op.Providers, provider)
 			}
 		}
 	}

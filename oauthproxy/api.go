@@ -35,6 +35,9 @@ func LoadApp(ctx caddy.Context) (*App, error) {
 func (a *App) GetOrAddEndpoint(e *Endpoint) (*Endpoint, error) {
 	for _, existing := range a.Endpoints {
 		if e.Name == existing.Name {
+			if e.isReference() {
+				return existing, nil
+			}
 			if !existing.equals(e) {
 				return nil, fmt.Errorf("endpoint %s already exists with different configuration", e.Name)
 			}

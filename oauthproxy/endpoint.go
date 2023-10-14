@@ -19,15 +19,12 @@ import (
 // Endpoint is a Caddy module that represents an oauth2-proxy endpoint.
 // It implements the caddyhttp.MiddlewareHandler interface.
 type Endpoint struct {
-	logger           *zap.Logger
-	cipher           encryption.Cipher
-	opts             *options.Options
-	proxy            *server.OAuthProxy
-	Name             string             `json:"name,omitempty"`
-	Providers        []options.Provider `json:"providers,omitempty"`
-	ExtraJwtIssuers  []string           `json:"extra_jwt_issuers,omitempty"`
-	CookieDomains    []string           `json:"cookie_domains,omitempty"`
-	WhitelistDomains []string           `json:"whitelist_domains,omitempty"`
+	logger  *zap.Logger
+	cipher  encryption.Cipher
+	opts    *options.Options
+	proxy   *server.OAuthProxy
+	Name    string   `json:"name,omitempty"`
+	Options *Options `json:"options,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -55,38 +52,14 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyh
 	return nil
 }
 
-// Provision loads and validate the endpoint configuration.
-// It is called when AddEndpoint method of the app is called and should
-// not be called directly by other host modules.
-func (e *Endpoint) Provision(ctx caddy.Context) error {
-	// Initialize options
-	if e.opts == nil {
-		e.opts = options.NewOptions()
-	}
-
-	// Save logger
-	e.logger = ctx.Logger().Named(e.Name)
-
-	// TODO: The secret is randomely generated, but it is not persisted
-	if e.opts.Cookie.Secret == "" {
-		secret, err := generateRandomASCIIString(32)
-		if err != nil {
-			return err
-		}
-		e.opts.Cookie.Secret = secret
-	}
+// This should not be needed now that whole config object is exposed
+// but it is kept to avoid changing example config files.
+func (e *Endpoint) applyDefaultOpts() error {
 	// Configure cookie name
 	if e.opts.Cookie.Name == "" {
 		e.opts.Cookie.Name = fmt.Sprintf("%s_%s", e.Name, "oauth2_proxy")
 	}
-	// Configure providers
-	e.opts.Providers = []options.Provider{}
-	e.opts.Providers = append(e.opts.Providers, e.Providers...)
-
 	// Configure remaining options
-	e.opts.ExtraJwtIssuers = append(e.opts.ExtraJwtIssuers, e.ExtraJwtIssuers...)
-	e.opts.Cookie.Domains = e.CookieDomains
-	e.opts.WhitelistDomains = e.WhitelistDomains
 	e.opts.SkipJwtBearerTokens = true
 	e.opts.ReverseProxy = true
 	e.opts.SkipProviderButton = true
@@ -113,14 +86,41 @@ func (e *Endpoint) Provision(ctx caddy.Context) error {
 				},
 			},
 		})
+	return nil
+}
 
+// Provision loads and validate the endpoint configuration.
+// It is called when AddEndpoint method of the app is called and should
+// not be called directly by other host modules.
+func (e *Endpoint) Provision(ctx caddy.Context) error {
+	// Initialize options
+	if e.Options == nil {
+		return fmt.Errorf("no options found for endpoint %s", e.Name)
+	}
+	// Save options
+	e.opts = e.Options.oauth2proxyOpts()
+	// Save logger
+	e.logger = ctx.Logger().Named(e.Name)
+
+	// TODO: This should not be needed now that whole config object is exposed
+	// but it is kept to avoid changing example config files.
+	if err := e.applyDefaultOpts(); err != nil {
+		return err
+	}
+	// TODO: The secret is randomely generated, but it is not persisted
+	if e.opts.Cookie.Secret == "" {
+		secret, err := generateRandomASCIIString(32)
+		if err != nil {
+			return err
+		}
+		e.opts.Cookie.Secret = secret
+	}
 	// Save cipher
 	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(e.opts.Cookie.Secret))
 	if err != nil {
 		return fmt.Errorf("error initialising cipher: %v", err)
 	}
 	e.cipher = cipher
-
 	// Validate options
 	if err := validation.Validate(e.opts); err != nil {
 		return err
@@ -142,71 +142,18 @@ func (e *Endpoint) setup() error {
 	return nil
 }
 
-// rough approximation of equality between two endpoints
-// this could be done more thoroughly, but it's not worth the effort
-// at the moment.
+func (e *Endpoint) isReference() bool {
+	return e.Options == nil
+}
+
 func (e *Endpoint) equals(other *Endpoint) bool {
 	if e.Name != other.Name {
 		return false
 	}
-	if len(e.CookieDomains) != len(other.CookieDomains) {
-		return false
+	if e.Options == nil && other.Options == nil {
+		return true
 	}
-	for i, domain := range e.CookieDomains {
-		if domain != other.CookieDomains[i] {
-			return false
-		}
-	}
-	if len(e.ExtraJwtIssuers) != len(other.ExtraJwtIssuers) {
-		return false
-	}
-	for i, issuer := range e.ExtraJwtIssuers {
-		if issuer != other.ExtraJwtIssuers[i] {
-			return false
-		}
-	}
-	if len(e.Providers) != len(other.Providers) {
-		return false
-	}
-	for i, provider := range e.Providers {
-		if provider.ID != other.Providers[i].ID {
-			return false
-		}
-		if provider.Type != other.Providers[i].Type {
-			return false
-		}
-		if provider.Name != other.Providers[i].Name {
-			return false
-		}
-		if provider.ClientID != other.Providers[i].ClientID {
-			return false
-		}
-		if provider.ClientSecret != other.Providers[i].ClientSecret {
-			return false
-		}
-		if provider.ClientSecretFile != other.Providers[i].ClientSecretFile {
-			return false
-		}
-		if provider.Scope != other.Providers[i].Scope {
-			return false
-		}
-		if provider.LoginURL != other.Providers[i].LoginURL {
-			return false
-		}
-		if provider.RedeemURL != other.Providers[i].RedeemURL {
-			return false
-		}
-		if provider.ProfileURL != other.Providers[i].ProfileURL {
-			return false
-		}
-		if provider.ValidateURL != other.Providers[i].ValidateURL {
-			return false
-		}
-		if provider.CodeChallengeMethod != other.Providers[i].CodeChallengeMethod {
-			return false
-		}
-	}
-	return true
+	return e.Options.equals(other.Options)
 }
 
 // nextKey is a struct used as key to store the next handler in the request context.

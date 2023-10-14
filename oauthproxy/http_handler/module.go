@@ -29,7 +29,7 @@ type OAuth2Session struct {
 // It implements the caddy.Module interface.
 func (OAuth2Session) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "http.handlers.oauth2_proxy",
+		ID:  "http.handlers.oauth2_session",
 		New: func() caddy.Module { return new(OAuth2Session) },
 	}
 }
@@ -45,21 +45,16 @@ func (p *OAuth2Session) Provision(ctx caddy.Context) error {
 	if p.EndpointRaw.Name == "" {
 		return fmt.Errorf("missing endpoint name")
 	}
-	endpoint, err := app.GetEndpoint(p.EndpointRaw.Name)
+	ep, err := app.GetOrAddEndpoint(&p.EndpointRaw)
 	if err != nil {
-		err := app.AddEndpoint(&p.EndpointRaw)
-		if err != nil {
-			return err
-		}
-		p.endpoint = &p.EndpointRaw
-	} else {
-		p.endpoint = endpoint
+		return err
 	}
+	p.endpoint = ep
 	return nil
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
-// It delegates the request to the oauth2-proxy policy.
+// It delegates the request to the oauth2-proxy mux.
 func (p OAuth2Session) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	return p.endpoint.ServeHTTP(w, r, next)
 }
