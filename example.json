@@ -12,7 +12,8 @@
                 "policies": [
                     {
                         "subjects": [
-                            "localhost"
+                            "localhost",
+                            "metrics.localhost"
                         ],
                         "issuers": [
                             {
@@ -24,11 +25,50 @@
                 ]
             }
         },
+        "oauth2": {
+            "endpoints": [
+                {
+                    "name": "az",
+                    "cookie_domains": [
+                        "localhost"
+                    ],
+                    "whitelist_domains": [
+                        "localhost"
+                    ],
+                    "extra_jwt_issuers": [
+                        "https://sts.windows.net/<tenantID>/=<clientID>"
+                    ],
+                    "providers": [
+                        {
+                            "id": "azure-ad",
+                            "name": "Azure AD",
+                            "provider": "oidc",
+                            "clientID": "<clientID>",
+                            "clientSecret": "<clientSecret>",
+                            "scope": "openid email profile",
+                            "loginURL": "https://login.microsoftonline.com/<tenantID>/v2.0/oauth2/authorize",
+                            "redeemURL": "https://login.microsoftonline.com/<tenantID>/v2.0/oauth2/token",
+                            "profileURL": "https://graph.microsoft.com/v1.0/me",
+                            "oidcConfig": {
+                                "issuerURL": "https://login.microsoftonline.com/<tenantID>/v2.0",
+                                "jwksURL": "https://login.microsoftonline.com/common/discovery/keys",
+                                "emailClaim": "email",
+                                "audienceClaims": [
+                                    "aud"
+                                ],
+                                "userIDClaim": "email"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
         "nats": {
             "auth_service": {
                 "internal_account": "AUTH",
                 "handler": {
-                    "module": "always_allow"
+                    "module": "oauth2",
+                    "endpoint": "az"
                 }
             },
             "server": {
@@ -36,6 +76,7 @@
                 "tags": {
                     "env": "demo"
                 },
+                "max_control_line": 8388608,
                 "debug": true,
                 "trace": true,
                 "http_port": 8222,
@@ -92,6 +133,12 @@
                                 }
                             ],
                             "handle": [
+                                {
+                                    "handler": "oauth2_proxy",
+                                    "endpoint": {
+                                        "name": "az"
+                                    }
+                                },
                                 {
                                     "handler": "metrics"
                                 }
