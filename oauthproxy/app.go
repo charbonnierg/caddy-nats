@@ -11,7 +11,11 @@ func init() {
 // App is the oauth2 app module.
 // It is the root module of the oauth2 Caddy module.
 // It contains a list of endpoints which are provisioned and setup when the app is started.
-// Each endpoint is a valid oauth2-proxy configuration.
+// Each endpoint will have an oauth2-proxy instance setup when the app is started.
+// Those instances can be used to perform oauth2 auth code flow by http middlewares,
+// or decode and validate session cookies by other caddy modules.
+// Each instance is configured with a cookie secret which is used to encrypt session cookies.
+// Those secrets are generated automatically when not provided, and in such case are not exposed to other modules.
 type App struct {
 	ctx       caddy.Context
 	Endpoints []*Endpoint `json:"endpoints,omitempty"`
