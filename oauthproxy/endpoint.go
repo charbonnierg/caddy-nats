@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package oauthproxy
 
 import (
@@ -39,6 +41,14 @@ func (Endpoint) CaddyModule() caddy.ModuleInfo {
 
 // ServeHTTP sets the next handler in the request context and calls the oauth2-proxy handler.
 // It implements the caddyhttp.MiddlewareHandler interface.
+// It is responsible for saving the next handler in the request context and calling the oauth2-proxy gorilla
+// mux handler: https://github.com/oauth2-proxy/oauth2-proxy/blob/131d0b1fd2aeaf7d3456ff094ade62e448a60cf0/server/oauthproxy.go#L319
+// The goal here is to call the oauth2-proxy handle and THEN the next handler.
+// But because oauth2-proxy is not a caddy module, we cannot use the caddy middleware chaining mechanism.
+// Instead, we configure oauth2-proxy (in the Endpoint.setup method) to use a custom upstream handler that will fetch the next handler
+// from the request context and call it. Checkout the oauth2-proxy code which uses this handler:
+// https://github.com/oauth2-proxy/oauth2-proxy/blob/131d0b1fd2aeaf7d3456ff094ade62e448a60cf0/server/oauthproxy.go#L984
+// The upstream handler is called ONLY when the request is authorized.
 func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	r = r.WithContext(context.WithValue(r.Context(), nextKey{}, next))
 	e.proxy.ServeHTTP(w, r)
@@ -205,8 +215,10 @@ func (e *Endpoint) equals(other *Endpoint) bool {
 type nextKey struct{}
 
 // chainer is a struct that implements the http.Handler interface.
-// It is used to chain the oauth2-proxy handler with the next handler.
+// It is called by oauth2-proxy gorilla mux when the request is authorized.
 // It fetches the next handler from the request context and calls it.
+// This whole thing relies on Endpoint.ServeHTTP to set the next handler in the request context
+// under the nextKey{} key.
 type chainer struct {
 	logger *zap.Logger
 }
