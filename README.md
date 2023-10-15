@@ -16,7 +16,7 @@ go build ./cmd/caddy
 sudo setcap cap_net_bind_service=+ep ./caddy
 ```
 
-- Update the example config with the oauth2 endpoint of your choice. Configuration should be a valid [Endpoint struct](https://github.com/charbonnierg/caddy-nats/blob/5af649f6c647dc63b94287288eebfddda712bcc8/oauthproxy/endpoint.go#L17).
+- Update the example config with the oauth2 endpoint of your choice. Configuration should be a valid [Endpoint struct](https://github.com/charbonnierg/caddy-nats/blob/rewrite/oauthproxy/endpoint.go#L21).
 
   ⚠ example config won't run without change, because it uses Azure Provider with fake data.
 
