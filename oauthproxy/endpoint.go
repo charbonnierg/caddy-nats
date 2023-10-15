@@ -10,6 +10,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/server"
@@ -52,43 +53,6 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyh
 	return nil
 }
 
-// This should not be needed now that whole config object is exposed
-// but it is kept to avoid changing example config files.
-func (e *Endpoint) applyDefaultOpts() error {
-	// Configure cookie name
-	if e.opts.Cookie.Name == "" {
-		e.opts.Cookie.Name = fmt.Sprintf("%s_%s", e.Name, "oauth2_proxy")
-	}
-	// Configure remaining options
-	e.opts.SkipJwtBearerTokens = true
-	e.opts.ReverseProxy = true
-	e.opts.SkipProviderButton = true
-	e.opts.EmailDomains = []string{"*"}
-
-	// This is a hack to get the access token and id token to the backend
-	e.opts.InjectRequestHeaders = append(e.opts.InjectRequestHeaders, options.Header{
-		Name: "X-Forwarded-Access-Token",
-		Values: []options.HeaderValue{
-			{
-				ClaimSource: &options.ClaimSource{
-					Claim: "access_token",
-				},
-			},
-		},
-	},
-		options.Header{
-			Name: "Authorization",
-			Values: []options.HeaderValue{
-				{
-					ClaimSource: &options.ClaimSource{
-						Claim: "id_token",
-					},
-				},
-			},
-		})
-	return nil
-}
-
 // Provision loads and validate the endpoint configuration.
 // It is called when AddEndpoint method of the app is called and should
 // not be called directly by other host modules.
@@ -98,15 +62,9 @@ func (e *Endpoint) Provision(ctx caddy.Context) error {
 		return fmt.Errorf("no options found for endpoint %s", e.Name)
 	}
 	// Save options
-	e.opts = e.Options.oauth2proxyOpts()
+	e.opts = e.Options.getOptions()
 	// Save logger
 	e.logger = ctx.Logger().Named(e.Name)
-
-	// TODO: This should not be needed now that whole config object is exposed
-	// but it is kept to avoid changing example config files.
-	if err := e.applyDefaultOpts(); err != nil {
-		return err
-	}
 	// TODO: The secret is randomely generated, but it is not persisted
 	if e.opts.Cookie.Secret == "" {
 		secret, err := generateRandomASCIIString(32)
@@ -115,12 +73,10 @@ func (e *Endpoint) Provision(ctx caddy.Context) error {
 		}
 		e.opts.Cookie.Secret = secret
 	}
-	// Save cipher
-	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(e.opts.Cookie.Secret))
-	if err != nil {
-		return fmt.Errorf("error initialising cipher: %v", err)
+	// load cipher
+	if err := e.loadCipher(); err != nil {
+		return err
 	}
-	e.cipher = cipher
 	// Validate options
 	if err := validation.Validate(e.opts); err != nil {
 		return err
@@ -129,12 +85,22 @@ func (e *Endpoint) Provision(ctx caddy.Context) error {
 	return nil
 }
 
+func (e *Endpoint) loadCipher() error {
+	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(e.opts.Cookie.Secret))
+	if err != nil {
+		return fmt.Errorf("error initialising cipher: %v", err)
+	}
+	e.cipher = cipher
+	return nil
+}
+
 // setup sets up the oauth2-proxy instance for this endpoint.
 // It is called when the app is started, not when the endpoint is provisioned.
 func (e *Endpoint) setup() error {
-	chainer := chainer{logger: e.logger}
+	up := upstream{logger: e.logger}
 	validator := server.NewValidator(e.opts.EmailDomains, e.opts.AuthenticatedEmailsFile)
-	proxy, err := server.NewEmbeddedOauthProxy(e.opts, validator, &chainer)
+	proxy, err := server.NewEmbeddedOauthProxy(e.opts, validator, &up)
+	up.setSessionLoader(proxy.LoadCookiedSession)
 	if err != nil {
 		return err
 	}
@@ -146,7 +112,7 @@ func (e *Endpoint) isReference() bool {
 	return e.Options == nil
 }
 
-func (e *Endpoint) equals(other *Endpoint) bool {
+func (e *Endpoint) isEqualTo(other *Endpoint) bool {
 	if e.Name != other.Name {
 		return false
 	}
@@ -161,19 +127,34 @@ func (e *Endpoint) equals(other *Endpoint) bool {
 // collisions with other packages.
 type nextKey struct{}
 
-// chainer is a struct that implements the http.Handler interface.
+// upstream is a struct that implements the http.Handler interface.
 // It is called by oauth2-proxy gorilla mux when the request is authorized.
 // It fetches the next handler from the request context and calls it.
 // This whole thing relies on Endpoint.ServeHTTP to set the next handler in the request context
 // under the nextKey{} key.
-type chainer struct {
-	logger *zap.Logger
+type upstream struct {
+	sessionLoader func(r *http.Request) (*sessions.SessionState, error)
+	logger        *zap.Logger
+}
+
+// setSessionLoader sets the session loader function.
+// this is needed to avoid circular dependencies because proxy needs the upstream to be created
+// but upstream need sessionLoader from proxy. Instead of passing the sessionLoader when creating
+// the upstream, we set it after both the upstream and the proxy are created.
+func (h *upstream) setSessionLoader(loader func(r *http.Request) (*sessions.SessionState, error)) {
+	h.sessionLoader = loader
 }
 
 // ServeHTTP fetches the next handler from the request context and calls it.
 // It is called by oauth2-proxy when the request is authorized as the upstream handler.
-func (h chainer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.logger.Info("serving authorized request", zap.Any("access_token", r.Header["X-Forwarded-Access-Token"]), zap.Any("id_token", r.Header["Authorization"]))
+func (h upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	session, err := h.sessionLoader(r)
+	if err != nil {
+		h.logger.Error("not authorized", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	h.logger.Info("serving authorized request", zap.String("email", session.Email), zap.String("expires_on", session.ExpiresOn.String()))
 	nextRaw := r.Context().Value(nextKey{})
 	if nextRaw == nil {
 		h.logger.Error("next handler not found in request context")
@@ -186,8 +167,7 @@ func (h chainer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	err := next.ServeHTTP(w, r)
-	if err != nil {
+	if err := next.ServeHTTP(w, r); err != nil {
 		h.logger.Error("error serving next handler", zap.Error(err))
 	}
 }

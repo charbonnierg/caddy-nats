@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package oauthproxy
 
 import (
@@ -5,37 +7,6 @@ import (
 
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
-
-type Headers []Header
-
-// Header represents an individual header that will be added to a request or
-// response header.
-type Header struct {
-	// Name is the header name to be used for this set of values.
-	// Names should be unique within a list of Headers.
-	Name string `json:"name,omitempty"`
-
-	// PreserveRequestValue determines whether any values for this header
-	// should be preserved for the request to the upstream server.
-	// This option only applies to injected request headers.
-	// Defaults to false (headers that match this header will be stripped).
-	PreserveRequestValue bool `json:"preserve_request_value,omitempty"`
-
-	// Values contains the desired values for this header
-	Values HeaderValues `json:"values,omitempty"`
-}
-
-type HeaderValues []HeaderValue
-
-// HeaderValue represents a single header value and the sources that can
-// make up the header value
-type HeaderValue struct {
-	// Allow users to load the value from a secret source
-	*SecretSource `json:",omitempty"`
-
-	// Allow users to load the value from a session claim
-	*ClaimSource `json:",omitempty"`
-}
 
 // SecretSource references an individual secret value.
 // Only one source within the struct should be defined at any time.
@@ -64,6 +35,41 @@ type ClaimSource struct {
 	// Note the value of claim will become the basic auth username and the
 	// basicAuthPassword will be used as the password value.
 	BasicAuthPassword *SecretSource `json:"basic_auth_password,omitempty"`
+}
+
+// Headers is a list of Header objects that will be added to a request or
+// response header.
+type Headers []Header
+
+// Header represents an individual header that will be added to a request or
+// response header.
+type Header struct {
+	// Name is the header name to be used for this set of values.
+	// Names should be unique within a list of Headers.
+	Name string `json:"name,omitempty"`
+
+	// PreserveRequestValue determines whether any values for this header
+	// should be preserved for the request to the upstream server.
+	// This option only applies to injected request headers.
+	// Defaults to false (headers that match this header will be stripped).
+	PreserveRequestValue bool `json:"preserve_request_value,omitempty"`
+
+	// Values contains the desired values for this header
+	Values HeaderValues `json:"values,omitempty"`
+}
+
+// HeaderValues is a list of HeaderValue objects that will be added to a
+// request or response header.
+type HeaderValues []HeaderValue
+
+// HeaderValue represents a single header value and the sources that can
+// make up the header value
+type HeaderValue struct {
+	// Allow users to load the value from a secret source
+	*SecretSource `json:",omitempty"`
+
+	// Allow users to load the value from a session claim
+	*ClaimSource `json:",omitempty"`
 }
 
 // Templates includes options for configuring the sign in and error pages
@@ -121,12 +127,14 @@ type RedisStoreOptions struct {
 	IdleTimeout            int      `json:"idle_timeout"`
 }
 
+// SessionOptions contains configuration options for the session store.
 type SessionOptions struct {
 	Type   string             `json:"type"`
 	Cookie CookieStoreOptions `json:"cookie"`
 	Redis  RedisStoreOptions  `json:"redis"`
 }
 
+// Cookie contains configuration options for the cookie.
 type Cookie struct {
 	Name           string        `json:"name,omitempty"`
 	Secret         string        `json:"secret,omitempty"`
@@ -134,13 +142,14 @@ type Cookie struct {
 	Path           string        `json:"path,omitempty"`
 	Expire         time.Duration `json:"expire,omitempty"`
 	Refresh        time.Duration `json:"refresh,omitempty"`
-	Secure         bool          `json:"secure,omitempty"`
-	HTTPOnly       bool          `json:"http_only,omitempty"`
+	NoSecure       bool          `json:"no_secure,omitempty"`
+	NoHTTPOnly     bool          `json:"no_http_only,omitempty"`
 	SameSite       string        `json:"same_site,omitempty"`
 	CSRFPerRequest bool          `json:"csrf_per_request,omitempty"`
 	CSRFExpire     time.Duration `json:"csrf_expire,omitempty"`
 }
 
+// Options contains all configuration options for oauth2-proxy endpoint.
 type Options struct {
 	ProxyPrefix             string   `json:"proxy_prefix"`
 	PingPath                string   `json:"ping_path,omitempty"`
@@ -154,11 +163,11 @@ type Options struct {
 	WhitelistDomains        []string `json:"whitelist_domains,omitempty"`
 	HtpasswdFile            string   `json:"htpasswd_file,omitempty"`
 	HtpasswdUserGroups      []string `json:"htpasswd_user_groups,omitempty"`
+	ReverseProxy            bool     `json:"reverse_proxy,omitempty"`
 
-	Cookie    Cookie          `json:"cookie"`
-	Session   SessionOptions  `json:"session"`
-	Templates Templates       `json:"templates"`
-	Logging   options.Logging `json:"logging"`
+	Cookie    Cookie         `json:"cookie"`
+	Session   SessionOptions `json:"session"`
+	Templates Templates      `json:"templates"`
 
 	InjectRequestHeaders  Headers `json:"inject_request_headers,omitempty"`
 	InjectResponseHeaders Headers `json:"inject_response_headers,omitempty"`
@@ -174,13 +183,14 @@ type Options struct {
 	SSLInsecureSkipVerify bool     `json:"ssl_insecure_skip_verify,omitempty"`
 	SkipAuthPreflight     bool     `json:"skip_auth_preflight,omitempty"`
 	ForceJSONErrors       bool     `json:"force_json_errors,omitempty"`
-
-	SignatureKey    string `json:"signature_key,omitempty"`
-	GCPHealthChecks bool   `json:"gcp_healthchecks,omitempty"`
 }
 
-func (o *Options) oauth2proxyOpts() *options.Options {
+func (o *Options) getOptions() *options.Options {
 	opts := options.NewOptions()
+	opts.Logging.AuthEnabled = false
+	opts.Logging.StandardEnabled = false
+	opts.Logging.RequestEnabled = false
+	opts.ReverseProxy = o.ReverseProxy
 	if o.ProxyPrefix != "" {
 		opts.ProxyPrefix = o.ProxyPrefix
 	}
@@ -235,11 +245,11 @@ func (o *Options) oauth2proxyOpts() *options.Options {
 	if o.Cookie.Refresh != 0 {
 		opts.Cookie.Refresh = o.Cookie.Refresh
 	}
-	if o.Cookie.Secure {
-		opts.Cookie.Secure = o.Cookie.Secure
+	if o.Cookie.NoSecure {
+		opts.Cookie.Secure = false
 	}
-	if o.Cookie.HTTPOnly {
-		opts.Cookie.HTTPOnly = o.Cookie.HTTPOnly
+	if o.Cookie.NoHTTPOnly {
+		opts.Cookie.HTTPOnly = false
 	}
 	if o.Cookie.SameSite != "" {
 		opts.Cookie.SameSite = o.Cookie.SameSite
@@ -262,7 +272,6 @@ func (o *Options) oauth2proxyOpts() *options.Options {
 	if o.Session.Redis.Password != "" {
 		opts.Session.Redis.Password = o.Session.Redis.Password
 	}
-
 	if o.Session.Redis.UseSentinel {
 		opts.Session.Redis.UseSentinel = o.Session.Redis.UseSentinel
 	}
@@ -291,7 +300,6 @@ func (o *Options) oauth2proxyOpts() *options.Options {
 		opts.Session.Redis.IdleTimeout = o.Session.Redis.IdleTimeout
 	}
 	if o.Templates.Path != "" {
-
 		opts.Templates.Path = o.Templates.Path
 	}
 	if o.Templates.CustomLogo != "" {
@@ -346,12 +354,6 @@ func (o *Options) oauth2proxyOpts() *options.Options {
 	if o.ForceJSONErrors {
 		opts.ForceJSONErrors = o.ForceJSONErrors
 	}
-	if o.SignatureKey != "" {
-		opts.SignatureKey = o.SignatureKey
-	}
-	if o.GCPHealthChecks {
-		opts.GCPHealthChecks = o.GCPHealthChecks
-	}
 	return opts
 }
 
@@ -363,6 +365,102 @@ func (o *Options) equals(other *Options) bool {
 		if issuer != other.ExtraJwtIssuers[i] {
 			return false
 		}
+	}
+	if len(o.SkipAuthRegex) != len(other.SkipAuthRegex) {
+		return false
+	}
+	for i, regex := range o.SkipAuthRegex {
+		if regex != other.SkipAuthRegex[i] {
+			return false
+		}
+	}
+	if len(o.SkipAuthRoutes) != len(other.SkipAuthRoutes) {
+		return false
+	}
+	for i, route := range o.SkipAuthRoutes {
+		if route != other.SkipAuthRoutes[i] {
+			return false
+
+		}
+	}
+	if len(o.APIRoutes) != len(other.APIRoutes) {
+		return false
+	}
+	for i, route := range o.APIRoutes {
+		if route != other.APIRoutes[i] {
+			return false
+		}
+	}
+	if len(o.TrustedIPs) != len(other.TrustedIPs) {
+		return false
+	}
+	for i, ip := range o.TrustedIPs {
+		if ip != other.TrustedIPs[i] {
+			return false
+		}
+	}
+	if len(o.EmailDomains) != len(other.EmailDomains) {
+		return false
+	}
+	for i, domain := range o.EmailDomains {
+		if domain != other.EmailDomains[i] {
+			return false
+		}
+	}
+	if len(o.WhitelistDomains) != len(other.WhitelistDomains) {
+		return false
+	}
+	for i, domain := range o.WhitelistDomains {
+		if domain != other.WhitelistDomains[i] {
+			return false
+		}
+	}
+	if len(o.HtpasswdUserGroups) != len(other.HtpasswdUserGroups) {
+		return false
+	}
+	for i, group := range o.HtpasswdUserGroups {
+		if group != other.HtpasswdUserGroups[i] {
+			return false
+		}
+	}
+	if o.ProxyPrefix != other.ProxyPrefix {
+		return false
+	}
+	if o.PingPath != other.PingPath {
+		return false
+	}
+	if o.PingUserAgent != other.PingUserAgent {
+		return false
+	}
+	if o.ReadyPath != other.ReadyPath {
+		return false
+	}
+	if o.RealClientIPHeader != other.RealClientIPHeader {
+		return false
+	}
+	if o.RawRedirectURL != other.RawRedirectURL {
+		return false
+	}
+	if o.AuthenticatedEmailsFile != other.AuthenticatedEmailsFile {
+		return false
+	}
+	if o.HtpasswdFile != other.HtpasswdFile {
+		return false
+	}
+	if !o.Cookie.isEqualTo(&other.Cookie) {
+		return false
+	}
+	if !o.Session.isEqualTo(&other.Session) {
+		return false
+	}
+	if !o.Templates.isEqualTo(&other.Templates) {
+		return false
+	}
+	if !o.InjectRequestHeaders.isEqualTo(other.InjectRequestHeaders) {
+		return false
+	}
+	if !o.InjectResponseHeaders.isEqualTo(other.InjectResponseHeaders) {
+		return false
 	}
 	if len(o.Providers) != len(other.Providers) {
 		return false
@@ -424,6 +522,14 @@ func (c *ClaimSource) oauth2proxyClaimSource() options.ClaimSource {
 	}
 }
 
+func (h *Header) oauth2proxyHeader() *options.Header {
+	return &options.Header{
+		Name:                 h.Name,
+		PreserveRequestValue: h.PreserveRequestValue,
+		Values:               h.Values.oauth2proxyHeaderValues(),
+	}
+}
+
 func (h *HeaderValue) oauth2proxyHeaderValue() options.HeaderValue {
 	var source options.SecretSource
 	if h.SecretSource != nil {
@@ -443,12 +549,12 @@ func (h *HeaderValue) oauth2proxyHeaderValue() options.HeaderValue {
 	}
 }
 
-func (h *Header) oauth2proxyHeader() *options.Header {
-	return &options.Header{
-		Name:                 h.Name,
-		PreserveRequestValue: h.PreserveRequestValue,
-		Values:               h.Values.oauth2proxyHeaderValues(),
+func (h Headers) oauth2proxyHeaders() []options.Header {
+	var headers []options.Header
+	for _, header := range h {
+		headers = append(headers, *header.oauth2proxyHeader())
 	}
+	return headers
 }
 
 func (h HeaderValues) oauth2proxyHeaderValues() []options.HeaderValue {
@@ -459,10 +565,211 @@ func (h HeaderValues) oauth2proxyHeaderValues() []options.HeaderValue {
 	return values
 }
 
-func (h Headers) oauth2proxyHeaders() []options.Header {
-	var headers []options.Header
-	for _, header := range h {
-		headers = append(headers, *header.oauth2proxyHeader())
+func (s SecretSource) isEqualTo(other *SecretSource) bool {
+	if len(s.Value) != len(other.Value) {
+		return false
 	}
-	return headers
+	for i, v := range s.Value {
+		if v != other.Value[i] {
+			return false
+		}
+	}
+	if s.FromEnv != other.FromEnv {
+		return false
+	}
+	if s.FromFile != other.FromFile {
+		return false
+	}
+	return true
+}
+
+func (c *ClaimSource) isEqualTo(other *ClaimSource) bool {
+	if c.Claim != other.Claim {
+		return false
+	}
+	if c.Prefix != other.Prefix {
+		return false
+	}
+	if c.BasicAuthPassword != nil && other.BasicAuthPassword != nil {
+		return c.BasicAuthPassword.isEqualTo(other.BasicAuthPassword)
+	}
+	return true
+}
+
+func (v *HeaderValue) isEqualTo(other *HeaderValue) bool {
+	if v.SecretSource != nil && other.SecretSource != nil {
+		return v.SecretSource.isEqualTo(other.SecretSource)
+	}
+	if v.ClaimSource != nil && other.ClaimSource != nil {
+		return v.ClaimSource.isEqualTo(other.ClaimSource)
+	}
+	return false
+}
+
+func (v HeaderValues) isEqualTo(other HeaderValues) bool {
+	if len(v) != len(other) {
+		return false
+	}
+	for i, v := range v {
+		if !v.isEqualTo(&(other)[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (h Header) isEqualTo(other Header) bool {
+	if h.Name != other.Name {
+		return false
+	}
+	if h.PreserveRequestValue != other.PreserveRequestValue {
+		return false
+	}
+	return h.Values.isEqualTo(other.Values)
+}
+
+func (h Headers) isEqualTo(other Headers) bool {
+	if len(h) != len(other) {
+		return false
+	}
+	for i, v := range h {
+		if !v.isEqualTo(other[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (t *Templates) isEqualTo(other *Templates) bool {
+	if t.Path != other.Path {
+		return false
+	}
+	if t.CustomLogo != other.CustomLogo {
+		return false
+	}
+	if t.Banner != other.Banner {
+		return false
+	}
+	if t.Footer != other.Footer {
+		return false
+	}
+	if t.DisplayLoginForm != other.DisplayLoginForm {
+		return false
+	}
+	if t.Debug != other.Debug {
+		return false
+	}
+	return true
+}
+
+func (c *CookieStoreOptions) isEqualTo(other *CookieStoreOptions) bool {
+	return c.Minimal == other.Minimal
+}
+
+func (r *RedisStoreOptions) isEqualTo(other *RedisStoreOptions) bool {
+	if r.ConnectionURL != other.ConnectionURL {
+		return false
+	}
+	if r.Password != other.Password {
+		return false
+	}
+	if r.UseSentinel != other.UseSentinel {
+		return false
+	}
+	if r.SentinelPassword != other.SentinelPassword {
+		return false
+	}
+	if r.SentinelMasterName != other.SentinelMasterName {
+		return false
+	}
+	if r.SentinelConnectionURLs != nil && other.SentinelConnectionURLs != nil {
+		if len(r.SentinelConnectionURLs) != len(other.SentinelConnectionURLs) {
+			return false
+		}
+		for i, v := range r.SentinelConnectionURLs {
+			if v != other.SentinelConnectionURLs[i] {
+				return false
+			}
+		}
+	}
+	if r.UseCluster != other.UseCluster {
+		return false
+	}
+	if r.ClusterConnectionURLs != nil || other.ClusterConnectionURLs != nil {
+		if len(r.ClusterConnectionURLs) != len(other.ClusterConnectionURLs) {
+			return false
+		}
+		for i, v := range r.ClusterConnectionURLs {
+			if v != other.ClusterConnectionURLs[i] {
+				return false
+			}
+		}
+	}
+	if r.CAPath != other.CAPath {
+		return false
+	}
+	if r.InsecureSkipTLSVerify != other.InsecureSkipTLSVerify {
+		return false
+	}
+	if r.IdleTimeout != other.IdleTimeout {
+		return false
+	}
+	return true
+}
+
+func (s *SessionOptions) isEqualTo(other *SessionOptions) bool {
+	if s.Type != other.Type {
+		return false
+	}
+	if s.Cookie.isEqualTo(&other.Cookie) {
+		return false
+	}
+	if s.Redis.isEqualTo(&other.Redis) {
+		return false
+	}
+	return true
+}
+
+func (c *Cookie) isEqualTo(other *Cookie) bool {
+	if c.Name != other.Name {
+		return false
+	}
+	if c.Secret != other.Secret {
+		return false
+	}
+	if c.Domains != nil && other.Domains != nil {
+		if len(c.Domains) != len(other.Domains) {
+			return false
+		}
+		for i, v := range c.Domains {
+			if v != other.Domains[i] {
+				return false
+			}
+		}
+	}
+	if c.Path != other.Path {
+		return false
+	}
+	if c.Expire != other.Expire {
+		return false
+	}
+	if c.Refresh != other.Refresh {
+		return false
+	}
+	if c.NoSecure != other.NoSecure {
+		return false
+	}
+	if c.NoHTTPOnly != other.NoHTTPOnly {
+		return false
+	}
+	if c.SameSite != other.SameSite {
+		return false
+	}
+	if c.CSRFPerRequest != other.CSRFPerRequest {
+		return false
+	}
+	if c.CSRFExpire != other.CSRFExpire {
+		return false
+	}
+	return true
 }

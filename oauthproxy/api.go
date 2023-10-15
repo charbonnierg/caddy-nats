@@ -38,7 +38,7 @@ func (a *App) GetOrAddEndpoint(e *Endpoint) (*Endpoint, error) {
 			if e.isReference() {
 				return existing, nil
 			}
-			if !existing.equals(e) {
+			if !existing.isEqualTo(e) {
 				return nil, fmt.Errorf("endpoint %s already exists with different configuration", e.Name)
 			}
 			return existing, nil
