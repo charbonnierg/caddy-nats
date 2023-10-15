@@ -17,13 +17,25 @@ func init() {
 	caddy.RegisterModule(OAuth2ProxyAuthCallout{})
 }
 
-// A minimal auth callout handler that always denies access.
+// OAuth2ProxyAuthCallout is a caddy module that implements the auth callout interface.
+// It is used to authenticate users using an oauth2 proxy.
+// It is configured in the "nats.auth_callout.oauth2" namespace.
+// It must be configured with an endpoint name, which must be defined in the oauth2 app.
+// If NATS server is running in operator mode, it must also be configured with signing keys
+// for the target accounts.
+// In NATS server is running in server mode, there is no need to configure signing keys,
+// as the signing key is configured in the parent caddy module.
+// This auth callout always expects the username to be the target account, and the password
+// to be the oauth2 session state (encrypted cookie string).
+// It is useful to authenticate websocket users coming from applications protected
+// by an oauth2 proxy.
 type OAuth2ProxyAuthCallout struct {
-	logger     *zap.Logger
-	sk         nkeys.KeyPair
-	endpoint   *oauthproxy.Endpoint
-	Endpoint   string `json:"endpoint"`
-	SigningKey string `json:"signing_key"`
+	logger         *zap.Logger
+	auth           *modules.AuthService
+	endpoint       *oauthproxy.Endpoint
+	keys           map[string]nkeys.KeyPair
+	Endpoint       string            `json:"endpoint"`
+	SigningKeysRaw map[string]string `json:"signing_keys,omitempty"`
 }
 
 func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
@@ -38,26 +50,19 @@ func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
 // It should not be called directly by other modules.
 func (c *OAuth2ProxyAuthCallout) Provision(app *modules.App) error {
 	c.logger = app.Context().Logger().Named("oauth2")
+	// Save auth service
+	c.auth = app.AuthService
+	// Load oauth2 app
 	oauthApp, err := oauthproxy.LoadApp(app.Context())
 	if err != nil {
 		return err
 	}
+	// Load oauth2 endpoint
 	endpoint, err := oauthApp.GetEndpoint(c.Endpoint)
 	if err != nil {
 		return err
 	}
 	c.endpoint = endpoint
-	var seed []byte
-	if app.Options.Operators == nil {
-		seed = []byte(app.AuthService.AuthSigningKey)
-	} else {
-		seed = []byte(c.SigningKey)
-	}
-	sk, err := nkeys.FromSeed(seed)
-	if err != nil {
-		return err
-	}
-	c.sk = sk
 	return nil
 }
 
@@ -85,21 +90,28 @@ func (c *OAuth2ProxyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims)
 	c.logger.Info("authenticated user", zap.String("email", sessionState.Email), zap.String("account", targetAccount))
 	userClaims.Name = sessionState.Email
 
-	// We should decide whether to allow the user to connect to the target account
-	// For now, we allow all users to connect to all accounts
-	// ...
-
-	// Encode user claims using signing key (the nkey seed associated with the issuer public key in server mode, or a signing key of target account in operator mode)
-	// This will work poorly in operator mode, as a single signing key is used for all accounts.
-	// But NATS auth callout ADR explicitely states that the callout service can issue JWT for DIFFERENT accounts
-	// as long as they are signed by the target account.
 	// Ideally, caddy modules could be used to fetch signing key from a remote service, but that's out of scope for now.
-	encoded, err := userClaims.Encode(c.sk)
-	if err != nil {
-		return nil, err
+	if c.keys != nil {
+		// We are in operator mode, use the signing key of the target account
+		key, ok := c.keys[targetAccount]
+		if !ok {
+			return nil, fmt.Errorf("no signing key for account %s", targetAccount)
+		}
+		encoded, err := userClaims.Encode(key)
+		if err != nil {
+			return nil, err
+		}
+		// Set encoded user claims as JWT in response claims
+		responseClaims.Jwt = encoded
+	} else {
+		// We are in server mode, use the signing key configured in the caddy module
+		encoded, err := c.auth.SignUserClaims(userClaims)
+		if err != nil {
+			return nil, err
+		}
+		// Set encoded user claims as JWT in response claims
+		responseClaims.Jwt = encoded
 	}
-	// Set encoded user claims as JWT in response claims
-	responseClaims.Jwt = encoded
 	// Return response claims (no need to sign them, as the caddy module will do it for us)
 	// In operator mode, this must be the signing key of the auth account in which auth callout is configured.
 	// In server mode, this is the nkey seed associated with the issuer public key.

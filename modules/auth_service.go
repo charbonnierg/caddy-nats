@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charbonnierg/caddy-nats/embedded/natsoptions"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
@@ -34,22 +33,21 @@ type AuthCallout interface {
 // The credentials are the credentials for the authorization callout issuer when
 // using operator mode. Credentials are not used in server mode.
 type AuthService struct {
-	logger          *zap.Logger
-	app             *App
-	conn            *nats.Conn
-	sub             *nats.Subscription
-	pk              string
-	xkp             nkeys.KeyPair
-	sk              nkeys.KeyPair
-	password        string
-	handler         AuthCallout
-	subject         string
-	HandlerRaw      json.RawMessage `json:"handler" caddy:"namespace=nats.auth_callout inline_key=module"`
-	InternalAccount string          `json:"internal_account,omitempty"`
-	InternalUser    string          `json:"internal_user,omitempty"`
-	AuthSigningKey  string          `json:"auth_signing_key"`
-	SubjectRaw      string          `json:"subject,omitempty"`
-	Credentials     string          `json:"credentials,omitempty"`
+	logger            *zap.Logger
+	pk                string
+	sk                nkeys.KeyPair
+	app               *App
+	conn              *nats.Conn
+	subject           string
+	subscription      *nats.Subscription
+	defaultHandler    AuthCallout
+	InternalAccount   string             `json:"internal_account,omitempty"`
+	InternalUser      string             `json:"internal_user,omitempty"`
+	AuthSigningKey    string             `json:"auth_signing_key"`
+	SubjectRaw        string             `json:"subject,omitempty"`
+	Credentials       string             `json:"credentials,omitempty"`
+	Policies          ConnectionPolicies `json:"policies,omitempty"`
+	DefaultHandlerRaw json.RawMessage    `json:"handler,omitempty" caddy:"namespace=nats.auth_callout inline_key=module"`
 }
 
 // Provision will provision the auth callout service.
@@ -57,93 +55,55 @@ type AuthService struct {
 // It will load and validate the auth callout handler module.
 // It will load and validate the auth signing key.
 func (s *AuthService) Provision(app *App) error {
-	s.logger = app.logger.Named("auth_callout")
 	s.app = app
-	if s.AuthSigningKey != "" && s.InternalAccount != "" {
-		return errors.New("auth signing key and internal account are mutually exclusive")
-	}
-	if s.InternalUser != "" && s.InternalAccount == "" {
-		return errors.New("internal account is required when using internal user")
-	}
-	if s.InternalAccount != "" && app.Options.Authorization != nil {
-		return errors.New("internal account is not allowed when custom authorization map is used")
-	}
-	if s.InternalAccount != "" && app.Options.Accounts == nil {
-		return errors.New("internal account is not allowed when no accounts are defined")
-	}
-	if s.InternalAccount != "" {
-		if s.InternalUser == "" {
-			s.InternalUser = "auth"
-		}
-		sk, err := nkeys.CreateAccount()
-		if err != nil {
-			return errors.New("failed to create internal auth account")
-		}
-		seed, err := sk.Seed()
-		if err != nil {
-			return errors.New("failed to get internal auth account seed")
-		}
-		pk, err := sk.PublicKey()
-		if err != nil {
-			return errors.New("failed to get internal auth account public key")
-		}
-		xkey, err := nkeys.CreateCurveKeys()
-		if err != nil {
-			return errors.New("failed to create internal auth user xkey")
-		}
-		s.xkp = xkey
-		auth := natsoptions.AuthorizationMap{
-			AuthCallout: &natsoptions.AuthCalloutMap{
-				Issuer: pk,
-				// XKey:      xpk,
-				Account:   s.InternalAccount,
-				AuthUsers: []string{s.InternalUser},
-			},
-		}
-		app.Options.Authorization = &auth
-		s.password = string(seed)
-		app.Options.Accounts = append(app.Options.Accounts, &natsoptions.Account{Name: s.InternalAccount, Users: []natsoptions.User{{User: s.InternalUser, Password: s.password}}})
-		s.AuthSigningKey = string(seed)
-	}
-	sk, err := nkeys.FromSeed([]byte(s.AuthSigningKey))
-	if err != nil {
-		return errors.New("failed to decode auth signing key")
-	}
-	s.sk = sk
-	pk, err := sk.PublicKey()
-	if err != nil {
-		return errors.New("failed to get auth signing key public key")
-	}
-	s.pk = pk
-	unm, err := app.ctx.LoadModule(s, "HandlerRaw")
-	if err != nil {
-		return fmt.Errorf("failed to load auth callout handler: %s", err.Error())
-	}
-	handler, ok := unm.(AuthCallout)
-	if !ok {
-		return errors.New("auth callout handler invalid type")
-	}
-	if err := handler.Provision(app); err != nil {
-		return fmt.Errorf("failed to provision auth callout handler: %s", err.Error())
-	}
-	s.handler = handler
-
+	s.logger = app.logger.Named("auth_callout")
+	// Provision subjec to which auth requests will be sent
 	if s.SubjectRaw == "" {
 		s.subject = DEFAULT_AUTH_CALLOUT_SUBJECT
 	} else {
 		s.subject = s.SubjectRaw
 	}
-	return nil
-}
-
-// Validate will validate the auth callout service.
-// It implements the caddy.Validator interface.
-func (s *AuthService) Validate() error {
+	// Generate an NATS server account if needed
+	// This account will be used to authenticate the auth callout
+	// A single user will be created in this account, password will
+	// be the auth signing key.
 	if s.AuthSigningKey == "" {
-		return errors.New("auth signing key is required")
+		if err := s.setupInternalAuthAccount(); err != nil {
+			return err
+		}
 	}
-	if s.handler == nil {
-		return errors.New("auth callout handler is required")
+	// At this point, either a signing key was provided in configuration
+	// or an internal account was created and the signing key is set
+	if s.AuthSigningKey == "" {
+		return errors.New("internal error: auth signing key is not set but should be")
+	}
+	// Provision auth signing key
+	sk, err := nkeys.FromSeed([]byte(s.AuthSigningKey))
+	if err != nil {
+		return errors.New("failed to decode auth signing key")
+	}
+	s.sk = sk
+	// Provision auth public key
+	pk, err := sk.PublicKey()
+	if err != nil {
+		return errors.New("failed to get auth signing key public key")
+	}
+	s.pk = pk
+	// Provision default handler
+	if s.DefaultHandlerRaw != nil {
+		unm, err := app.ctx.LoadModule(s, "DefaultHandlerRaw")
+		if err != nil {
+			return fmt.Errorf("failed to load default handler: %s", err.Error())
+		}
+		handler, ok := unm.(AuthCallout)
+		if !ok {
+			return errors.New("default handler invalid type")
+		}
+		s.defaultHandler = handler
+	}
+	// Provision policies
+	if err := s.Policies.Provision(app); err != nil {
+		return err
 	}
 	return nil
 }
@@ -152,6 +112,7 @@ func (s *AuthService) Validate() error {
 // It will subscribe to the auth callout subject.
 func (s *AuthService) Start(server *server.Server) error {
 	s.logger.Info("Starting auth callout service")
+	// Get default options
 	opts := nats.GetDefaultOptions()
 	// Set in process server option
 	if err := nats.InProcessServer(server)(&opts); err != nil {
@@ -161,52 +122,9 @@ func (s *AuthService) Start(server *server.Server) error {
 		if err := nats.UserCredentials(s.Credentials)(&opts); err != nil {
 			return err
 		}
-	}
-	// TODO: Refactor this big mess
-	// The goal is to "guess" the user and password to use for the auth callout
-	if s.app.Options != nil && s.app.Options.Authorization != nil {
-		auth := s.app.Options.Authorization
-		accs := s.app.Options.Accounts
-		config := auth.AuthCallout
-		if config != nil {
-			if config.AuthUsers != nil {
-				if auth.Users != nil {
-					var found = false
-					for _, user := range auth.Users {
-						if found {
-							break
-						}
-						for _, authUser := range config.AuthUsers {
-							if user.User == authUser {
-								opts.User = user.User
-								opts.Password = user.Password
-								found = true
-								break
-							}
-						}
-					}
-				} else {
-					for _, acc := range accs {
-						if acc.Name == config.Account {
-							var found = false
-							for _, user := range acc.Users {
-								if found {
-									break
-								}
-								for _, authUser := range config.AuthUsers {
-									if user.User == authUser {
-										opts.User = user.User
-										opts.Password = user.Password
-										found = true
-										break
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+	} else {
+		// Set password if any
+		s.setPassword(&opts)
 	}
 	// Create connection
 	conn, err := opts.Connect()
@@ -219,7 +137,7 @@ func (s *AuthService) Start(server *server.Server) error {
 	if err != nil {
 		return err
 	}
-	s.sub = sub
+	s.subscription = sub
 	return nil
 }
 
@@ -227,10 +145,15 @@ func (s *AuthService) Start(server *server.Server) error {
 // It will unsubscribe from the auth callout subject.
 func (s *AuthService) Stop() error {
 	s.logger.Info("Stopping auth callout service")
-	if s.sub != nil {
-		return s.sub.Unsubscribe()
+	if s.subscription != nil {
+		return s.subscription.Unsubscribe()
 	}
 	return nil
+}
+
+// SignUserClaims will sign the user claims using the auth signing key.
+func (s *AuthService) SignUserClaims(userClaims *jwt.UserClaims) (string, error) {
+	return userClaims.Encode(s.sk)
 }
 
 func (s *AuthService) handleMsg(msg *nats.Msg) {
@@ -241,13 +164,30 @@ func (s *AuthService) handleMsg(msg *nats.Msg) {
 		s.handleError(msg, request, err)
 		return
 	}
-	// Let module handle the request
-	response, err := s.handler.Handle(request)
-	// Either handle success or failure
-	if err != nil {
-		s.handleError(msg, request, err)
+	var handler AuthCallout
+	// Match handler for this request
+	matchedHandler, ok := s.Policies.Match(request)
+	// Fail if no policy matched and there is no default handler
+	if !ok && s.defaultHandler == nil {
+		s.handleError(msg, request, fmt.Errorf("no matching policy"))
+		return
+	}
+	// Use default handler if no policy matched
+	if !ok {
+		handler = s.defaultHandler
 	} else {
+		handler = matchedHandler
+	}
+	// Let handler handle the request
+	response, err := handler.Handle(request)
+	// Either handle success or failure
+	switch err {
+	case nil:
 		s.handleSuccess(msg, request, response)
+		return
+	default:
+		s.handleError(msg, request, err)
+		return
 	}
 }
 
@@ -277,5 +217,41 @@ func (s *AuthService) handleSuccess(msg *nats.Msg, request *jwt.AuthorizationReq
 	}
 	if err := msg.Respond([]byte(payload)); err != nil {
 		s.logger.Error("failed to respond to authorization request", zap.Error(err))
+	}
+}
+
+func (s *AuthService) setPassword(opts *nats.Options) {
+	// The goal is to "guess" the user and password to use for the auth callout
+	if s.app.Options != nil && s.app.Options.Authorization != nil {
+		auth := s.app.Options.Authorization
+		accs := s.app.Options.Accounts
+		config := auth.AuthCallout
+		if config != nil && config.AuthUsers != nil {
+			if auth.Users != nil {
+				for _, user := range auth.Users {
+					for _, authUser := range config.AuthUsers {
+						if user.User == authUser {
+							opts.User = user.User
+							opts.Password = user.Password
+							return
+						}
+					}
+				}
+			} else {
+				for _, acc := range accs {
+					if acc.Name == config.Account {
+						for _, user := range acc.Users {
+							for _, authUser := range config.AuthUsers {
+								if user.User == authUser {
+									opts.User = user.User
+									opts.Password = user.Password
+									return
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }

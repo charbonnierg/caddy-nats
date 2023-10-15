@@ -235,9 +235,6 @@ func (o *Options) setResolverOpts(opts *server.Options) error {
 }
 
 func (o *Options) setSystemAccountOpt(opts *server.Options) error {
-	if o.SystemAccount == "" {
-		return nil
-	}
 	if o.Operators != nil {
 		// Parse system account jwt
 		claims, err := jwt.DecodeAccountClaims(o.SystemAccount)
@@ -246,9 +243,23 @@ func (o *Options) setSystemAccountOpt(opts *server.Options) error {
 		}
 		opts.SystemAccount = claims.Subject
 		o.systemAccount = claims
-	} else {
-		// Don't attempt to parse, system account may be a simple name
-		opts.SystemAccount = o.SystemAccount
+		return nil
+	}
+	// Don't attempt to parse, system account may be a simple name, maybe it's empty
+	opts.SystemAccount = o.SystemAccount
+	// Check is system account must be created
+	if o.SystemAccount == "" && o.systemAccount == nil && o.Accounts != nil {
+		// We have accounts, but we don't have a system account.
+		// Let's create one named "SYS"
+		o.SystemAccount = "SYS"
+		// If this account already exists, raise an error, because we don't know
+		// if administrator is aware that this will be the system account or not
+		for _, account := range o.Accounts {
+			if account.Name == o.SystemAccount {
+				return errors.New("system account must be explicitely specified when an account named SYS is used")
+			}
+		}
+		o.addAccount(opts, &Account{Name: o.SystemAccount})
 	}
 	return nil
 }
@@ -316,10 +327,10 @@ func (o *Options) setUserPasswordAuth(opts *server.Options) error {
 
 func (o *Options) addUser(opts *server.Options, user *User) error {
 	if user.User == "" {
-		return errors.New("authorization.users.user cannot be empty")
+		return errors.New("cannot add user without a name")
 	}
 	if user.Password == "" {
-		return errors.New("authorization.users.password cannot be empty")
+		return errors.New("cannot add user without a password")
 	}
 	allowedConnTypes, err := validateConnectionTypes(user.AllowedConnectionTypes)
 	if err != nil {
@@ -361,10 +372,10 @@ func (o *Options) setUsersAuth(opts *server.Options) error {
 
 func (o *Options) addAccountUser(opts *server.Options, account *server.Account, user *User) error {
 	if user.User == "" {
-		return errors.New("authorization.users.user cannot be empty")
+		return errors.New("cannot add an account user without a name")
 	}
 	if user.Password == "" {
-		return errors.New("authorization.users.password cannot be empty")
+		return errors.New("cannot add an account user without a password")
 	}
 	allowedConnTypes, err := validateConnectionTypes(user.AllowedConnectionTypes)
 	if err != nil {
