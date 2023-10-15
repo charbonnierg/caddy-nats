@@ -13,7 +13,11 @@
                     {
                         "subjects": [
                             "localhost",
-                            "metrics.localhost"
+                            "auth.localhost",
+                            "leaf.localhost",
+                            "ws.localhost",
+                            "metrics.localhost",
+                            "demo.localhost"
                         ],
                         "issuers": [
                             {
@@ -29,37 +33,47 @@
             "endpoints": [
                 {
                     "name": "az",
-                    "cookie_domains": [
-                        "localhost"
-                    ],
-                    "whitelist_domains": [
-                        "localhost"
-                    ],
-                    "extra_jwt_issuers": [
-                        "https://sts.windows.net/<tenantID>/=<clientID>"
-                    ],
-                    "providers": [
-                        {
-                            "id": "azure-ad",
-                            "name": "Azure AD",
-                            "provider": "oidc",
-                            "clientID": "<clientID>",
-                            "clientSecret": "<clientSecret>",
-                            "scope": "openid email profile",
-                            "loginURL": "https://login.microsoftonline.com/<tenantID>/v2.0/oauth2/authorize",
-                            "redeemURL": "https://login.microsoftonline.com/<tenantID>/v2.0/oauth2/token",
-                            "profileURL": "https://graph.microsoft.com/v1.0/me",
-                            "oidcConfig": {
-                                "issuerURL": "https://login.microsoftonline.com/<tenantID>/v2.0",
-                                "jwksURL": "https://login.microsoftonline.com/common/discovery/keys",
-                                "emailClaim": "email",
-                                "audienceClaims": [
-                                    "aud"
-                                ],
-                                "userIDClaim": "email"
+                    "options": {
+                        "cookie": {
+                            "domains": [
+                                "localhost",
+                                ".localhost"
+                            ],
+                            "no_http_only": true
+                        },
+                        "email_domains": [
+                            "*"
+                        ],
+                        "whitelist_domains": [
+                            "localhost",
+                            ".localhost"
+                        ],
+                        "extra_jwt_issuers": [
+                            "https://sts.windows.net/<TENANT ID>/=<CLIENT ID>"
+                        ],
+                        "providers": [
+                            {
+                                "id": "azure-ad",
+                                "name": "Azure AD",
+                                "provider": "oidc",
+                                "clientID": "<CLIENT ID>",
+                                "clientSecret": "<CLIENT SECRET>",
+                                "scope": "openid email profile",
+                                "loginURL": "https://login.microsoftonline.com/<TENANT ID>/v2.0/oauth2/authorize",
+                                "redeemURL": "https://login.microsoftonline.com/<TENANT ID>/v2.0/oauth2/token",
+                                "profileURL": "https://graph.microsoft.com/v1.0/me",
+                                "oidcConfig": {
+                                    "issuerURL": "https://login.microsoftonline.com/<TENANT ID>/v2.0",
+                                    "jwksURL": "https://login.microsoftonline.com/common/discovery/keys",
+                                    "emailClaim": "email",
+                                    "audienceClaims": [
+                                        "aud"
+                                    ],
+                                    "userIDClaim": "email"
+                                }
                             }
-                        }
-                    ]
+                        ]
+                    }
                 }
             ]
         },
@@ -67,9 +81,52 @@
             "auth_service": {
                 "internal_account": "AUTH",
                 "handler": {
-                    "module": "oauth2",
-                    "endpoint": "az"
-                }
+                    "module": "always_deny"
+                },
+                "policies": [
+                    {
+                        "match": [
+                            {
+                                "connect_opts": {
+                                    "username": "APP"
+                                }
+                            }
+                        ],
+                        "handler": {
+                            "module": "oauth2",
+                            "endpoint": "az"
+                        }
+                    },
+                    {
+                        "match": [
+                            {
+                                "client_info": {
+                                    "host": "127.0.0.1",
+                                    "kind": "Client",
+                                    "type": "nats"
+                                },
+                                "connect_opts": {
+                                    "username": "SYS"
+                                }
+                            }
+                        ],
+                        "handler": {
+                            "module": "always_allow"
+                        }
+                    },
+                    {
+                        "match": [
+                            {
+                                "connect_opts": {
+                                    "username": "GUEST"
+                                }
+                            }
+                        ],
+                        "handler": {
+                            "module": "always_allow"
+                        }
+                    }
+                ]
             },
             "server": {
                 "name": "test",
@@ -85,13 +142,12 @@
                         "localhost"
                     ]
                 },
-                "system_account": "SYS",
                 "accounts": [
                     {
                         "name": "APP"
                     },
                     {
-                        "name": "SYS"
+                        "name": "GUEST"
                     }
                 ],
                 "jetstream": {},
@@ -99,14 +155,14 @@
                 "leafnode": {
                     "tls": {
                         "subjects": [
-                            "localhost"
+                            "leaf.localhost"
                         ]
                     }
                 },
                 "websocket": {
                     "tls": {
                         "subjects": [
-                            "localhost"
+                            "ws.localhost"
                         ]
                     }
                 },
@@ -128,7 +184,7 @@
                             "match": [
                                 {
                                     "host": [
-                                        "localhost"
+                                        "metrics.localhost"
                                     ]
                                 }
                             ],
@@ -144,9 +200,38 @@
                                 }
                             ],
                             "terminal": true
+                        },
+                        {
+                            "match": [
+                                {
+                                    "host": [
+                                        "localhost"
+                                    ]
+                                }
+                            ],
+                            "handle": [
+                                {
+                                    "handler": "oauth2_session",
+                                    "endpoint": {
+                                        "name": "az"
+                                    }
+                                },
+                                {
+                                    "handler": "static_response",
+                                    "status_code": 200,
+                                    "headers": {
+                                        "Content-Type": [
+                                            "text/html; charset=utf-8"
+                                        ]
+                                    },
+                                    "body": "<html><body><h1>Demo</h1><p>Run the following code snippet to try out NATS auth callout:</p></br><pre>const nats = await import(\"https://cdn.jsdelivr.net/npm/nats.ws@1.18.0/esm/nats.js\")</pre></br><pre>nc = await nats.connect(\n\t{\"servers\": \"wss://ws.localhost:10443\", \"user\": \"APP\", \"pass\": document.cookie}\n)</pre>\n"
+                                }
+                            ],
+                            "terminal": true
                         }
                     ],
-                    "metrics": {}
+                    "metrics": {},
+                    "logs": {}
                 }
             }
         }
