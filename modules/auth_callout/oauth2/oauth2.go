@@ -55,11 +55,9 @@ func (c *OAuth2ProxyAuthCallout) Provision(app *modules.App) error {
 }
 
 // Handle is called by auth callout caddy module to authenticate a user.
-// It returns unsigned response claims, as the signing key is configured in the caddy module.
-// However, it must sign the user claims using either the signing key configured in the caddy module
-// in server mode, or the signing key of the target account in operator mode. Since only a single static
-// signing key is supported in configuration for now, it is not possible to issue JWT for different accounts
-// in operator mode.
+// It returns either user claims or an error.
+// The account for which the user is authenticated is the username in connect opts.
+// This target account is set as Audience in the user claims as required auth_callout caddy module.
 func (c *OAuth2ProxyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
 	// Initialize user claims
 	userClaims := jwt.NewUserClaims(request.UserNkey)
