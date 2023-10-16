@@ -3,20 +3,20 @@ builds:
   - id: caddy
     main: "./cmd/caddy/main.go"
     goos:
-      #      - darwin
+      - darwin
       - linux
       - windows
     goarch:
       - amd64
-        #      - arm64
-        #      - arm
+      - arm64
+      - arm
     goarm:
       - "7"
-        #ignore:
-        #  - goos: windows
-        #    goarch: arm
-        #  - goos: darwin
-        #    goarch: arm
+      - "6"
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
     env:
       - "CGO_ENABLED=0"
-
