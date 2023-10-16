@@ -4,13 +4,13 @@ package oauthproxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/server"
@@ -18,7 +18,9 @@ import (
 )
 
 // Endpoint is a Caddy module that represents an oauth2-proxy endpoint.
-// It implements the caddyhttp.MiddlewareHandler interface.
+// It implements the caddyhttp.MiddlewareHandler interface even though it's not
+// used directly as an HTTP midleware. Rather, the module `http.handlers.oauth2_session`
+// is used as a middleware, and it calls the endpoint ServeHTTP method..
 type Endpoint struct {
 	logger  *zap.Logger
 	cipher  encryption.Cipher
@@ -53,18 +55,21 @@ func (e *Endpoint) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyh
 	return nil
 }
 
-// Provision loads and validate the endpoint configuration.
+// provision loads and validate the endpoint configuration.
 // It is called when AddEndpoint method of the app is called and should
 // not be called directly by other host modules.
-func (e *Endpoint) Provision(ctx caddy.Context) error {
-	// Initialize options
+func (e *Endpoint) provision(app *App) error {
+	// Set logger
+	if e.Name == "" {
+		return errors.New("endpoint name cannot be empty")
+	}
+	e.logger = app.GetLogger(e.Name)
+	// Set options
 	if e.Options == nil {
 		return fmt.Errorf("no options found for endpoint %s", e.Name)
 	}
-	// Save options
-	e.opts = e.Options.getOptions()
-	// Save logger
-	e.logger = ctx.Logger().Named(e.Name)
+	e.opts = e.Options.oauth2proxyOptions()
+	// Set cookie secret
 	// TODO: The secret is randomely generated, but it is not persisted
 	if e.opts.Cookie.Secret == "" {
 		secret, err := generateRandomASCIIString(32)
@@ -73,24 +78,17 @@ func (e *Endpoint) Provision(ctx caddy.Context) error {
 		}
 		e.opts.Cookie.Secret = secret
 	}
-	// load cipher
-	if err := e.loadCipher(); err != nil {
-		return err
-	}
 	// Validate options
 	if err := validation.Validate(e.opts); err != nil {
-		return err
+		return fmt.Errorf("invalid options for endpoint %s: %v", e.Name, err)
 	}
-
-	return nil
-}
-
-func (e *Endpoint) loadCipher() error {
+	// Load cipher
 	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(e.opts.Cookie.Secret))
 	if err != nil {
 		return fmt.Errorf("error initialising cipher: %v", err)
 	}
 	e.cipher = cipher
+
 	return nil
 }
 
@@ -108,11 +106,13 @@ func (e *Endpoint) setup() error {
 	return nil
 }
 
-func (e *Endpoint) isReference() bool {
+// empty returns true if the endpoint has no options.
+func (e *Endpoint) empty() bool {
 	return e.Options == nil
 }
 
-func (e *Endpoint) isEqualTo(other *Endpoint) bool {
+// equals returns true if the endpoint has the same name and options as the other endpoint.
+func (e *Endpoint) equals(other *Endpoint) bool {
 	if e.Name != other.Name {
 		return false
 	}
@@ -120,54 +120,4 @@ func (e *Endpoint) isEqualTo(other *Endpoint) bool {
 		return true
 	}
 	return e.Options.equals(other.Options)
-}
-
-// nextKey is a struct used as key to store the next handler in the request context.
-// Context docs recommends to use a private struct rather than a string to avoid
-// collisions with other packages.
-type nextKey struct{}
-
-// upstream is a struct that implements the http.Handler interface.
-// It is called by oauth2-proxy gorilla mux when the request is authorized.
-// It fetches the next handler from the request context and calls it.
-// This whole thing relies on Endpoint.ServeHTTP to set the next handler in the request context
-// under the nextKey{} key.
-type upstream struct {
-	sessionLoader func(r *http.Request) (*sessions.SessionState, error)
-	logger        *zap.Logger
-}
-
-// setSessionLoader sets the session loader function.
-// this is needed to avoid circular dependencies because proxy needs the upstream to be created
-// but upstream need sessionLoader from proxy. Instead of passing the sessionLoader when creating
-// the upstream, we set it after both the upstream and the proxy are created.
-func (h *upstream) setSessionLoader(loader func(r *http.Request) (*sessions.SessionState, error)) {
-	h.sessionLoader = loader
-}
-
-// ServeHTTP fetches the next handler from the request context and calls it.
-// It is called by oauth2-proxy when the request is authorized as the upstream handler.
-func (h upstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	session, err := h.sessionLoader(r)
-	if err != nil {
-		h.logger.Error("not authorized", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	h.logger.Info("serving authorized request", zap.String("email", session.Email), zap.String("expires_on", session.ExpiresOn.String()))
-	nextRaw := r.Context().Value(nextKey{})
-	if nextRaw == nil {
-		h.logger.Error("next handler not found in request context")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	next, ok := nextRaw.(caddyhttp.Handler)
-	if !ok {
-		h.logger.Error("next handler is not an http.Handler")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if err := next.ServeHTTP(w, r); err != nil {
-		h.logger.Error("error serving next handler", zap.Error(err))
-	}
 }

@@ -28,6 +28,12 @@ func LoadApp(ctx caddy.Context) (*App, error) {
 	return app, nil
 }
 
+// GetLogger returns a child logger with the given name.
+// The logger is created using the app logger.
+func (a *App) GetLogger(name string) *zap.Logger {
+	return a.logger.Named(name)
+}
+
 // GetOrAddEndpoint returns the endpoint with the given name, or adds it to the app if it does not exist.
 // If the endpoint already exists with different configuration, an error is returned.
 // If the endpoint is added to the app, it is provisioned before being returned.
@@ -35,10 +41,10 @@ func LoadApp(ctx caddy.Context) (*App, error) {
 func (a *App) GetOrAddEndpoint(e *Endpoint) (*Endpoint, error) {
 	for _, existing := range a.Endpoints {
 		if e.Name == existing.Name {
-			if e.isReference() {
+			if e.empty() {
 				return existing, nil
 			}
-			if !existing.isEqualTo(e) {
+			if !existing.equals(e) {
 				return nil, fmt.Errorf("endpoint %s already exists with different configuration", e.Name)
 			}
 			return existing, nil
@@ -69,7 +75,7 @@ func (a *App) AddEndpoint(e *Endpoint) error {
 			return fmt.Errorf("endpoint %s already exists", e.Name)
 		}
 	}
-	if err := e.Provision(a.ctx); err != nil {
+	if err := e.provision(a); err != nil {
 		return err
 	}
 	a.Endpoints = append(a.Endpoints, e)

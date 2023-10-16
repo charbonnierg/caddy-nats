@@ -185,7 +185,7 @@ type Options struct {
 	ForceJSONErrors       bool     `json:"force_json_errors,omitempty"`
 }
 
-func (o *Options) getOptions() *options.Options {
+func (o *Options) oauth2proxyOptions() *options.Options {
 	opts := options.NewOptions()
 	opts.Logging.AuthEnabled = false
 	opts.Logging.StandardEnabled = false
@@ -318,10 +318,10 @@ func (o *Options) getOptions() *options.Options {
 		opts.Templates.DisplayLoginForm = o.Templates.DisplayLoginForm
 	}
 	if o.InjectRequestHeaders != nil {
-		opts.InjectRequestHeaders = o.InjectRequestHeaders.oauth2proxyHeaders()
+		opts.InjectRequestHeaders = o.InjectRequestHeaders.oauth2proxyOptions()
 	}
 	if o.InjectResponseHeaders != nil {
-		opts.InjectResponseHeaders = o.InjectResponseHeaders.oauth2proxyHeaders()
+		opts.InjectResponseHeaders = o.InjectResponseHeaders.oauth2proxyOptions()
 	}
 	if o.Providers != nil {
 		opts.Providers = o.Providers
@@ -357,156 +357,7 @@ func (o *Options) getOptions() *options.Options {
 	return opts
 }
 
-func (o *Options) equals(other *Options) bool {
-	if len(o.ExtraJwtIssuers) != len(other.ExtraJwtIssuers) {
-		return false
-	}
-	for i, issuer := range o.ExtraJwtIssuers {
-		if issuer != other.ExtraJwtIssuers[i] {
-			return false
-		}
-	}
-	if len(o.SkipAuthRegex) != len(other.SkipAuthRegex) {
-		return false
-	}
-	for i, regex := range o.SkipAuthRegex {
-		if regex != other.SkipAuthRegex[i] {
-			return false
-		}
-	}
-	if len(o.SkipAuthRoutes) != len(other.SkipAuthRoutes) {
-		return false
-	}
-	for i, route := range o.SkipAuthRoutes {
-		if route != other.SkipAuthRoutes[i] {
-			return false
-
-		}
-	}
-	if len(o.APIRoutes) != len(other.APIRoutes) {
-		return false
-	}
-	for i, route := range o.APIRoutes {
-		if route != other.APIRoutes[i] {
-			return false
-		}
-	}
-	if len(o.TrustedIPs) != len(other.TrustedIPs) {
-		return false
-	}
-	for i, ip := range o.TrustedIPs {
-		if ip != other.TrustedIPs[i] {
-			return false
-		}
-	}
-	if len(o.EmailDomains) != len(other.EmailDomains) {
-		return false
-	}
-	for i, domain := range o.EmailDomains {
-		if domain != other.EmailDomains[i] {
-			return false
-		}
-	}
-	if len(o.WhitelistDomains) != len(other.WhitelistDomains) {
-		return false
-	}
-	for i, domain := range o.WhitelistDomains {
-		if domain != other.WhitelistDomains[i] {
-			return false
-		}
-	}
-	if len(o.HtpasswdUserGroups) != len(other.HtpasswdUserGroups) {
-		return false
-	}
-	for i, group := range o.HtpasswdUserGroups {
-		if group != other.HtpasswdUserGroups[i] {
-			return false
-		}
-	}
-	if o.ProxyPrefix != other.ProxyPrefix {
-		return false
-	}
-	if o.PingPath != other.PingPath {
-		return false
-	}
-	if o.PingUserAgent != other.PingUserAgent {
-		return false
-	}
-	if o.ReadyPath != other.ReadyPath {
-		return false
-	}
-	if o.RealClientIPHeader != other.RealClientIPHeader {
-		return false
-	}
-	if o.RawRedirectURL != other.RawRedirectURL {
-		return false
-	}
-	if o.AuthenticatedEmailsFile != other.AuthenticatedEmailsFile {
-		return false
-	}
-	if o.HtpasswdFile != other.HtpasswdFile {
-		return false
-	}
-	if !o.Cookie.isEqualTo(&other.Cookie) {
-		return false
-	}
-	if !o.Session.isEqualTo(&other.Session) {
-		return false
-	}
-	if !o.Templates.isEqualTo(&other.Templates) {
-		return false
-	}
-	if !o.InjectRequestHeaders.isEqualTo(other.InjectRequestHeaders) {
-		return false
-	}
-	if !o.InjectResponseHeaders.isEqualTo(other.InjectResponseHeaders) {
-		return false
-	}
-	if len(o.Providers) != len(other.Providers) {
-		return false
-	}
-	for i, provider := range o.Providers {
-		if provider.ID != other.Providers[i].ID {
-			return false
-		}
-		if provider.Type != other.Providers[i].Type {
-			return false
-		}
-		if provider.Name != other.Providers[i].Name {
-			return false
-		}
-		if provider.ClientID != other.Providers[i].ClientID {
-			return false
-		}
-		if provider.ClientSecret != other.Providers[i].ClientSecret {
-			return false
-		}
-		if provider.ClientSecretFile != other.Providers[i].ClientSecretFile {
-			return false
-		}
-		if provider.Scope != other.Providers[i].Scope {
-			return false
-		}
-		if provider.LoginURL != other.Providers[i].LoginURL {
-			return false
-		}
-		if provider.RedeemURL != other.Providers[i].RedeemURL {
-			return false
-		}
-		if provider.ProfileURL != other.Providers[i].ProfileURL {
-			return false
-		}
-		if provider.ValidateURL != other.Providers[i].ValidateURL {
-			return false
-		}
-		if provider.CodeChallengeMethod != other.Providers[i].CodeChallengeMethod {
-			return false
-		}
-	}
-	return true
-}
-
-func (c *ClaimSource) oauth2proxyClaimSource() options.ClaimSource {
+func (c *ClaimSource) oauth2proxyOptions() options.ClaimSource {
 	var basicAuthPassword options.SecretSource
 	if c.BasicAuthPassword != nil {
 		basicAuthPassword = options.SecretSource{
@@ -522,15 +373,15 @@ func (c *ClaimSource) oauth2proxyClaimSource() options.ClaimSource {
 	}
 }
 
-func (h *Header) oauth2proxyHeader() *options.Header {
+func (h *Header) oauth2proxyOptions() *options.Header {
 	return &options.Header{
 		Name:                 h.Name,
 		PreserveRequestValue: h.PreserveRequestValue,
-		Values:               h.Values.oauth2proxyHeaderValues(),
+		Values:               h.Values.oauth2proxyOptions(),
 	}
 }
 
-func (h *HeaderValue) oauth2proxyHeaderValue() options.HeaderValue {
+func (h *HeaderValue) oauth2proxyOptions() options.HeaderValue {
 	var source options.SecretSource
 	if h.SecretSource != nil {
 		source = options.SecretSource{
@@ -541,7 +392,7 @@ func (h *HeaderValue) oauth2proxyHeaderValue() options.HeaderValue {
 	}
 	var claimSource options.ClaimSource
 	if h.ClaimSource != nil {
-		claimSource = h.ClaimSource.oauth2proxyClaimSource()
+		claimSource = h.ClaimSource.oauth2proxyOptions()
 	}
 	return options.HeaderValue{
 		SecretSource: &source,
@@ -549,227 +400,18 @@ func (h *HeaderValue) oauth2proxyHeaderValue() options.HeaderValue {
 	}
 }
 
-func (h Headers) oauth2proxyHeaders() []options.Header {
+func (h Headers) oauth2proxyOptions() []options.Header {
 	var headers []options.Header
 	for _, header := range h {
-		headers = append(headers, *header.oauth2proxyHeader())
+		headers = append(headers, *header.oauth2proxyOptions())
 	}
 	return headers
 }
 
-func (h HeaderValues) oauth2proxyHeaderValues() []options.HeaderValue {
+func (h HeaderValues) oauth2proxyOptions() []options.HeaderValue {
 	var values []options.HeaderValue
 	for _, hv := range h {
-		values = append(values, hv.oauth2proxyHeaderValue())
+		values = append(values, hv.oauth2proxyOptions())
 	}
 	return values
-}
-
-func (s SecretSource) isEqualTo(other *SecretSource) bool {
-	if len(s.Value) != len(other.Value) {
-		return false
-	}
-	for i, v := range s.Value {
-		if v != other.Value[i] {
-			return false
-		}
-	}
-	if s.FromEnv != other.FromEnv {
-		return false
-	}
-	if s.FromFile != other.FromFile {
-		return false
-	}
-	return true
-}
-
-func (c *ClaimSource) isEqualTo(other *ClaimSource) bool {
-	if c.Claim != other.Claim {
-		return false
-	}
-	if c.Prefix != other.Prefix {
-		return false
-	}
-	if c.BasicAuthPassword != nil && other.BasicAuthPassword != nil {
-		return c.BasicAuthPassword.isEqualTo(other.BasicAuthPassword)
-	}
-	return true
-}
-
-func (v *HeaderValue) isEqualTo(other *HeaderValue) bool {
-	if v.SecretSource != nil && other.SecretSource != nil {
-		return v.SecretSource.isEqualTo(other.SecretSource)
-	}
-	if v.ClaimSource != nil && other.ClaimSource != nil {
-		return v.ClaimSource.isEqualTo(other.ClaimSource)
-	}
-	return false
-}
-
-func (v HeaderValues) isEqualTo(other HeaderValues) bool {
-	if len(v) != len(other) {
-		return false
-	}
-	for i, v := range v {
-		if !v.isEqualTo(&(other)[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func (h Header) isEqualTo(other Header) bool {
-	if h.Name != other.Name {
-		return false
-	}
-	if h.PreserveRequestValue != other.PreserveRequestValue {
-		return false
-	}
-	return h.Values.isEqualTo(other.Values)
-}
-
-func (h Headers) isEqualTo(other Headers) bool {
-	if len(h) != len(other) {
-		return false
-	}
-	for i, v := range h {
-		if !v.isEqualTo(other[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func (t *Templates) isEqualTo(other *Templates) bool {
-	if t.Path != other.Path {
-		return false
-	}
-	if t.CustomLogo != other.CustomLogo {
-		return false
-	}
-	if t.Banner != other.Banner {
-		return false
-	}
-	if t.Footer != other.Footer {
-		return false
-	}
-	if t.DisplayLoginForm != other.DisplayLoginForm {
-		return false
-	}
-	if t.Debug != other.Debug {
-		return false
-	}
-	return true
-}
-
-func (c *CookieStoreOptions) isEqualTo(other *CookieStoreOptions) bool {
-	return c.Minimal == other.Minimal
-}
-
-func (r *RedisStoreOptions) isEqualTo(other *RedisStoreOptions) bool {
-	if r.ConnectionURL != other.ConnectionURL {
-		return false
-	}
-	if r.Password != other.Password {
-		return false
-	}
-	if r.UseSentinel != other.UseSentinel {
-		return false
-	}
-	if r.SentinelPassword != other.SentinelPassword {
-		return false
-	}
-	if r.SentinelMasterName != other.SentinelMasterName {
-		return false
-	}
-	if r.SentinelConnectionURLs != nil && other.SentinelConnectionURLs != nil {
-		if len(r.SentinelConnectionURLs) != len(other.SentinelConnectionURLs) {
-			return false
-		}
-		for i, v := range r.SentinelConnectionURLs {
-			if v != other.SentinelConnectionURLs[i] {
-				return false
-			}
-		}
-	}
-	if r.UseCluster != other.UseCluster {
-		return false
-	}
-	if r.ClusterConnectionURLs != nil || other.ClusterConnectionURLs != nil {
-		if len(r.ClusterConnectionURLs) != len(other.ClusterConnectionURLs) {
-			return false
-		}
-		for i, v := range r.ClusterConnectionURLs {
-			if v != other.ClusterConnectionURLs[i] {
-				return false
-			}
-		}
-	}
-	if r.CAPath != other.CAPath {
-		return false
-	}
-	if r.InsecureSkipTLSVerify != other.InsecureSkipTLSVerify {
-		return false
-	}
-	if r.IdleTimeout != other.IdleTimeout {
-		return false
-	}
-	return true
-}
-
-func (s *SessionOptions) isEqualTo(other *SessionOptions) bool {
-	if s.Type != other.Type {
-		return false
-	}
-	if s.Cookie.isEqualTo(&other.Cookie) {
-		return false
-	}
-	if s.Redis.isEqualTo(&other.Redis) {
-		return false
-	}
-	return true
-}
-
-func (c *Cookie) isEqualTo(other *Cookie) bool {
-	if c.Name != other.Name {
-		return false
-	}
-	if c.Secret != other.Secret {
-		return false
-	}
-	if c.Domains != nil && other.Domains != nil {
-		if len(c.Domains) != len(other.Domains) {
-			return false
-		}
-		for i, v := range c.Domains {
-			if v != other.Domains[i] {
-				return false
-			}
-		}
-	}
-	if c.Path != other.Path {
-		return false
-	}
-	if c.Expire != other.Expire {
-		return false
-	}
-	if c.Refresh != other.Refresh {
-		return false
-	}
-	if c.NoSecure != other.NoSecure {
-		return false
-	}
-	if c.NoHTTPOnly != other.NoHTTPOnly {
-		return false
-	}
-	if c.SameSite != other.SameSite {
-		return false
-	}
-	if c.CSRFPerRequest != other.CSRFPerRequest {
-		return false
-	}
-	if c.CSRFExpire != other.CSRFExpire {
-		return false
-	}
-	return true
 }

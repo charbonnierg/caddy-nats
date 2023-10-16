@@ -34,8 +34,9 @@ func (OAuth2Session) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision implements caddy.Provisioner.
-// It is called when the module is provisioned on startup.
+// Provision configures the module.
+// It implements the caddy.Provisioner interface.
+// It is called when the module is provisioned on first load or on config change.
 // It will get or add the oauth2 endpoint to the app.
 func (p *OAuth2Session) Provision(ctx caddy.Context) error {
 	app, err := oauthproxy.LoadApp(ctx)
@@ -54,7 +55,7 @@ func (p *OAuth2Session) Provision(ctx caddy.Context) error {
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
-// It delegates the request to the oauth2-proxy mux.
+// It simply delegates the request to the endpoint handler.
 func (p OAuth2Session) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	return p.endpoint.ServeHTTP(w, r, next)
 }
