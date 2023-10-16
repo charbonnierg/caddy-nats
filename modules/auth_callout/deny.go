@@ -28,7 +28,7 @@ func (a *DenyAuthCallout) Provision(app *modules.App) error {
 	return nil
 }
 
-func (a *DenyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.AuthorizationResponseClaims, error) {
+func (a *DenyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
 	return nil, errors.New("access denied")
 }
 

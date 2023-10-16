@@ -7,13 +7,13 @@ import (
 
 	"github.com/charbonnierg/caddy-nats/embedded/natsoptions"
 	"github.com/nats-io/nkeys"
-	"go.uber.org/zap"
 )
 
-func (s *AuthService) setupInternalAuthAccount() error {
-	if s.AuthSigningKey != "" && s.InternalAccount != "" {
-		return errors.New("auth signing key and internal account are mutually exclusive")
+func (s *AuthService2) setupInternalAuthAccount() error {
+	if s.AuthSigningKey != "" {
+		return nil
 	}
+
 	if s.InternalUser != "" && s.InternalAccount == "" {
 		return errors.New("internal account is required when using internal user")
 	}
@@ -55,7 +55,6 @@ func (s *AuthService) setupInternalAuthAccount() error {
 		s.AuthSigningKey = string(seed)
 		s.app.Options.Authorization = &auth
 		s.app.Options.Accounts = append(s.app.Options.Accounts, &acc)
-		s.logger.Info("internal auth account created", zap.String("account", s.InternalAccount), zap.String("user", s.InternalUser))
 	}
 	return nil
 }

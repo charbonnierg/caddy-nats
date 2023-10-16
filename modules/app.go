@@ -31,7 +31,7 @@ type App struct {
 	runner             *natsrunner.Runner
 	connectionPolicies []caddytls.ConnectionPolicies
 	subjects           []string
-	AuthService        *AuthService         `json:"auth_service,omitempty"`
+	AuthService        *AuthService2        `json:"auth_service,omitempty"`
 	Options            *natsoptions.Options `json:"server,omitempty"`
 	ReadyTimeout       time.Duration        `json:"ready_timeout,omitempty"`
 }
