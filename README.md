@@ -14,10 +14,11 @@ As stated in the ADR, Authorization Callout aims to enable an external NATS serv
 
 > The motivation for this extension is to support applications using an alternate identity and access management (IAM) backend as the source of truth for managing users/applications/machines credentials and permissions. This could be services that implement standard protocols such as LDAP, SAML, and OAuth, an ad-hoc database, or even a file on disk.
 
-Since this feature is quite new, there isn't much documentation aside from the two links above ([ADR-26](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-26.md) and [NATS docs](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-26.md)), but we can at least draw two requirements:
+Since this feature is quite new, there isn't much documentation aside from the two links above ([ADR-26](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-26.md) and [NATS docs](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-26.md)), but we can at least draw a few things:
 
 - Authorization callout addresses the need for external authentication/authorization
 - Authorization callout is performed by a service which connects to the NATS server (not the NATS server itself)
+- Auth callout service receives an authorization request and must return either an error or a signed authorization response
 
 Assuming that a project wants OAuth2 authenticated web users to connect to NATS using authorization callout, the following components are required:
 
