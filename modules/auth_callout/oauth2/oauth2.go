@@ -20,14 +20,8 @@ func init() {
 // It is used to authenticate users using an oauth2 proxy.
 // It is configured in the "nats.auth_callout.oauth2" namespace.
 // It must be configured with an endpoint name, which must be defined in the oauth2 app.
-// If NATS server is running in operator mode, it must also be configured with signing keys
-// for the target accounts.
-// In NATS server is running in server mode, there is no need to configure signing keys,
-// as the signing key is configured in the parent caddy module.
 // This auth callout always expects the username to be the target account, and the password
 // to be the oauth2 session state (encrypted cookie string).
-// It is useful to authenticate websocket users coming from applications protected
-// by an oauth2 proxy.
 type OAuth2ProxyAuthCallout struct {
 	logger   *zap.Logger
 	endpoint *oauthproxy.Endpoint
