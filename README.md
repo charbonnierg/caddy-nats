@@ -2,6 +2,46 @@
 
 > Run `nats-server` as a [caddy app](https://caddyserver.com/docs/extending-caddy#app-modules) with experimental oauth2 authentication.
 
+## Introduction
+
+As of NATS v2.10.0, Auth Callout is an opt-in extension for delegating client authentication and authorization to an application-defined NATS service.
+
+The reference for Auth Callout is in the [ADR-26: NATS Authorization Callouts](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-26.md)
+
+As stated in the ADR, Authorization Callout aims to enable an external NATS service to generate NATS authorization and credentials by authenticating connection requests.
+
+[The documentation](https://docs.nats.io/running-a-nats-service/configuration/securing_nats/auth_callout) helps understanding the usecases:
+
+> The motivation for this extension is to support applications using an alternate identity and access management (IAM) backend as the source of truth for managing users/applications/machines credentials and permissions. This could be services that implement standard protocols such as LDAP, SAML, and OAuth, an ad-hoc database, or even a file on disk.
+
+Since this feature is quite new, there isn't much documentation aside from the two links above ([ADR-26](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-26.md) and [NATS docs](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-26.md)), but we can at least draw two requirements:
+
+- Authorization callout addresses the need for external authentication/authorization
+- Authorization callout is performed by a service which connects to the NATS server (not the NATS server itself)
+
+Assuming that a project wants OAuth2 authenticated web users to connect to NATS using authorization callout, the following components are required:
+
+- a NATS server configured to use authorization callout
+- an HTTP server to serve the web application
+- an OAuth2 middleware to ensure that HTTP sessions are authenticated and authorized
+- an auth callout NATS service connected to the NATS server and verifying session state before issuing user claims
+
+The goal of this repository is to provide a single executable binary, which will act as:
+- a NATS server
+- a NATS authorization callout service 
+- an HTTP server
+- an Oauth2 middleware
+
+It means that no additional software or components should be required in order to authenticate, authorize and allow users to connect to NATS.
+
+## Introduction to caddy
+
+[Caddy](https://caddyserver.com/) is ...
+
+## Introduction to oauth2-proxy
+
+OAuth2 is not trivial to implement (even though lots of libraries exist to help developers integrate OAuth2 authorization into their applications). In order to avoid writing an OAuth2 middleware, I decided to reuse the existing project [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy). This project is used by many companies or other open sources projects, has more than 300 contributors, and approximately 7600 stars on GitHub. Because this project is a **server** component, it cannot be integrated directly into an existing Go application. I had to [make a fork to use oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy/compare/master...charbonnierg:oauth2-proxy:library_usage) in order to easily create a [caddy module](https://github.com/charbonnierg/caddy-nats/blob/rewrite/oauthproxy/app.go). This caddy module is an HTTP middleware which can be used before other caddy modules to authenticate and authorize an HTTP session.
+
 ## Example usage
 
 - First build the project:
