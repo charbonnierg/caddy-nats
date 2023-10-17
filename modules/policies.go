@@ -49,7 +49,7 @@ func (pol *ConnectionPolicy) Match(request *jwt.AuthorizationRequestClaims) bool
 	return matched
 }
 
-func (pol *ConnectionPolicy) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
+func (pol *ConnectionPolicy) Handle(request *AuthorizationRequest) (*jwt.UserClaims, error) {
 	return pol.handler.Handle(request)
 }
 

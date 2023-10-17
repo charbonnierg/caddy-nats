@@ -19,7 +19,7 @@ type DenyAuthCallout struct{}
 
 func (DenyAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats.auth_callout.always_deny",
+		ID:  "nats.auth_callout.deny",
 		New: func() caddy.Module { return new(DenyAuthCallout) },
 	}
 }
@@ -28,7 +28,7 @@ func (a *DenyAuthCallout) Provision(app *modules.App) error {
 	return nil
 }
 
-func (a *DenyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
+func (a *DenyAuthCallout) Handle(request *modules.AuthorizationRequest) (*jwt.UserClaims, error) {
 	return nil, errors.New("access denied")
 }
 

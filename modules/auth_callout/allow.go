@@ -3,6 +3,8 @@
 package auth_callout
 
 import (
+	"errors"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/charbonnierg/caddy-nats/modules"
 	"github.com/nats-io/jwt/v2"
@@ -13,11 +15,15 @@ func init() {
 }
 
 // A minimal auth callout handler that always denies access.
-type AllowAuthCallout struct{}
+type AllowAuthCallout struct {
+	User     string            `json:"user,omitempty"`
+	Account  string            `json:"account,omitempty"`
+	Template *modules.Template `json:"template,omitempty"`
+}
 
 func (AllowAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats.auth_callout.always_allow",
+		ID:  "nats.auth_callout.allow",
 		New: func() caddy.Module { return new(AllowAuthCallout) },
 	}
 }
@@ -26,13 +32,23 @@ func (c *AllowAuthCallout) Provision(app *modules.App) error {
 	return nil
 }
 
-func (a *AllowAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
-	// Use the username as the issuer account.
-	// We don't look at the password
-	// But in a more useful module, password could be an OpenID token maybe ?
-	userClaims := jwt.NewUserClaims(request.UserNkey)
-	// The target account must be specified as JWT audience
-	userClaims.Audience = request.ConnectOptions.Username
+func (a *AllowAuthCallout) Handle(request *modules.AuthorizationRequest) (*jwt.UserClaims, error) {
+	userClaims := jwt.NewUserClaims(request.Claims.UserNkey)
+	if a.Template != nil {
+		// Apply the template
+		a.Template.Render(request, userClaims)
+	}
+	if a.Account != "" {
+		// The target account must be specified as JWT audience
+		userClaims.Audience = request.ReplaceAll(a.Account, "")
+	} else {
+		// If not specified, the target account is the username
+		userClaims.Audience = request.Claims.ConnectOptions.Username
+	}
+	if userClaims.Audience == "" {
+		// If the target account is still empty, deny access
+		return nil, errors.New("no target account specified")
+	}
 	// And that's it, return the user claims
 	return userClaims, nil
 }

@@ -4,11 +4,13 @@ package oauth2
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/charbonnierg/caddy-nats/modules"
 	"github.com/charbonnierg/caddy-nats/oauthproxy"
 	"github.com/nats-io/jwt/v2"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +27,9 @@ func init() {
 type OAuth2ProxyAuthCallout struct {
 	logger   *zap.Logger
 	endpoint *oauthproxy.Endpoint
-	Endpoint string `json:"endpoint"`
+	Endpoint string            `json:"endpoint"`
+	Account  string            `json:"account,omitempty"`
+	Template *modules.Template `json:"template,omitempty"`
 }
 
 func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
@@ -58,23 +62,68 @@ func (c *OAuth2ProxyAuthCallout) Provision(app *modules.App) error {
 // It returns either user claims or an error.
 // The account for which the user is authenticated is the username in connect opts.
 // This target account is set as Audience in the user claims as required auth_callout caddy module.
-func (c *OAuth2ProxyAuthCallout) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
+func (c *OAuth2ProxyAuthCallout) Handle(request *modules.AuthorizationRequest) (*jwt.UserClaims, error) {
 	// Initialize user claims
-	userClaims := jwt.NewUserClaims(request.UserNkey)
-	// Target account must be present as username in connect opts
-	targetAccount := request.ConnectOptions.Username
-	// Set audience to target account
-	userClaims.Audience = targetAccount
+	userClaims := jwt.NewUserClaims(request.Claims.UserNkey)
 	// OAuth2 session state must be presented as password in connect opts (encrypted cookie string)
-	sessionState, err := c.endpoint.DecodeSessionStateFromString(request.ConnectOptions.Password)
+	sessionState, err := c.endpoint.DecodeSessionStateFromString(request.Claims.ConnectOptions.Password)
 	if err != nil {
 		return nil, errors.New("unable to decode session state")
 	}
-	// We've got a session state, we can now set the user claims
-	c.logger.Info("authenticated user", zap.String("email", sessionState.Email), zap.String("account", targetAccount))
-	userClaims.Name = sessionState.Email
+	// Add replacers for session state
+	c.addSessionReplacerVars(request, sessionState)
+	// Set target account
+	if c.Account != "" {
+		// The target account must be specified as JWT audience
+		userClaims.Audience = request.ReplaceAll(c.Account, "")
+	} else {
+		// If not specified, the target account is the username
+		userClaims.Audience = request.Claims.ConnectOptions.Username
+	}
+	if userClaims.Audience == "" {
+		// If the target account is still empty, deny access
+		return nil, errors.New("no target account specified")
+	}
+	if c.Template != nil {
+		// Apply the template
+		c.Template.Render(request, userClaims)
+	} else {
+		// If no template is specified, set the email as user name
+		userClaims.Name = sessionState.Email
+	}
+	c.logger.Info("authenticated user", zap.String("email", sessionState.Email), zap.String("account", userClaims.Audience))
 	// And that's it, return user claims
 	return userClaims, nil
+}
+
+func (c *OAuth2ProxyAuthCallout) addSessionReplacerVars(request *modules.AuthorizationRequest, session *sessions.SessionState) {
+	extractor, err := c.endpoint.GetOidcSessionClaimExtractor(session)
+	if err != nil {
+		c.logger.Error("unable to get oidc session claim extractor", zap.Error(err))
+		return
+	}
+	request.AddReplacerMapper(func(key string) (any, bool) {
+		oidcPrefix := "oidc.session."
+		if !strings.HasPrefix(key, oidcPrefix) {
+			return nil, false
+		}
+		claim := strings.TrimPrefix(key, oidcPrefix)
+		value, ok, err := extractor.GetClaim(claim)
+		if err != nil {
+			c.logger.Warn("unable to extract oidc session claim", zap.String("claim", claim), zap.Error(err))
+			return nil, false
+		}
+		if !ok {
+			c.logger.Warn("oidc session claim not found", zap.String("claim", claim))
+			return nil, false
+		}
+		stringValue, ok := value.(string)
+		if !ok {
+			c.logger.Warn("oidc session claim is not a string", zap.String("claim", claim))
+			return nil, false
+		}
+		return stringValue, true
+	})
 }
 
 var (

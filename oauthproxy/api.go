@@ -3,11 +3,14 @@
 package oauthproxy
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
 	"go.uber.org/zap"
 )
 
@@ -114,4 +117,22 @@ func (e *Endpoint) DecodeSessionStateFromString(cookie string) (*sessions.Sessio
 		return nil, err
 	}
 	return e.DecodeSessionState(cookies)
+}
+
+func (e *Endpoint) GetOidcSessionClaimExtractor(state *sessions.SessionState) (util.ClaimExtractor, error) {
+	// FIXME: What should we do if we got multiple providers for this endpoint ?
+	// I guess we should first decode ID token, then check if the issuer matches
+	// a specific provider issuer, then use the profile URL from the provider.
+	profileURL, err := url.Parse(e.opts.Providers[0].ProfileURL)
+	if err != nil {
+		return nil, err
+	}
+	// NewClaimExtractor expect a http.Header, so we need to create one
+	headers := make(http.Header)
+	headers.Set("Authorization", fmt.Sprintf("Bearer %s", state.IDToken))
+	extractor, err := util.NewClaimExtractor(context.TODO(), state.IDToken, profileURL, headers)
+	if err != nil {
+		return nil, err
+	}
+	return extractor, nil
 }

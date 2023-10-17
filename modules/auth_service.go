@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,12 +12,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-type AuthCallout interface {
-	Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error)
-	Provision(app *App) error
-}
-
-type AuthService2 struct {
+type AuthService struct {
 	app               *App
 	conn              *nats.Conn
 	service           *natsauth.Service
@@ -31,10 +27,14 @@ type AuthService2 struct {
 	DefaultHandlerRaw json.RawMessage    `json:"handler,omitempty" caddy:"namespace=nats.auth_callout inline_key=module"`
 }
 
-func (s *AuthService2) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
+func (s *AuthService) Handle(claims *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
+	req := &AuthorizationRequest{
+		Claims:  claims,
+		Context: context.TODO(),
+	}
 	var handler AuthCallout
 	// Match handler for this request
-	matchedHandler, ok := s.Policies.Match(request)
+	matchedHandler, ok := s.Policies.Match(claims)
 	// Fail if no policy matched and there is no default handler
 	if !ok && s.defaultHandler == nil {
 		return nil, errors.New("no matching policy")
@@ -46,14 +46,14 @@ func (s *AuthService2) Handle(request *jwt.AuthorizationRequestClaims) (*jwt.Use
 		handler = matchedHandler
 	}
 	// Let handler handle the request
-	return handler.Handle(request)
+	return handler.Handle(req)
 }
 
 // Provision will provision the auth callout service.
 // It implements the caddy.Provisioner interface.
 // It will load and validate the auth callout handler module.
 // It will load and validate the auth signing key.
-func (s *AuthService2) Provision(app *App) error {
+func (s *AuthService) Provision(app *App) error {
 	s.app = app
 	// Validate configuration
 	if s.AuthSigningKey != "" && s.InternalAccount != "" {
@@ -106,7 +106,7 @@ func (s *AuthService2) Provision(app *App) error {
 	return nil
 }
 
-func (s *AuthService2) Start(server *server.Server) error {
+func (s *AuthService) Start(server *server.Server) error {
 	// Get default options
 	opts := nats.GetDefaultOptions()
 	// Set in process server option
@@ -131,14 +131,14 @@ func (s *AuthService2) Start(server *server.Server) error {
 	return s.service.Listen(conn)
 }
 
-func (s *AuthService2) Stop() error {
+func (s *AuthService) Stop() error {
 	if s.conn != nil {
 		s.conn.Close()
 	}
 	return nil
 }
 
-func (s *AuthService2) setPassword(opts *nats.Options) {
+func (s *AuthService) setPassword(opts *nats.Options) {
 	// The goal is to "guess" the user and password to use for the auth callout
 	if s.app.Options != nil && s.app.Options.Authorization != nil {
 		auth := s.app.Options.Authorization

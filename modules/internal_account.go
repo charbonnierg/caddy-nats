@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
-func (s *AuthService2) setupInternalAuthAccount() error {
+func (s *AuthService) setupInternalAuthAccount() error {
 	if s.AuthSigningKey != "" {
 		return nil
 	}
