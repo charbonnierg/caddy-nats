@@ -33,6 +33,16 @@
             "endpoints": [
                 {
                     "name": "az",
+                    "store": {
+                        "type": "jetstream",
+                        "client": {
+                            "servers": [
+                                "nats://localhost:4222"
+                            ],
+                            "username": "OAUTH2",
+                            "password": "OAUTH2"
+                        }
+                    },
                     "options": {
                         "cookie": {
                             "domains": [
@@ -81,7 +91,7 @@
             "auth_service": {
                 "internal_account": "AUTH",
                 "handler": {
-                    "module": "always_deny"
+                    "module": "deny"
                 },
                 "policies": [
                     {
@@ -94,7 +104,17 @@
                         ],
                         "handler": {
                             "module": "oauth2",
-                            "endpoint": "az"
+                            "endpoint": "az",
+                            "account": "APP",
+                            "template": {
+                                "pub": {
+                                    "allow": [
+                                        "{oidc.session.email}.>",
+                                        "test.>"
+                                    ]
+                                },
+                                "resp": {}
+                            }
                         }
                     },
                     {
@@ -111,7 +131,27 @@
                             }
                         ],
                         "handler": {
-                            "module": "always_allow"
+                            "module": "allow",
+                            "account": "SYS"
+                        }
+                    },
+                    {
+                        "match": [
+                            {
+                                "client_info": {
+                                    "host": "127.0.0.1",
+                                    "kind": "Client",
+                                    "type": "nats"
+                                },
+                                "connect_opts": {
+                                    "username": "OAUTH2",
+                                    "password": "OAUTH2"
+                                }
+                            }
+                        ],
+                        "handler": {
+                            "module": "allow",
+                            "account": "OAUTH2"
                         }
                     },
                     {
@@ -123,7 +163,12 @@
                             }
                         ],
                         "handler": {
-                            "module": "always_allow"
+                            "module": "allow",
+                            "account": "GUEST",
+                            "template": {
+                                "subs": 50,
+                                "payload": 8192
+                            }
                         }
                     }
                 ]
@@ -142,12 +187,19 @@
                         "localhost"
                     ]
                 },
+                "system_acccount": "SYS",
                 "accounts": [
                     {
                         "name": "APP"
                     },
                     {
                         "name": "GUEST"
+                    },
+                    {
+                        "name": "OAUTH2"
+                    },
+                    {
+                        "name": "SYS"
                     }
                 ],
                 "jetstream": {},
