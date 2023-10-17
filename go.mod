@@ -2,7 +2,7 @@ module github.com/charbonnierg/caddy-nats
 
 go 1.21.1
 
-replace github.com/oauth2-proxy/oauth2-proxy/v7 => github.com/charbonnierg/oauth2-proxy/v7 v7.5.1-library-usage
+replace github.com/oauth2-proxy/oauth2-proxy/v7 => github.com/charbonnierg/oauth2-proxy/v7 v7.5.1-library-usage-r2
 
 require (
 	github.com/caddyserver/caddy/v2 v2.7.4

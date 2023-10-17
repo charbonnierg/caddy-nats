@@ -4,6 +4,12 @@ package oauthproxy
 
 // Return true if two Options structs are equal.
 func (o *Options) equals(other *Options) bool {
+	if o == nil && other == nil {
+		return true
+	}
+	if o == nil && other != nil {
+		return false
+	}
 	if len(o.ExtraJwtIssuers) != len(other.ExtraJwtIssuers) {
 		return false
 	}
@@ -94,9 +100,6 @@ func (o *Options) equals(other *Options) bool {
 		return false
 	}
 	if !o.Cookie.equals(&other.Cookie) {
-		return false
-	}
-	if !o.Session.equals(&other.Session) {
 		return false
 	}
 	if !o.Templates.equals(&other.Templates) {
@@ -251,77 +254,6 @@ func (t *Templates) equals(other *Templates) bool {
 		return false
 	}
 	if t.Debug != other.Debug {
-		return false
-	}
-	return true
-}
-
-// Return true if two CookieStoreOptions structs are equal.
-func (c *CookieStoreOptions) equals(other *CookieStoreOptions) bool {
-	return c.Minimal == other.Minimal
-}
-
-// Return true if two RedisStoreOptions structs are equal.
-func (r *RedisStoreOptions) equals(other *RedisStoreOptions) bool {
-	if r.ConnectionURL != other.ConnectionURL {
-		return false
-	}
-	if r.Password != other.Password {
-		return false
-	}
-	if r.UseSentinel != other.UseSentinel {
-		return false
-	}
-	if r.SentinelPassword != other.SentinelPassword {
-		return false
-	}
-	if r.SentinelMasterName != other.SentinelMasterName {
-		return false
-	}
-	if r.SentinelConnectionURLs != nil && other.SentinelConnectionURLs != nil {
-		if len(r.SentinelConnectionURLs) != len(other.SentinelConnectionURLs) {
-			return false
-		}
-		for i, v := range r.SentinelConnectionURLs {
-			if v != other.SentinelConnectionURLs[i] {
-				return false
-			}
-		}
-	}
-	if r.UseCluster != other.UseCluster {
-		return false
-	}
-	if r.ClusterConnectionURLs != nil || other.ClusterConnectionURLs != nil {
-		if len(r.ClusterConnectionURLs) != len(other.ClusterConnectionURLs) {
-			return false
-		}
-		for i, v := range r.ClusterConnectionURLs {
-			if v != other.ClusterConnectionURLs[i] {
-				return false
-			}
-		}
-	}
-	if r.CAPath != other.CAPath {
-		return false
-	}
-	if r.InsecureSkipTLSVerify != other.InsecureSkipTLSVerify {
-		return false
-	}
-	if r.IdleTimeout != other.IdleTimeout {
-		return false
-	}
-	return true
-}
-
-// Return true if two SessionOptions structs are equal.
-func (s *SessionOptions) equals(other *SessionOptions) bool {
-	if s.Type != other.Type {
-		return false
-	}
-	if s.Cookie.equals(&other.Cookie) {
-		return false
-	}
-	if s.Redis.equals(&other.Redis) {
 		return false
 	}
 	return true

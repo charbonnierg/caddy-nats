@@ -4,6 +4,7 @@ package oauthproxy
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -24,10 +25,12 @@ import (
 type Endpoint struct {
 	logger  *zap.Logger
 	cipher  encryption.Cipher
+	store   SessionStore
 	opts    *options.Options
 	proxy   *server.OAuthProxy
-	Name    string   `json:"name,omitempty"`
-	Options *Options `json:"options,omitempty"`
+	Name    string          `json:"name,omitempty"`
+	Options *Options        `json:"options,omitempty"`
+	Store   json.RawMessage `json:"store,omitempty" caddy:"namespace=oauth2.session_store inline_key=type"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -69,14 +72,36 @@ func (e *Endpoint) provision(app *App) error {
 		return fmt.Errorf("no options found for endpoint %s", e.Name)
 	}
 	e.opts = e.Options.oauth2proxyOptions()
-	// Set cookie secret
-	// TODO: The secret is randomely generated, but it is not persisted
 	if e.opts.Cookie.Secret == "" {
 		secret, err := generateRandomASCIIString(32)
 		if err != nil {
 			return err
 		}
 		e.opts.Cookie.Secret = secret
+	}
+	// Load session store
+	if e.Store == nil {
+		// Use cookie store by default
+		store := &CookieStore{}
+		err := store.Provision(&e.opts.Cookie)
+		if err != nil {
+			return fmt.Errorf("error provisioning cookie store for endpoint %s: %v", e.Name, err)
+		}
+		e.store = store
+	} else {
+		unm, err := app.ctx.LoadModule(e.Store, "type")
+		if err != nil {
+			return fmt.Errorf("error loading session store for endpoint %s: %v", e.Name, err)
+		}
+		store, ok := unm.(SessionStore)
+		if !ok {
+			return fmt.Errorf("invalid session store for endpoint %s", e.Name)
+		}
+		err = store.Provision(&e.opts.Cookie)
+		if err != nil {
+			return fmt.Errorf("error provisioning session store for endpoint %s: %v", e.Name, err)
+		}
+		e.store = store
 	}
 	// Validate options
 	if err := validation.Validate(e.opts); err != nil {
@@ -97,11 +122,11 @@ func (e *Endpoint) provision(app *App) error {
 func (e *Endpoint) setup() error {
 	up := upstream{logger: e.logger}
 	validator := server.NewValidator(e.opts.EmailDomains, e.opts.AuthenticatedEmailsFile)
-	proxy, err := server.NewEmbeddedOauthProxy(e.opts, validator, &up)
-	up.setSessionLoader(proxy.LoadCookiedSession)
+	proxy, err := server.NewEmbeddedOauthProxy(e.opts, validator, nil, &up)
 	if err != nil {
 		return err
 	}
+	up.setSessionLoader(proxy.LoadCookiedSession)
 	e.proxy = proxy
 	return nil
 }
@@ -116,8 +141,17 @@ func (e *Endpoint) equals(other *Endpoint) bool {
 	if e.Name != other.Name {
 		return false
 	}
-	if e.Options == nil && other.Options == nil {
-		return true
+	if !e.Options.equals(other.Options) {
+		return false
 	}
-	return e.Options.equals(other.Options)
+	// Compare raw bytes
+	if len(e.Store) != len(other.Store) {
+		return false
+	}
+	for i, v := range e.Store {
+		if v != other.Store[i] {
+			return false
+		}
+	}
+	return true
 }

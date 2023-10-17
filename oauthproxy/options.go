@@ -107,33 +107,6 @@ type Templates struct {
 	Debug bool `json:"show_debug_on_error,omitempty"`
 }
 
-// CookieStoreOptions contains configuration options for the CookieSessionStore.
-type CookieStoreOptions struct {
-	Minimal bool `json:"session_cookie_minimal"`
-}
-
-// RedisStoreOptions contains configuration options for the RedisSessionStore.
-type RedisStoreOptions struct {
-	ConnectionURL          string   `json:"connection_url"`
-	Password               string   `json:"password"`
-	UseSentinel            bool     `json:"use_sentinel"`
-	SentinelPassword       string   `json:"sentinel_password"`
-	SentinelMasterName     string   `json:"sentinel_master_name"`
-	SentinelConnectionURLs []string `json:"sentinel_connection_urls"`
-	UseCluster             bool     `json:"use_cluster"`
-	ClusterConnectionURLs  []string `json:"cluster_connection_urls"`
-	CAPath                 string   `json:"ca_path"`
-	InsecureSkipTLSVerify  bool     `json:"insecure_skip_tls_verify"`
-	IdleTimeout            int      `json:"idle_timeout"`
-}
-
-// SessionOptions contains configuration options for the session store.
-type SessionOptions struct {
-	Type   string             `json:"type"`
-	Cookie CookieStoreOptions `json:"cookie"`
-	Redis  RedisStoreOptions  `json:"redis"`
-}
-
 // Cookie contains configuration options for the cookie.
 type Cookie struct {
 	Name           string        `json:"name,omitempty"`
@@ -165,9 +138,8 @@ type Options struct {
 	HtpasswdUserGroups      []string `json:"htpasswd_user_groups,omitempty"`
 	ReverseProxy            bool     `json:"reverse_proxy,omitempty"`
 
-	Cookie    Cookie         `json:"cookie"`
-	Session   SessionOptions `json:"session"`
-	Templates Templates      `json:"templates"`
+	Cookie    Cookie    `json:"cookie"`
+	Templates Templates `json:"templates"`
 
 	InjectRequestHeaders  Headers `json:"inject_request_headers,omitempty"`
 	InjectResponseHeaders Headers `json:"inject_response_headers,omitempty"`
@@ -259,45 +231,6 @@ func (o *Options) oauth2proxyOptions() *options.Options {
 	}
 	if o.Cookie.CSRFExpire != 0 {
 		opts.Cookie.CSRFExpire = o.Cookie.CSRFExpire
-	}
-	if o.Session.Type != "" {
-		opts.Session.Type = o.Session.Type
-	}
-	if o.Session.Cookie.Minimal {
-		opts.Session.Cookie.Minimal = o.Session.Cookie.Minimal
-	}
-	if o.Session.Redis.ConnectionURL != "" {
-		opts.Session.Redis.ConnectionURL = o.Session.Redis.ConnectionURL
-	}
-	if o.Session.Redis.Password != "" {
-		opts.Session.Redis.Password = o.Session.Redis.Password
-	}
-	if o.Session.Redis.UseSentinel {
-		opts.Session.Redis.UseSentinel = o.Session.Redis.UseSentinel
-	}
-	if o.Session.Redis.SentinelPassword != "" {
-		opts.Session.Redis.SentinelPassword = o.Session.Redis.SentinelPassword
-	}
-	if o.Session.Redis.SentinelMasterName != "" {
-		opts.Session.Redis.SentinelMasterName = o.Session.Redis.SentinelMasterName
-	}
-	if o.Session.Redis.SentinelConnectionURLs != nil {
-		opts.Session.Redis.SentinelConnectionURLs = o.Session.Redis.SentinelConnectionURLs
-	}
-	if o.Session.Redis.UseCluster {
-		opts.Session.Redis.UseCluster = o.Session.Redis.UseCluster
-	}
-	if o.Session.Redis.ClusterConnectionURLs != nil {
-		opts.Session.Redis.ClusterConnectionURLs = o.Session.Redis.ClusterConnectionURLs
-	}
-	if o.Session.Redis.CAPath != "" {
-		opts.Session.Redis.CAPath = o.Session.Redis.CAPath
-	}
-	if o.Session.Redis.InsecureSkipTLSVerify {
-		opts.Session.Redis.InsecureSkipTLSVerify = o.Session.Redis.InsecureSkipTLSVerify
-	}
-	if o.Session.Redis.IdleTimeout != 0 {
-		opts.Session.Redis.IdleTimeout = o.Session.Redis.IdleTimeout
 	}
 	if o.Templates.Path != "" {
 		opts.Templates.Path = o.Templates.Path
