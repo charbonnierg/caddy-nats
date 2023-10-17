@@ -8,7 +8,9 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 )
 
-func (s *RedisStore) Store() sessionsapi.SessionStore { return s.store }
+func init() {
+	caddy.RegisterModule(RedisStore{})
+}
 
 type RedisStore struct {
 	store                  sessionsapi.SessionStore
@@ -24,6 +26,8 @@ type RedisStore struct {
 	InsecureSkipTLSVerify  bool     `json:"insecure_skip_tls_verify"`
 	IdleTimeout            int      `json:"idle_timeout"`
 }
+
+func (s *RedisStore) Store() sessionsapi.SessionStore { return s.store }
 
 func (s *RedisStore) Provision(opts *options.Cookie) error {
 	storeOpts := &options.SessionOptions{

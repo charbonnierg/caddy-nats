@@ -4,6 +4,7 @@ package natsrunner
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -121,6 +122,20 @@ func (r *Runner) Running() bool {
 func (r *Runner) Start() error {
 	// Start the server
 	r.server.Start()
+	// Lookup and enable jetstream for accounts
+	for _, acc := range r.Options.Accounts {
+		if acc.JetStream {
+			account, err := r.server.LookupAccount(acc.Name)
+			if err != nil {
+				return fmt.Errorf("account was not initialized: %s", err.Error())
+			}
+			// Enable jetstream
+			err = account.EnableJetStream(nil)
+			if err != nil {
+				return fmt.Errorf("failed to enabled jetstream for account: %s", err.Error())
+			}
+		}
+	}
 	// Wait for server to be ready for connections
 	if r.ReadyDeadline != 0 {
 		if ok := r.server.ReadyForConnections(r.ReadyDeadline); !ok {

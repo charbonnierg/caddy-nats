@@ -7,17 +7,21 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
 )
 
+func init() {
+	caddy.RegisterModule(CookieStore{})
+}
+
 type SessionStore interface {
 	Store() sessionsapi.SessionStore
 	Provision(opts *options.Cookie) error
 }
 
-func (s *CookieStore) Store() sessionsapi.SessionStore { return s.store }
-
 type CookieStore struct {
 	store   sessionsapi.SessionStore
 	Minimal bool `json:"session_cookie_minimal"`
 }
+
+func (s *CookieStore) Store() sessionsapi.SessionStore { return s.store }
 
 func (s *CookieStore) Provision(opts *options.Cookie) error {
 	storeOpts := &options.SessionOptions{Type: options.CookieSessionStoreType, Cookie: options.CookieStoreOptions{Minimal: s.Minimal}}

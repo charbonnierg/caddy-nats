@@ -3,13 +3,11 @@
 package oauthproxy
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
-	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 	"go.uber.org/zap"
 )
 
@@ -94,11 +92,14 @@ func (e *Endpoint) DecodeSessionState(cookies []*http.Cookie) (*sessions.Session
 	if err != nil {
 		return nil, err
 	}
-	val, _, ok := encryption.Validate(cookie, e.opts.Cookie.Secret, e.opts.Cookie.Expire)
-	if !ok {
-		return nil, errors.New("cookie signature not valid")
+	req := &http.Request{}
+	req.Header = http.Header{}
+	req.AddCookie(cookie)
+	state, err := e.store.Store().Load(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load session state: %v", err)
 	}
-	return sessions.DecodeSessionState(val, e.cipher, true)
+	return state, nil
 }
 
 // DecodeSessionStateFromString decodes the session state from the given encoded cookie string.

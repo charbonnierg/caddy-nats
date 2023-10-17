@@ -89,7 +89,7 @@ func (e *Endpoint) provision(app *App) error {
 		}
 		e.store = store
 	} else {
-		unm, err := app.ctx.LoadModule(e.Store, "type")
+		unm, err := app.ctx.LoadModule(e, "Store")
 		if err != nil {
 			return fmt.Errorf("error loading session store for endpoint %s: %v", e.Name, err)
 		}
@@ -122,7 +122,7 @@ func (e *Endpoint) provision(app *App) error {
 func (e *Endpoint) setup() error {
 	up := upstream{logger: e.logger}
 	validator := server.NewValidator(e.opts.EmailDomains, e.opts.AuthenticatedEmailsFile)
-	proxy, err := server.NewEmbeddedOauthProxy(e.opts, validator, nil, &up)
+	proxy, err := server.NewEmbeddedOauthProxy(e.opts, validator, e.store.Store(), &up)
 	if err != nil {
 		return err
 	}

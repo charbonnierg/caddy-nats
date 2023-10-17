@@ -11,6 +11,8 @@ import (
 	_ "github.com/charbonnierg/caddy-nats/modules/auth_callout/oauth2"
 	_ "github.com/charbonnierg/caddy-nats/oauthproxy"
 	_ "github.com/charbonnierg/caddy-nats/oauthproxy/http_handler"
+	_ "github.com/charbonnierg/caddy-nats/oauthproxy/session_store"
+	_ "github.com/charbonnierg/caddy-nats/oauthproxy/session_store/jetstream"
 )
 
 func main() {
