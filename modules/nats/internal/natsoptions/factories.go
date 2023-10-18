@@ -3,8 +3,8 @@
 package natsoptions
 
 import (
-	"github.com/charbonnierg/beyond/modules/nats/embedded/natslogger"
-	"github.com/charbonnierg/beyond/modules/nats/embedded/natsmetrics"
+	"github.com/charbonnierg/beyond/modules/nats/internal/natslogger"
+	"github.com/charbonnierg/beyond/modules/nats/internal/natsmetrics"
 
 	"github.com/nats-io/nats-server/v2/server"
 	"go.uber.org/zap"

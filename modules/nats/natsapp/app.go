@@ -9,8 +9,8 @@ import (
 
 	"github.com/charbonnierg/beyond"
 	interfaces "github.com/charbonnierg/beyond/modules/nats"
-	"github.com/charbonnierg/beyond/modules/nats/embedded/natsoptions"
-	"github.com/charbonnierg/beyond/modules/nats/embedded/natsrunner"
+	"github.com/charbonnierg/beyond/modules/nats/internal/natsoptions"
+	"github.com/charbonnierg/beyond/modules/nats/internal/natsrunner"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"

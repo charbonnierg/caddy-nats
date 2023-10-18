@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charbonnierg/beyond/modules/nats/embedded/natsauth"
+	"github.com/charbonnierg/beyond/modules/nats/internal/natsauth"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charbonnierg/beyond/modules/nats/embedded/natsmetrics"
+	"github.com/charbonnierg/beyond/modules/nats/internal/natsmetrics"
 )
 
 func (o *Options) GetExporterOptions() (*natsmetrics.CollectorOptions, error) {

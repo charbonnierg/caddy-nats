@@ -5,7 +5,7 @@ package natsapp
 import (
 	"errors"
 
-	"github.com/charbonnierg/beyond/modules/nats/embedded/natsoptions"
+	"github.com/charbonnierg/beyond/modules/nats/internal/natsoptions"
 	"github.com/nats-io/nkeys"
 )
 
