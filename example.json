@@ -109,8 +109,12 @@
                             "template": {
                                 "pub": {
                                     "allow": [
-                                        "{oidc.session.email}.>",
-                                        "test.>"
+                                        "user.{oidc.session.email}.>"
+                                    ]
+                                },
+                                "sub": {
+                                    "allow": [
+                                        "user.>"
                                     ]
                                 },
                                 "resp": {}
