@@ -5,12 +5,14 @@ package natsapp
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/charbonnierg/beyond"
 	interfaces "github.com/charbonnierg/beyond/modules/nats"
 	"github.com/charbonnierg/beyond/modules/nats/internal/natsoptions"
 	"github.com/charbonnierg/beyond/modules/nats/internal/natsrunner"
+	"github.com/charbonnierg/beyond/modules/secrets"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -29,6 +31,7 @@ func init() {
 type App struct {
 	ctx                caddy.Context
 	beyond             *beyond.Beyond
+	secrets            secrets.SecretApp
 	tlsApp             *caddytls.TLS
 	logger             *zap.Logger
 	runner             *natsrunner.Runner
@@ -71,6 +74,16 @@ func (a *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 	a.beyond = b
+	// Load secrets app module
+	unm, err := a.beyond.LoadApp(a, "secrets")
+	if err != nil {
+		return err
+	}
+	secretsapp, ok := unm.(secrets.SecretApp)
+	if !ok {
+		return errors.New("secrets app invalid type")
+	}
+	a.secrets = secretsapp
 	// Provision tls app and connections policies
 	a.connectionPolicies = []caddytls.ConnectionPolicies{}
 	tlsApp, err := a.beyond.GetTLSApp()
@@ -84,9 +97,16 @@ func (a *App) Provision(ctx caddy.Context) error {
 			return err
 		}
 	}
-	// We could update options here if we want
-	// For example we could set the TLS config override
-	// of the standard NATS server to use ACME certificates:
+	// Replace secrets replacer variables
+	replacer := caddy.NewReplacer()
+	a.secrets.AddSecretsReplacerVars(replacer)
+	name, err := replacer.ReplaceOrErr(a.Options.ServerName, true, true)
+	if err != nil {
+		return fmt.Errorf("invalid secret placeholder in server name: %v", err)
+	}
+	a.Options.ServerName = name
+	a.logger.Warn("configuring nats server", zap.String("server_name", a.Options.ServerName))
+	// Set the TLS config override of the standard NATS server to use ACME certificates
 	if err := a.setTLSConfigOverride(); err != nil {
 		return err
 	}

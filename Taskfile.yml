@@ -1,0 +1,56 @@
+version: "3"
+
+tasks:
+  generate:
+    desc: Generate opentelemetry-collector source code
+    cmds:
+      - builder --skip-compilation --config=otelcol-builder.yml
+
+  docs:
+    desc: Serve docs locally
+    cmds:
+      - pkgsite
+
+  caddy:
+    desc: Run caddy command after building it
+    deps:
+      - build
+    cmds:
+      - ./caddy {{.CLI_ARGS}}
+
+  start:
+    desc: Start local caddy server after building it
+    deps:
+      - build
+    cmds:
+      - ./caddy run {{.CLI_ARGS}}
+
+  build:
+    desc: Build caddy server with all modules
+    cmds:
+      - mkdir -p dist
+      - go build -o caddy ./cmd/caddy
+      - sudo setcap cap_net_bind_service=+ep ./caddy
+    env:
+      CGO_ENABLED: 0
+
+  xbuild:
+    desc: Build cross-platform caddy server with all modules
+    cmds:
+      - goreleaser build --clean
+
+  release:
+    desc: CI Release - Do not run locally
+    cmds:
+      - goreleaser
+
+  tidy:
+    desc: Tidy up go.mod dependencies
+    cmds:
+      - go mod tidy
+
+  # tests
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v ./...

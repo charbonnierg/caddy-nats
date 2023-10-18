@@ -1,4 +1,4 @@
-package secrets
+package secretsapp
 
 import (
 	"fmt"
