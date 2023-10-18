@@ -1,4 +1,4 @@
-package nats
+package natsapp
 
 import (
 	"os"

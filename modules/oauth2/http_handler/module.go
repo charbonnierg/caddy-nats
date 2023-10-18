@@ -10,8 +10,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	_oauth2 "github.com/charbonnierg/beyond/modules/oauth2"
-	oauth2 "github.com/charbonnierg/beyond/modules/oauth2/interfaces"
+	"github.com/charbonnierg/beyond/modules/oauth2"
+	"github.com/charbonnierg/beyond/modules/oauth2/oauth2app"
 )
 
 func init() {
@@ -23,7 +23,7 @@ func init() {
 // It implements the caddyhttp.MiddlewareHandler interface.
 type OAuth2Session struct {
 	endpoint    oauth2.OAuth2Endpoint
-	EndpointRaw *_oauth2.Endpoint `json:"endpoint,omitempty"`
+	EndpointRaw *oauth2app.Endpoint `json:"endpoint,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -44,7 +44,7 @@ func (p *OAuth2Session) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to load oauth2 app module: %v", err)
 	}
-	app, ok := unm.(*_oauth2.App)
+	app, ok := unm.(*oauth2app.App)
 	if !ok {
 		return fmt.Errorf("invalid oauth2 app module")
 	}

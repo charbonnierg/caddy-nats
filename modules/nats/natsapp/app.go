@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package nats
+package natsapp
 
 import (
 	"encoding/json"
@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/charbonnierg/beyond"
+	interfaces "github.com/charbonnierg/beyond/modules/nats"
 	"github.com/charbonnierg/beyond/modules/nats/embedded/natsoptions"
 	"github.com/charbonnierg/beyond/modules/nats/embedded/natsrunner"
-	"github.com/charbonnierg/beyond/modules/nats/interfaces"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"

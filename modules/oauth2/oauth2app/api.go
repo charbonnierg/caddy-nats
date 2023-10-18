@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package oauth2
+package oauth2app
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"net/url"
 
 	"github.com/charbonnierg/beyond"
-	"github.com/charbonnierg/beyond/modules/oauth2/interfaces"
+	interfaces "github.com/charbonnierg/beyond/modules/oauth2"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
 	"go.uber.org/zap"

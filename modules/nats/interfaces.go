@@ -1,4 +1,6 @@
-package interfaces
+// SPDX-License-Identifier: Apache-2.0
+
+package nats
 
 import (
 	"github.com/nats-io/nats-server/v2/server"

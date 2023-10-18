@@ -39,17 +39,11 @@ func (Beyond) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Start will start the Beyond module.
-// It is required to implement the caddy.App interface.
-func (b *Beyond) Start() error {
-	return nil
-}
+// Start will start the Beyond module. It is required to implement the caddy.App interface.
+func (b *Beyond) Start() error { return nil }
 
-// Stop will stop the Beyond module.
-// It is required to implement the caddy.App interface.
-func (b *Beyond) Stop() error {
-	return nil
-}
+// Stop will stop the Beyond module. It is required to implement the caddy.App interface.
+func (b *Beyond) Stop() error { return nil }
 
 // Provision will configure and validate the Beyond module.
 // It is required to implement the caddy.Provisioner interface.
@@ -62,14 +56,6 @@ func (b *Beyond) Provision(ctx caddy.Context) error {
 	b.apps = make(Apps)
 	// Let's load the TLS app
 	b.logger.Warn("loading tls app")
-	if err := b.loadTLSApp(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// loadTLSApp is a helper function to load the caddy TLS app module.
-func (b *Beyond) loadTLSApp() error {
 	unm, err := b.ctx.App("tls")
 	if err != nil {
 		return fmt.Errorf("failed to load tls app: %v", err)

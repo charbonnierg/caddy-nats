@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package oauth2
+package oauth2app
 
 import (
 	"sync"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/charbonnierg/beyond"
-	"github.com/charbonnierg/beyond/modules/oauth2/interfaces"
+	interfaces "github.com/charbonnierg/beyond/modules/oauth2"
 	"go.uber.org/zap"
 )
 

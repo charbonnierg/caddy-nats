@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond/modules/nats"
-	oauth2 "github.com/charbonnierg/beyond/modules/oauth2/interfaces"
+	"github.com/charbonnierg/beyond/modules/nats/natsapp"
+	"github.com/charbonnierg/beyond/modules/oauth2"
 	"github.com/nats-io/jwt/v2"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"go.uber.org/zap"
@@ -28,9 +28,9 @@ type OAuth2ProxyAuthCallout struct {
 	logger   *zap.Logger
 	oauth    oauth2.OAuth2App
 	endpoint oauth2.OAuth2Endpoint
-	Endpoint string         `json:"endpoint"`
-	Account  string         `json:"account,omitempty"`
-	Template *nats.Template `json:"template,omitempty"`
+	Endpoint string            `json:"endpoint"`
+	Account  string            `json:"account,omitempty"`
+	Template *natsapp.Template `json:"template,omitempty"`
 }
 
 func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
@@ -43,7 +43,7 @@ func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
 // Provision sets up the auth callout handler.
 // It is called by the auth callout caddy module when the handler is loaded from config.
 // It should not be called directly by other modules.
-func (c *OAuth2ProxyAuthCallout) Provision(app *nats.App) error {
+func (c *OAuth2ProxyAuthCallout) Provision(app *natsapp.App) error {
 	c.logger = app.Context().Logger().Named("oauth2")
 	// Load oauth2 app
 	unm, err := app.LoadApp("oauth2")
@@ -75,7 +75,7 @@ func (c *OAuth2ProxyAuthCallout) loadOauth2Endpoint() error {
 // It returns either user claims or an error.
 // The account for which the user is authenticated is the username in connect opts.
 // This target account is set as Audience in the user claims as required auth_callout caddy module.
-func (c *OAuth2ProxyAuthCallout) Handle(request *nats.AuthorizationRequest) (*jwt.UserClaims, error) {
+func (c *OAuth2ProxyAuthCallout) Handle(request *natsapp.AuthorizationRequest) (*jwt.UserClaims, error) {
 	// Endpoint will be loaded on first request, then it is saved on
 	// the callout instance for subsequent requests
 	err := c.loadOauth2Endpoint()
@@ -115,7 +115,7 @@ func (c *OAuth2ProxyAuthCallout) Handle(request *nats.AuthorizationRequest) (*jw
 	return userClaims, nil
 }
 
-func (c *OAuth2ProxyAuthCallout) addSessionReplacerVars(request *nats.AuthorizationRequest, session *sessions.SessionState) {
+func (c *OAuth2ProxyAuthCallout) addSessionReplacerVars(request *natsapp.AuthorizationRequest, session *sessions.SessionState) {
 	extractor, err := c.endpoint.GetOidcSessionClaimExtractor(session)
 	if err != nil {
 		c.logger.Error("unable to get oidc session claim extractor", zap.Error(err))
@@ -146,5 +146,5 @@ func (c *OAuth2ProxyAuthCallout) addSessionReplacerVars(request *nats.Authorizat
 }
 
 var (
-	_ nats.AuthCallout = (*OAuth2ProxyAuthCallout)(nil)
+	_ natsapp.AuthCallout = (*OAuth2ProxyAuthCallout)(nil)
 )

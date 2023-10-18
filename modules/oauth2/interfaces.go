@@ -1,4 +1,4 @@
-package interfaces
+package oauth2
 
 import (
 	"net/http"

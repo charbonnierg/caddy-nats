@@ -6,7 +6,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/charbonnierg/beyond/modules/oauth2"
+	"github.com/charbonnierg/beyond/modules/oauth2/oauth2app"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
@@ -29,7 +29,7 @@ func (p *OAuth2Session) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		}
 		ep := p.EndpointRaw
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			op := &oauth2.Options{}
+			op := &oauth2app.Options{}
 			ep.Options = op
 			switch d.Val() {
 			case "cookie_domains":

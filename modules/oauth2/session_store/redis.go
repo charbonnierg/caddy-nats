@@ -2,7 +2,7 @@ package session_store
 
 import (
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond/modules/oauth2"
+	"github.com/charbonnierg/beyond/modules/oauth2/oauth2app"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
@@ -29,7 +29,7 @@ type RedisStore struct {
 
 func (s *RedisStore) Store() sessionsapi.SessionStore { return s.store }
 
-func (s *RedisStore) Provision(_ *oauth2.App, opts *options.Cookie) error {
+func (s *RedisStore) Provision(_ *oauth2app.App, opts *options.Cookie) error {
 	storeOpts := &options.SessionOptions{
 		Type: options.RedisSessionStoreType,
 		Redis: options.RedisStoreOptions{
@@ -61,5 +61,5 @@ func (RedisStore) CaddyModule() caddy.ModuleInfo {
 }
 
 var (
-	_ oauth2.SessionStore = (*RedisStore)(nil)
+	_ oauth2app.SessionStore = (*RedisStore)(nil)
 )

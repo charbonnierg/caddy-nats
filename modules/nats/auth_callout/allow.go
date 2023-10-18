@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond/modules/nats"
+	"github.com/charbonnierg/beyond/modules/nats/natsapp"
 	"github.com/nats-io/jwt/v2"
 )
 
@@ -16,9 +16,9 @@ func init() {
 
 // A minimal auth callout handler that always denies access.
 type AllowAuthCallout struct {
-	User     string         `json:"user,omitempty"`
-	Account  string         `json:"account,omitempty"`
-	Template *nats.Template `json:"template,omitempty"`
+	User     string            `json:"user,omitempty"`
+	Account  string            `json:"account,omitempty"`
+	Template *natsapp.Template `json:"template,omitempty"`
 }
 
 func (AllowAuthCallout) CaddyModule() caddy.ModuleInfo {
@@ -28,11 +28,11 @@ func (AllowAuthCallout) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (c *AllowAuthCallout) Provision(app *nats.App) error {
+func (c *AllowAuthCallout) Provision(app *natsapp.App) error {
 	return nil
 }
 
-func (a *AllowAuthCallout) Handle(request *nats.AuthorizationRequest) (*jwt.UserClaims, error) {
+func (a *AllowAuthCallout) Handle(request *natsapp.AuthorizationRequest) (*jwt.UserClaims, error) {
 	userClaims := jwt.NewUserClaims(request.Claims.UserNkey)
 	if a.Template != nil {
 		// Apply the template
@@ -54,5 +54,5 @@ func (a *AllowAuthCallout) Handle(request *nats.AuthorizationRequest) (*jwt.User
 }
 
 var (
-	_ nats.AuthCallout = (*AllowAuthCallout)(nil)
+	_ natsapp.AuthCallout = (*AllowAuthCallout)(nil)
 )

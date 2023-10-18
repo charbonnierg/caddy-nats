@@ -1,4 +1,4 @@
-package oauth2
+package oauth2app
 
 import (
 	"github.com/caddyserver/caddy/v2"

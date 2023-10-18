@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
-	nats "github.com/charbonnierg/beyond/modules/nats/interfaces"
-	"github.com/charbonnierg/beyond/modules/oauth2"
+	"github.com/charbonnierg/beyond/modules/nats"
+	"github.com/charbonnierg/beyond/modules/oauth2/oauth2app"
 	"github.com/charbonnierg/beyond/modules/oauth2/session_store/jetstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
@@ -27,7 +27,7 @@ type JetStreamStore struct {
 	TTL           time.Duration     `json:"ttl,omitempty"`
 }
 
-func (s *JetStreamStore) Provision(app *oauth2.App, opts *options.Cookie) error {
+func (s *JetStreamStore) Provision(app *oauth2app.App, opts *options.Cookie) error {
 	s.logger, _ = zap.NewDevelopment()
 	if s.Client.Internal {
 		unm, err := app.LoadApp("nats")
@@ -62,5 +62,5 @@ func (s *JetStreamStore) Store() sessionsapi.SessionStore {
 }
 
 var (
-	_ oauth2.SessionStore = (*JetStreamStore)(nil)
+	_ oauth2app.SessionStore = (*JetStreamStore)(nil)
 )

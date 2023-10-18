@@ -5,7 +5,8 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/charbonnierg/beyond"
-	docker "github.com/charbonnierg/beyond/modules/docker/interfaces"
+	"github.com/charbonnierg/beyond/modules/docker"
+	interfaces "github.com/charbonnierg/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
 
@@ -71,6 +72,9 @@ func (a *App) Stop() error {
 }
 
 var (
-	_ caddy.App         = (*App)(nil)
-	_ caddy.Provisioner = (*App)(nil)
+	// Make sure app implements the beyond.App interface
+	_ beyond.App = (*App)(nil)
+	// Only methods exposed by the interfaces.SecretApp interface will be accessible
+	// to other apps.
+	_ interfaces.SecretApp = (*App)(nil)
 )

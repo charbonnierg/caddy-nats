@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	_nats "github.com/charbonnierg/beyond/modules/nats/interfaces"
+	natsapp "github.com/charbonnierg/beyond/modules/nats"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
 )
@@ -15,7 +15,7 @@ import (
 // the first time Connect method is called.
 type Client struct {
 	closed       bool
-	server       _nats.ServerProvider
+	server       natsapp.ServerProvider
 	nc           *nats.Conn
 	js           nats.JetStreamContext
 	Internal     bool          `json:"internal,omitempty"`
@@ -34,7 +34,7 @@ type Client struct {
 	PingInterval time.Duration `json:"ping_interval,omitempty"`
 }
 
-func (c *Client) SetInProcessServerProvider(provider _nats.ServerProvider) {
+func (c *Client) SetInProcessServerProvider(provider natsapp.ServerProvider) {
 	c.server = provider
 }
 

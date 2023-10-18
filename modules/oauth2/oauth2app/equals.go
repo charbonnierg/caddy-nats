@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package oauth2
+package oauth2app
 
 // Return true if two Options structs are equal.
 func (o *Options) equals(other *Options) bool {
