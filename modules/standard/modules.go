@@ -13,5 +13,6 @@ import (
 	_ "github.com/charbonnierg/beyond/modules/oauth2/oauth2app"
 	_ "github.com/charbonnierg/beyond/modules/oauth2/session_store"
 	_ "github.com/charbonnierg/beyond/modules/oauth2/session_store/jetstream"
+	_ "github.com/charbonnierg/beyond/modules/otelcol"
 	_ "github.com/charbonnierg/beyond/modules/secrets/secretsapp"
 )

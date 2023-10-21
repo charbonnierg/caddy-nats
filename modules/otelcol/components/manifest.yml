@@ -1,0 +1,72 @@
+dist:
+  module: github.com/charbonnierg/beyond/modules/otelcol/components # the module name for the new distribution, following Go mod conventions. Optional, but recommended.
+  description: "Custom OpenTelemetry Collector distribution for Beyond project" # a long name for the application. Optional.
+  otelcol_version: "0.87.0" # the OpenTelemetry Collector version to use as base for the distribution. Optional.
+  output_path: ./_opentelemetry-collector # the path to write the output (sources and binary). Optional.
+  version: "0.0.1-dev" # the version for your custom OpenTelemetry Collector. Optional.
+  debug_compilation: false # enabling this causes the builder to keep the debug symbols in the resulting binary. Optional.
+
+# When adding a replace, add a comment before it to document why it's needed and when it can be removed
+replaces:
+  # See https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/12322#issuecomment-1185029670
+  - github.com/docker/go-connections v0.4.1-0.20210727194412-58542c764a11 => github.com/docker/go-connections v0.4.0
+
+# When adding an exclude, add a comment before it to document why it's needed and when it can be removed
+excludes:
+  # See https://github.com/open-telemetry/opentelemetry-collector/issues/8127#issuecomment-1654747977.
+  # Should be fixed by https://github.com/open-telemetry/opentelemetry-collector/pull/8219 which was merged
+  # in v0.85.0, but I still get the error when building the collector with the v0.87.0
+  - github.com/knadh/koanf v1.5.0
+
+# Add extensions as needed
+extensions:
+  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/basicauthextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/bearertokenauthextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/httpforwarder v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/oauth2clientauthextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/oidcauthextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.87.0
+    import: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage v0.87.0
+    import: github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/dbstorage
+
+# Add exporters as needed
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.87.0
+  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.87.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.87.0
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.87.0
+
+# Add processors as needed
+processors:
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.87.0
+  - gomod: go.opentelemetry.io/collector/processor/memorylimiterprocessor v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.87.0
+
+# Add receivers as needed
+receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filestatsreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filereceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/httpcheckreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/otlpjsonfilereceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/syslogreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/webhookeventreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.87.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowsperfcountersreceiver v0.87.0
+
+# Add connectors as needed
+connectors:
+  - gomod: go.opentelemetry.io/collector/connector/forwardconnector v0.87.0

@@ -2,9 +2,15 @@ version: "3"
 
 tasks:
   generate:
+    desc: Generate source code
+    deps:
+      - generate:otelcol
+
+  generate:otelcol:
     desc: Generate opentelemetry-collector source code
     cmds:
-      - builder --skip-compilation --config=otelcol-builder.yml
+      - ocb --skip-compilation --config=manifest.yml
+    dir: modules/otelcol/components
 
   docs:
     desc: Serve docs locally

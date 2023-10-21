@@ -36,9 +36,7 @@
                     "store": {
                         "type": "jetstream",
                         "client": {
-                            "servers": [
-                                "nats://localhost:4222"
-                            ],
+                            "internal": true,
                             "username": "OAUTH2",
                             "password": "OAUTH2"
                         }
@@ -46,7 +44,6 @@
                     "options": {
                         "cookie": {
                             "domains": [
-                                "localhost",
                                 ".localhost"
                             ],
                             "no_http_only": true
@@ -55,25 +52,24 @@
                             "*"
                         ],
                         "whitelist_domains": [
-                            "localhost",
                             ".localhost"
                         ],
                         "extra_jwt_issuers": [
-                            "https://sts.windows.net/<TENANT ID>/=<CLIENT ID>"
+                            "https://sts.windows.net/{env.AZ_PROVIDER_TENANT_ID}/={env.AZ_PROVIDER_CLIENT_ID}"
                         ],
                         "providers": [
                             {
                                 "id": "azure-ad",
                                 "name": "Azure AD",
                                 "provider": "oidc",
-                                "clientID": "<CLIENT ID>",
-                                "clientSecret": "<CLIENT SECRET>",
+                                "clientID": "{env.AZ_PROVIDER_CLIENT_ID}",
+                                "clientSecret": "{env.AZ_PROVIDER_CLIENT_SECRET}",
                                 "scope": "openid email profile",
-                                "loginURL": "https://login.microsoftonline.com/<TENANT ID>/v2.0/oauth2/authorize",
-                                "redeemURL": "https://login.microsoftonline.com/<TENANT ID>/v2.0/oauth2/token",
+                                "loginURL": "https://login.microsoftonline.com/{env.AZ_PROVIDER_TENANT_ID}/v2.0/oauth2/authorize",
+                                "redeemURL": "https://login.microsoftonline.com/{env.AZ_PROVIDER_TENANT_ID}/v2.0/oauth2/token",
                                 "profileURL": "https://graph.microsoft.com/v1.0/me",
                                 "oidcConfig": {
-                                    "issuerURL": "https://login.microsoftonline.com/<TENANT ID>/v2.0",
+                                    "issuerURL": "https://login.microsoftonline.com/{env.AZ_PROVIDER_TENANT_ID}/v2.0",
                                     "jwksURL": "https://login.microsoftonline.com/common/discovery/keys",
                                     "emailClaim": "email",
                                     "audienceClaims": [
@@ -109,12 +105,8 @@
                             "template": {
                                 "pub": {
                                     "allow": [
-                                        "user.{oidc.session.email}.>"
-                                    ]
-                                },
-                                "sub": {
-                                    "allow": [
-                                        "user.>"
+                                        "{oidc.session.email}.>",
+                                        "test.>"
                                     ]
                                 },
                                 "resp": {}
@@ -191,19 +183,17 @@
                         "localhost"
                     ]
                 },
-                "system_acccount": "SYS",
                 "accounts": [
                     {
-                        "name": "APP"
+                        "name": "APP",
+                        "jetstream": true
                     },
                     {
                         "name": "GUEST"
                     },
                     {
-                        "name": "OAUTH2"
-                    },
-                    {
-                        "name": "SYS"
+                        "name": "OAUTH2",
+                        "jetstream": true
                     }
                 ],
                 "jetstream": {},
@@ -261,7 +251,7 @@
                             "match": [
                                 {
                                     "host": [
-                                        "localhost"
+                                        "demo.localhost"
                                     ]
                                 }
                             ],
@@ -288,6 +278,89 @@
                     ],
                     "metrics": {},
                     "logs": {}
+                }
+            }
+        },
+        "otelcol": {
+            "config": {
+                "receivers": {
+                    "otlp": {
+                        "protocols": {
+                            "grpc": {
+                                "endpoint": "127.0.0.1:4318"
+                            },
+                            "http": {
+                                "endpoint": "127.0.0.1:4317"
+                            }
+                        }
+                    }
+                },
+                "processors": {
+                    "batch": {}
+                },
+                "exporters": {
+                    "debug": {}
+                },
+                "extensions": {
+                    "health_check": {
+                        "endpoint": "127.0.0.1:4315"
+                    },
+                    "pprof": {},
+                    "zpages": {}
+                },
+                "service": {
+                    "extensions": [
+                        "health_check",
+                        "pprof",
+                        "zpages"
+                    ],
+                    "pipelines": {
+                        "traces": {
+                            "receivers": [
+                                "otlp"
+                            ],
+                            "processors": [
+                                "batch"
+                            ],
+                            "exporters": [
+                                "debug"
+                            ]
+                        },
+                        "metrics": {
+                            "receivers": [
+                                "otlp"
+                            ],
+                            "processors": [
+                                "batch"
+                            ],
+                            "exporters": [
+                                "debug"
+                            ]
+                        },
+                        "logs": {
+                            "receivers": [
+                                "otlp"
+                            ],
+                            "processors": [
+                                "batch"
+                            ],
+                            "exporters": [
+                                "debug"
+                            ]
+                        }
+                    },
+                    "telemetry": {
+                        "logs": {
+                            "level": "debug",
+                            "initial_fields": {
+                                "service": "server-01"
+                            }
+                        },
+                        "metrics": {
+                            "level": "detailed",
+                            "address": "127.0.0.1:8888"
+                        }
+                    }
                 }
             }
         }
