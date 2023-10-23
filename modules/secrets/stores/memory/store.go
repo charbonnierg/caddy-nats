@@ -1,9 +1,11 @@
+// Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
 package memory
 
 import (
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/modules/secrets"
 )
 
@@ -50,5 +52,6 @@ func (s *MemoryStore) Set(key string, value string) error {
 
 // Interface guards
 var (
-	_ secrets.Store = (*MemoryStore)(nil)
+	_ secrets.Store         = (*MemoryStore)(nil)
+	_ caddyfile.Unmarshaler = (*MemoryStore)(nil)
 )

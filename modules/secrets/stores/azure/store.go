@@ -1,9 +1,13 @@
+// Copyright 2023 QUARA - RGPI
+// SPDX-License-Identifier: Apache-2.0
+
 package azure
 
 import (
 	"errors"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
@@ -70,5 +74,6 @@ func (s *AzureKeyvault) Set(key string, value string) error {
 
 // Interface guards
 var (
-	_ secrets.Store = (*AzureKeyvault)(nil)
+	_ secrets.Store         = (*AzureKeyvault)(nil)
+	_ caddyfile.Unmarshaler = (*AzureKeyvault)(nil)
 )

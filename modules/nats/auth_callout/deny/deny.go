@@ -1,6 +1,7 @@
+// Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package auth_callout
+package deny
 
 import (
 	"errors"

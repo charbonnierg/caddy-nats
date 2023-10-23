@@ -1,3 +1,4 @@
+// Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
 // Package natsmetrics is a Prometheus collector for NATS.

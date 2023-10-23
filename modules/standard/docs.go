@@ -1,3 +1,4 @@
+// Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
 // Package standard contains the standard Beyond modules.

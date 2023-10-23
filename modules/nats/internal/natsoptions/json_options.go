@@ -1,3 +1,4 @@
+// Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
 // Package options provides a JSON struct which can be used to generate a valid
