@@ -1,6 +1,12 @@
-# caddy-nats (EXPERIMENTAL)
+# Beyond (EXPERIMENTAL)
 
 > Run `nats-server` as a [caddy app](https://caddyserver.com/docs/extending-caddy#app-modules) with experimental oauth2 authentication.
+
+> Since a few days, this repo became much more than running NATS together with caddy, it also includes:
+> - OpenTelemetry Collector
+> - DNS providers for DNS-01 challenge
+> - Secrets provider
+> But this is a work-in-progress, not documented yet.
 
 ## Introduction
 
@@ -41,7 +47,7 @@ It means that no additional software or components should be required in order t
 
 ## Introduction to oauth2-proxy
 
-OAuth2 is not trivial to implement (even though lots of libraries exist to help developers integrate OAuth2 authorization into their applications). In order to avoid writing an OAuth2 middleware, I decided to reuse the existing project [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy). This project is used by many companies or other open sources projects, has more than 300 contributors, and approximately 7600 stars on GitHub. Because this project is a **server** component, it cannot be integrated directly into an existing Go application. I had to [make a fork to use oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy/compare/master...charbonnierg:oauth2-proxy:library_usage) in order to easily create a [caddy module](https://github.com/charbonnierg/beyond/blob/rewrite/oauthproxy/app.go). This caddy module is an HTTP middleware which can be used before other caddy modules to authenticate and authorize an HTTP session.
+OAuth2 is not trivial to implement (even though lots of libraries exist to help developers integrate OAuth2 authorization into their applications). In order to avoid writing an OAuth2 middleware, I decided to reuse the existing project [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy). This project is used by many companies or other open sources projects, has more than 300 contributors, and approximately 7600 stars on GitHub. Because this project is a **server** component, it cannot be integrated directly into an existing Go application. I had to [make a fork to use oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy/compare/master...quara-dev:oauth2-proxy:library_usage) in order to easily create a [caddy module](https://github.com/quara-dev/beyond/blob/rewrite/oauthproxy/app.go). This caddy module is an HTTP middleware which can be used before other caddy modules to authenticate and authorize an HTTP session.
 
 ## Example usage
 

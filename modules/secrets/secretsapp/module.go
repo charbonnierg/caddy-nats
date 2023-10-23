@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond"
-	interfaces "github.com/charbonnierg/beyond/modules/secrets"
+	"github.com/quara-dev/beyond"
+	interfaces "github.com/quara-dev/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
 

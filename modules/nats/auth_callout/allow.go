@@ -6,8 +6,8 @@ import (
 	"errors"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond/modules/nats/natsapp"
 	"github.com/nats-io/jwt/v2"
+	"github.com/quara-dev/beyond/modules/nats/natsapp"
 )
 
 func init() {

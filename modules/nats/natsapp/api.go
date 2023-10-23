@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
+	"github.com/quara-dev/beyond"
 )
 
 // Reload will reload the NATS server configuration.

@@ -3,7 +3,7 @@
 package components_test
 
 import (
-	"github.com/charbonnierg/beyond/modules/otelcol/components"
+	"github.com/quara-dev/beyond/modules/otelcol/components"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"testing"

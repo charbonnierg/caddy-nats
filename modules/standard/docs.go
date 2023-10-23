@@ -11,7 +11,7 @@
 //		  // Standard caddy plugins
 //		  _ "github.com/caddyserver/caddy/v2/modules/standard"
 //		  // Standard beyond plugins
-//		  _ "github.com/charbonnierg/beyond/modules/standard"
+//		  _ "github.com/quara-dev/beyond/modules/standard"
 //		  // plug in additional Caddy modules here
 //		  // ...
 //	  )

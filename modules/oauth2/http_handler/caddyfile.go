@@ -6,8 +6,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/charbonnierg/beyond/modules/oauth2/oauth2app"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+	"github.com/quara-dev/beyond/modules/oauth2/oauth2app"
 )
 
 // ParsePublishHandler parses the nats_publish directive. Syntax:

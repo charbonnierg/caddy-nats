@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond"
-	interfaces "github.com/charbonnierg/beyond/modules/oauth2"
+	"github.com/quara-dev/beyond"
+	interfaces "github.com/quara-dev/beyond/modules/oauth2"
 	"go.uber.org/zap"
 )
 

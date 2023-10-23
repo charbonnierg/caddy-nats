@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond"
-	"github.com/charbonnierg/beyond/modules/otelcol/components"
+	"github.com/quara-dev/beyond"
+	"github.com/quara-dev/beyond/modules/otelcol/components"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"

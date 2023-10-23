@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/charbonnierg/beyond/modules/nats/internal/natsmetrics"
-	"github.com/charbonnierg/beyond/modules/nats/internal/natsoptions"
+	"github.com/quara-dev/beyond/modules/nats/internal/natsmetrics"
+	"github.com/quara-dev/beyond/modules/nats/internal/natsoptions"
 
 	"github.com/nats-io/nats-server/v2/server"
 	"go.uber.org/zap"

@@ -10,8 +10,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/charbonnierg/beyond/modules/oauth2"
-	"github.com/charbonnierg/beyond/modules/oauth2/oauth2app"
+	"github.com/quara-dev/beyond/modules/oauth2"
+	"github.com/quara-dev/beyond/modules/oauth2/oauth2app"
 )
 
 func init() {

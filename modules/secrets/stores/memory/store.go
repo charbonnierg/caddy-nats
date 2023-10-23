@@ -4,7 +4,7 @@ package memory
 
 import (
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond/modules/secrets"
+	"github.com/quara-dev/beyond/modules/secrets"
 )
 
 // MemoryStore is a secrets store that stores secrets in memory.

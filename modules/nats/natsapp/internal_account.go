@@ -5,8 +5,8 @@ package natsapp
 import (
 	"errors"
 
-	"github.com/charbonnierg/beyond/modules/nats/internal/natsoptions"
 	"github.com/nats-io/nkeys"
+	"github.com/quara-dev/beyond/modules/nats/internal/natsoptions"
 )
 
 func (s *AuthService) setupInternalAuthAccount() error {

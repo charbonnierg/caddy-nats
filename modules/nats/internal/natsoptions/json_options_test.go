@@ -5,7 +5,7 @@ package natsoptions_test
 import (
 	"testing"
 
-	"github.com/charbonnierg/beyond/modules/nats/internal/natsoptions"
+	"github.com/quara-dev/beyond/modules/nats/internal/natsoptions"
 )
 
 func TestDefaultOptions(t *testing.T) {

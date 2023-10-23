@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/charbonnierg/beyond"
-	interfaces "github.com/charbonnierg/beyond/modules/oauth2"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/util"
+	"github.com/quara-dev/beyond"
+	interfaces "github.com/quara-dev/beyond/modules/oauth2"
 	"go.uber.org/zap"
 )
 

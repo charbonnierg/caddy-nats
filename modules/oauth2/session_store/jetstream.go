@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond/modules/nats"
-	"github.com/charbonnierg/beyond/modules/oauth2/oauth2app"
-	"github.com/charbonnierg/beyond/modules/oauth2/session_store/jetstream"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
+	"github.com/quara-dev/beyond/modules/nats"
+	"github.com/quara-dev/beyond/modules/oauth2/oauth2app"
+	"github.com/quara-dev/beyond/modules/oauth2/session_store/jetstream"
 	"go.uber.org/zap"
 )
 

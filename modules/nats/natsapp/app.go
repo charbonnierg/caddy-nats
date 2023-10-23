@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/charbonnierg/beyond"
-	interfaces "github.com/charbonnierg/beyond/modules/nats"
-	"github.com/charbonnierg/beyond/modules/nats/internal/natsoptions"
-	"github.com/charbonnierg/beyond/modules/nats/internal/natsrunner"
-	"github.com/charbonnierg/beyond/modules/secrets"
+	"github.com/quara-dev/beyond"
+	interfaces "github.com/quara-dev/beyond/modules/nats"
+	"github.com/quara-dev/beyond/modules/nats/internal/natsoptions"
+	"github.com/quara-dev/beyond/modules/nats/internal/natsrunner"
+	"github.com/quara-dev/beyond/modules/secrets"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"

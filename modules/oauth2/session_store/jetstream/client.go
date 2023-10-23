@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	natsapp "github.com/charbonnierg/beyond/modules/nats"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
+	natsapp "github.com/quara-dev/beyond/modules/nats"
 )
 
 // Client represents a connection to a JetStream enabled

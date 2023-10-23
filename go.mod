@@ -1,4 +1,4 @@
-module github.com/charbonnierg/beyond
+module github.com/quara-dev/beyond
 
 go 1.21
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/charbonnierg/beyond/modules/secrets"
+	"github.com/quara-dev/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
 
