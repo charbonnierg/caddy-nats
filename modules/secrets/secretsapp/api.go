@@ -4,23 +4,30 @@ package secretsapp
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/charbonnierg/beyond/modules/secrets"
+	"go.uber.org/zap"
 )
 
-var (
-	DEFAULT_STORE_NAME = "default"
-)
+// Context returns the caddy context for the secrets app.
+func (a *App) Context() caddy.Context {
+	return a.ctx
+}
+
+func (a *App) Logger() *zap.Logger {
+	return a.logger
+}
 
 // Get returns the value of the secret with the given name located in the given store.
 // The key syntax is "secretkey@storename".
 // If storename is not specified, the default store is used.
-func (a *App) Get(key string) ([]byte, error) {
+func (a *App) Get(key string) (string, error) {
 	store, secretkey, err := a.getStoreAndKey(key)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	return store.Get(secretkey)
 }
@@ -28,7 +35,7 @@ func (a *App) Get(key string) ([]byte, error) {
 // Set sets the value of the secret with the given name located in the given store.
 // The key syntax is "secretkey@storename".
 // If storename is not specified, the default store is used.
-func (a *App) Set(key string, value []byte) error {
+func (a *App) Set(key string, value string) error {
 	store, secretkey, err := a.getStoreAndKey(key)
 	if err != nil {
 		return err
@@ -40,6 +47,10 @@ func (a *App) Set(key string, value []byte) error {
 // It allows fetching and saving secrets without specifying the store name.
 func (a *App) GetStore(name string) secrets.Store {
 	return a.getStore(name)
+}
+
+func (a *App) DefaultStore() secrets.Store {
+	return a.getStore(a.defaultStore)
 }
 
 // AddSecretsReplacerVars adds replacer variables to the given replacer.
@@ -59,27 +70,27 @@ func (a *App) AddSecretsReplacerVars(repl *caddy.Replacer) {
 	})
 }
 
-func (a *App) getStore(name string) *Store {
+func (a *App) getStore(name string) secrets.Store {
 	return nil
 }
 
-func (a *App) getStoreAndKey(key string) (*Store, string, error) {
+func (a *App) getStoreAndKey(key string) (secrets.Store, string, error) {
 	parts := strings.Split(key, "@")
 	var storename string
 	var secretkey string
 	switch len(parts) {
 	case 1:
-		storename = DEFAULT_STORE_NAME
 		secretkey = parts[0]
+		storename = a.defaultStore
 	case 2:
-		storename = parts[0]
-		secretkey = parts[1]
+		secretkey = parts[0]
+		storename = parts[1]
 	default:
 		return nil, "", errors.New("invalid key")
 	}
 	store := a.getStore(storename)
 	if store == nil {
-		return nil, "", errors.New("store not found")
+		return nil, "", fmt.Errorf("store not found: %s", storename)
 	}
 	return store, secretkey, nil
 }

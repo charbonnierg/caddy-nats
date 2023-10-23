@@ -1,11 +1,10 @@
 package secretsapp
 
 import (
-	"fmt"
+	"encoding/json"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/charbonnierg/beyond"
-	"github.com/charbonnierg/beyond/modules/docker"
 	interfaces "github.com/charbonnierg/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
@@ -15,10 +14,12 @@ func init() {
 }
 
 type App struct {
-	ctx    caddy.Context
-	logger *zap.Logger
-	beyond *beyond.Beyond
-	docker docker.DockerApp
+	ctx          caddy.Context
+	logger       *zap.Logger
+	beyond       *beyond.Beyond
+	defaultStore string
+	stores       map[string]interfaces.Store
+	StoresRaw    map[string]json.RawMessage `json:"stores,omitempty" caddy:"namespace=secrets.store"`
 }
 
 func (App) CaddyModule() caddy.ModuleInfo {
@@ -31,33 +32,29 @@ func (App) CaddyModule() caddy.ModuleInfo {
 func (a *App) Provision(ctx caddy.Context) error {
 	a.ctx = ctx
 	a.logger = ctx.Logger()
-
-	// Anything that MUST be done before allowing other apps to access the secret app
-	// should happend BEFORE loading the beyond module.
-	// E.G., here:
-	// ...
-
+	// Initialize stores map
+	a.stores = make(map[string]interfaces.Store)
 	// This will load the beyond module and register the "secrets" app within beyond module
-	if err := a.register(); err != nil {
-		return err
-	}
-	// At this point we can use the beyond module to load other apps
-	// Let's load the secret app
-	unm, err := a.beyond.LoadApp(a, "docker")
-	if err != nil {
-		return fmt.Errorf("failed to load docker app: %v", err)
-	}
-	a.docker = unm.(docker.DockerApp)
-	return nil
-}
-
-// Helper function to load the beyond module and register the "secrets" app within beyond module
-func (a *App) register() error {
 	b, err := beyond.RegisterApp(a.ctx, a)
 	if err != nil {
 		return err
 	}
 	a.beyond = b
+	// Let's load and provision all stores
+	unm, err := ctx.LoadModule(a, "StoresRaw")
+	if err != nil {
+		return err
+	}
+	for name, modIface := range unm.(map[string]interface{}) {
+		mod := modIface.(interfaces.Store)
+		if err := mod.Provision(a); err != nil {
+			return err
+		}
+		a.stores[name] = mod
+		if a.defaultStore == "" {
+			a.defaultStore = name
+		}
+	}
 	return nil
 }
 
