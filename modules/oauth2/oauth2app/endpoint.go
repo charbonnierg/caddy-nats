@@ -32,7 +32,7 @@ type Endpoint struct {
 	proxy   *server.OAuthProxy
 	Name    string          `json:"name,omitempty"`
 	Options *Options        `json:"options,omitempty"`
-	Store   json.RawMessage `json:"store,omitempty" caddy:"namespace=oauth2.session_store inline_key=type"`
+	Store   json.RawMessage `json:"store,omitempty" caddy:"namespace=oauth2.stores inline_key=type"`
 }
 
 // CaddyModule returns the Caddy module information.

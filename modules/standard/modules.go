@@ -21,8 +21,8 @@ import (
 	// OAuth2 modules
 	_ "github.com/quara-dev/beyond/modules/oauth2/http_handler"
 	_ "github.com/quara-dev/beyond/modules/oauth2/oauth2app"
-	_ "github.com/quara-dev/beyond/modules/oauth2/session_store"
 	_ "github.com/quara-dev/beyond/modules/oauth2/session_store/jetstream"
+	_ "github.com/quara-dev/beyond/modules/oauth2/session_store/redis"
 
 	// Telemetry modules
 	_ "github.com/quara-dev/beyond/modules/otelcol"

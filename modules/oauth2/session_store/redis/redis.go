@@ -1,7 +1,7 @@
 // Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package session_store
+package redis
 
 import (
 	"github.com/caddyserver/caddy/v2"
@@ -58,7 +58,7 @@ func (s *RedisStore) Provision(_ *oauth2app.App, opts *options.Cookie) error {
 
 func (RedisStore) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "oauth2.session_store.redis",
+		ID:  "oauth2.stores.redis",
 		New: func() caddy.Module { return new(RedisStore) },
 	}
 }

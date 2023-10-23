@@ -41,7 +41,8 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					if !d.NextArg() {
 						return d.Err("expected a store type")
 					}
-					storeType := "secrets.stores." + d.Val()
+					storeTypeShort := d.Val()
+					storeType := "secrets.stores." + storeTypeShort
 					mod, err := caddyfile.UnmarshalModule(d, storeType)
 					if err != nil {
 						return d.Errf("failed to unmarshal module '%s': %v", storeType, err)
@@ -49,7 +50,7 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					if a.StoresRaw == nil {
 						a.StoresRaw = make(map[string]json.RawMessage)
 					}
-					a.StoresRaw[storeName] = caddyconfig.JSONModuleObject(mod, "type", storeType, nil)
+					a.StoresRaw[storeName] = caddyconfig.JSONModuleObject(mod, "type", storeTypeShort, nil)
 				}
 			}
 		}

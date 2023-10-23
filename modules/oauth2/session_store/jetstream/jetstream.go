@@ -1,7 +1,7 @@
 // Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package session_store
+package jetstream
 
 import (
 	"errors"
@@ -13,7 +13,7 @@ import (
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/quara-dev/beyond/modules/nats"
 	"github.com/quara-dev/beyond/modules/oauth2/oauth2app"
-	"github.com/quara-dev/beyond/modules/oauth2/session_store/jetstream"
+	"github.com/quara-dev/beyond/modules/oauth2/session_store/jetstream/internal"
 	"go.uber.org/zap"
 )
 
@@ -24,10 +24,10 @@ func init() {
 type JetStreamStore struct {
 	logger        *zap.Logger
 	sessionsstore sessionsapi.SessionStore
-	kvstore       jetstream.Store
-	Name          string            `json:"name,omitempty"`
-	Client        *jetstream.Client `json:"client,omitempty"`
-	TTL           time.Duration     `json:"ttl,omitempty"`
+	kvstore       internal.Store
+	Name          string           `json:"name,omitempty"`
+	Client        *internal.Client `json:"client,omitempty"`
+	TTL           time.Duration    `json:"ttl,omitempty"`
 }
 
 func (s *JetStreamStore) Provision(app *oauth2app.App, opts *options.Cookie) error {
@@ -43,7 +43,7 @@ func (s *JetStreamStore) Provision(app *oauth2app.App, opts *options.Cookie) err
 		}
 		s.Client.SetInProcessServerProvider(natsApp)
 	}
-	jsstore := jetstream.NewStore(s.Name, s.Client, s.TTL, s.logger)
+	jsstore := internal.NewStore(s.Name, s.Client, s.TTL, s.logger)
 	s.kvstore = *jsstore
 	store, err := jsstore.SessionStore(opts)
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *JetStreamStore) Provision(app *oauth2app.App, opts *options.Cookie) err
 
 func (JetStreamStore) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "oauth2.session_store.jetstream",
+		ID:  "oauth2.stores.jetstream",
 		New: func() caddy.Module { return new(JetStreamStore) },
 	}
 }

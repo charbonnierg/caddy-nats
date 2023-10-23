@@ -1,7 +1,7 @@
 // Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package jetstream
+package internal
 
 import (
 	"fmt"

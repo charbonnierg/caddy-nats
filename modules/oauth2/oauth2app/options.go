@@ -125,22 +125,22 @@ type Cookie struct {
 
 // Options contains all configuration options for oauth2-proxy endpoint.
 type Options struct {
-	ProxyPrefix             string   `json:"proxy_prefix"`
+	ProxyPrefix             string   `json:"proxy_prefix,omitempty"`
 	PingPath                string   `json:"ping_path,omitempty"`
 	PingUserAgent           string   `json:"ping_user_agent,omitempty"`
 	ReadyPath               string   `json:"ready_path,omitempty"`
 	RealClientIPHeader      string   `json:"real_client_ip_header,omitempty"`
 	TrustedIPs              []string `json:"trusted_ips,omitempty"`
 	RawRedirectURL          string   `json:"redirect_url,omitempty"`
-	AuthenticatedEmailsFile string   `json:"authenticated_emails-file,omitempty"`
+	AuthenticatedEmailsFile string   `json:"authenticated_emails_file,omitempty"`
 	EmailDomains            []string `json:"email_domains,omitempty"`
 	WhitelistDomains        []string `json:"whitelist_domains,omitempty"`
 	HtpasswdFile            string   `json:"htpasswd_file,omitempty"`
 	HtpasswdUserGroups      []string `json:"htpasswd_user_groups,omitempty"`
 	ReverseProxy            bool     `json:"reverse_proxy,omitempty"`
 
-	Cookie    Cookie    `json:"cookie"`
-	Templates Templates `json:"templates"`
+	Cookie    *Cookie    `json:"cookie,omitempty"`
+	Templates *Templates `json:"templates,omitempty"`
 
 	InjectRequestHeaders  Headers `json:"inject_request_headers,omitempty"`
 	InjectResponseHeaders Headers `json:"inject_response_headers,omitempty"`

@@ -100,10 +100,10 @@ func (o *Options) equals(other *Options) bool {
 	if o.HtpasswdFile != other.HtpasswdFile {
 		return false
 	}
-	if !o.Cookie.equals(&other.Cookie) {
+	if !o.Cookie.equals(other.Cookie) {
 		return false
 	}
-	if !o.Templates.equals(&other.Templates) {
+	if !o.Templates.equals(other.Templates) {
 		return false
 	}
 	if !o.InjectRequestHeaders.equals(other.InjectRequestHeaders) {

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/quara-dev/beyond"
 	interfaces "github.com/quara-dev/beyond/modules/oauth2"
 	"go.uber.org/zap"
@@ -14,6 +15,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(new(App))
+	httpcaddyfile.RegisterGlobalOption("oauth2", parseGlobalOption)
 }
 
 // App is the oauth2 app module.
