@@ -19,7 +19,8 @@ type App struct {
 	beyond       *beyond.Beyond
 	defaultStore string
 	stores       map[string]interfaces.Store
-	StoresRaw    map[string]json.RawMessage `json:"stores,omitempty" caddy:"namespace=secrets.store"`
+	StoresRaw    map[string]json.RawMessage `json:"stores,omitempty" caddy:"namespace=secrets.store inline_key=module"`
+	Automations  []*Automation              `json:"automate,omitempty"`
 }
 
 func (App) CaddyModule() caddy.ModuleInfo {
@@ -55,11 +56,20 @@ func (a *App) Provision(ctx caddy.Context) error {
 			a.defaultStore = name
 		}
 	}
+	// Let's load and provision all automations
+	for _, automation := range a.Automations {
+		if err := automation.Provision(a); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (a *App) Start() error {
 	a.logger.Info("Starting secrets app")
+	for _, automation := range a.Automations {
+		go automation.Run()
+	}
 	return nil
 }
 

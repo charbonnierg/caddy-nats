@@ -23,6 +23,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/libdns/digitalocean"
+	"github.com/quara-dev/beyond/modules/secrets"
 )
 
 // Provider wraps the provider implementation as a Caddy module.
@@ -44,7 +45,18 @@ func (Provider) CaddyModule() caddy.ModuleInfo {
 // Implements caddy.Provisioner.
 func (p *Provider) Provision(ctx caddy.Context) error {
 	repl := caddy.NewReplacer()
-	p.Provider.APIToken = repl.ReplaceAll(p.Provider.APIToken, "")
+	// Load the secrets app
+	secrets, err := secrets.Load(ctx)
+	if err != nil {
+		return err
+	}
+	// Add the secrets replacer vars in order to resolve the API token
+	secrets.AddSecretsReplacerVars(repl)
+	token, err := repl.ReplaceOrErr(p.Provider.APIToken, true, true)
+	if err != nil {
+		return err
+	}
+	p.Provider.APIToken = token
 	return nil
 }
 

@@ -24,6 +24,10 @@ type Secret struct {
 	Key   string
 }
 
+func (s Secret) String() string {
+	return s.Key
+}
+
 type Template struct {
 	template *template.Template
 	// This is the template to use for the secret
@@ -40,7 +44,12 @@ func (t *Template) Provision(automation *Automation) error {
 }
 
 func (t *Template) Render(value map[string]string) (string, error) {
-	data := map[string]string{}
+	data := map[string]any{}
+	data["values"] = value
+	for k, v := range value {
+		_k := strings.Split(k, "@")
+		data[strings.ReplaceAll(_k[0], "-", "_")] = v
+	}
 	buf := bytes.NewBuffer(nil)
 	err := t.template.Execute(buf, data)
 	if err != nil {
@@ -108,13 +117,14 @@ func (a *Automation) Provision(app *App) error {
 // Run starts the automation, and keeps running until the context is cancelled.
 // There is no need to stop the automation, it will stop automatically when the context is cancelled.
 func (a *Automation) Run() error {
-	timer := time.NewTimer(a.Interval)
+	ticker := time.NewTicker(a.Interval)
 	for {
 		select {
 		case <-a.ctx.Done():
-			timer.Stop()
+			ticker.Stop()
 			return nil
-		case <-timer.C:
+		case <-ticker.C:
+			a.logger.Info("running secret automation")
 			willRetry := false
 			// Fetch secrets
 			values := map[string]string{}

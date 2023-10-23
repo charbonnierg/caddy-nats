@@ -363,6 +363,14 @@
                     }
                 }
             }
+        },
+        "secrets": {
+            "stores": {
+                "az-kv-srv-01": {
+                    "module": "azure_keyvault",
+                    "uri": "https://kv-srv-01.vault.azure.net/"
+                }
+            }
         }
     }
 }

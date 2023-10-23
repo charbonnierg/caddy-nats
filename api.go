@@ -15,10 +15,21 @@ import (
 // GetTLSApp can be used to load the TLS caddy app from other caddy apps.
 // It makes sure the TLS app is loaded using the beyond app context before returning it.
 func (b *Beyond) GetTLSApp() (*caddytls.TLS, error) {
-	if b.tls == nil {
-		return nil, errors.New("beyond module is not loaded yet")
+	if b.tls != nil {
+		return b.tls, nil
 	}
-	return b.tls, nil
+	// Let's load the TLS app
+	b.logger.Warn("loading tls app")
+	unm, err := b.ctx.App("tls")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load tls app: %v", err)
+	}
+	tlsApp, ok := unm.(*caddytls.TLS)
+	if !ok {
+		return nil, errors.New("invalid tls app module type")
+	}
+	b.tls = tlsApp
+	return tlsApp, nil
 }
 
 // RegisterApp can be used to load the Beyond caddy app module from other apps.

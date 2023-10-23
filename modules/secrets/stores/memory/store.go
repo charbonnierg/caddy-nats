@@ -7,6 +7,10 @@ import (
 	"github.com/quara-dev/beyond/modules/secrets"
 )
 
+func init() {
+	caddy.RegisterModule(MemoryStore{})
+}
+
 // MemoryStore is a secrets store that stores secrets in memory.
 // It is not persistent and is only useful for testing or sharing
 // non-persistent secrets between caddy modules when combined with
@@ -22,7 +26,7 @@ func (s *MemoryStore) Provision(app secrets.SecretApp) error {
 	return nil
 }
 
-func (s *MemoryStore) CaddyModule() caddy.ModuleInfo {
+func (MemoryStore) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "secrets.store.memory",
 		New: func() caddy.Module { return new(MemoryStore) },

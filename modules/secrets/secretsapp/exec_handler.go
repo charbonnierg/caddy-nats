@@ -9,6 +9,10 @@ import (
 	"github.com/caddyserver/caddy/v2"
 )
 
+func init() {
+	caddy.RegisterModule(ExecHandler{})
+}
+
 type ExecHandler struct {
 	// This is the command to execute
 	Command string `json:"command,omitempty"`
@@ -68,5 +72,6 @@ func (h *ExecHandler) Handle(value string) (string, error) {
 	if err != nil {
 		return string(out), fmt.Errorf("failed to execute command: %w", err)
 	}
-	return string(out), nil
+	result := strings.TrimSpace(string(out))
+	return result, nil
 }

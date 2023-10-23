@@ -3,9 +3,6 @@
 package beyond
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	"go.uber.org/zap"
@@ -54,17 +51,6 @@ func (b *Beyond) Provision(ctx caddy.Context) error {
 	b.logger = ctx.Logger()
 	// Initialize apps
 	b.apps = make(Apps)
-	// Let's load the TLS app
-	b.logger.Warn("loading tls app")
-	unm, err := b.ctx.App("tls")
-	if err != nil {
-		return fmt.Errorf("failed to load tls app: %v", err)
-	}
-	tlsApp, ok := unm.(*caddytls.TLS)
-	if !ok {
-		return errors.New("invalid tls app module type")
-	}
-	b.tls = tlsApp
 	return nil
 }
 
