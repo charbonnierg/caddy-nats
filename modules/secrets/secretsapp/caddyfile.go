@@ -50,7 +50,7 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					if a.StoresRaw == nil {
 						a.StoresRaw = make(map[string]json.RawMessage)
 					}
-					a.StoresRaw[storeName] = caddyconfig.JSONModuleObject(mod, "type", storeTypeShort, nil)
+					a.StoresRaw[storeName] = caddyconfig.JSONModuleObject(mod, "module", storeTypeShort, nil)
 				}
 			}
 		}

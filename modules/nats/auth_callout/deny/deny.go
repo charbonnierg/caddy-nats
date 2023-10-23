@@ -16,7 +16,10 @@ func init() {
 }
 
 // A minimal auth callout handler that always denies access.
-type DenyAuthCallout struct{}
+type DenyAuthCallout struct {
+	err     error
+	Message string `json:"message,omitempty"`
+}
 
 func (DenyAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
@@ -26,11 +29,16 @@ func (DenyAuthCallout) CaddyModule() caddy.ModuleInfo {
 }
 
 func (a *DenyAuthCallout) Provision(app *natsapp.App) error {
+	if a.Message == "" {
+		a.err = errors.New("access denied")
+	} else {
+		a.err = errors.New(a.Message)
+	}
 	return nil
 }
 
 func (a *DenyAuthCallout) Handle(request *natsapp.AuthorizationRequest) (*jwt.UserClaims, error) {
-	return nil, errors.New("access denied")
+	return nil, a.err
 }
 
 var (

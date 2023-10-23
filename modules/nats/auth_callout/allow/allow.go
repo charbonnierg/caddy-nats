@@ -17,7 +17,6 @@ func init() {
 
 // A minimal auth callout handler that always denies access.
 type AllowAuthCallout struct {
-	User     string            `json:"user,omitempty"`
 	Account  string            `json:"account,omitempty"`
 	Template *natsapp.Template `json:"template,omitempty"`
 }

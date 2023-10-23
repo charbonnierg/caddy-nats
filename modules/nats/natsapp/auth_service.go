@@ -23,7 +23,7 @@ type AuthService struct {
 	InternalAccount   string             `json:"internal_account,omitempty"`
 	InternalUser      string             `json:"internal_user,omitempty"`
 	AuthAccount       string             `json:"auth_account,omitempty"`
-	AuthSigningKey    string             `json:"auth_signing_key"`
+	AuthSigningKey    string             `json:"auth_signing_key,omitempty"`
 	SubjectRaw        string             `json:"subject,omitempty"`
 	Credentials       string             `json:"credentials,omitempty"`
 	Policies          ConnectionPolicies `json:"policies,omitempty"`

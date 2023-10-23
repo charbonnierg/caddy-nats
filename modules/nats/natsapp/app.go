@@ -17,12 +17,14 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
 	"go.uber.org/zap"
 )
 
 func init() {
 	caddy.RegisterModule(new(App))
+	httpcaddyfile.RegisterGlobalOption("nats", parseGlobalOption)
 }
 
 // App is the nats app module.
