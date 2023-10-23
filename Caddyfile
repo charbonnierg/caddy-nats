@@ -1,0 +1,159 @@
+{
+	order oauth2_session before handle
+	secrets {
+		stores {
+			default azure_keyvault https://myvault.vault.azure.net
+		}
+	}
+	nats {
+		auth_service {
+			internal_account AUTH
+			default deny
+			policy {
+				match {
+					username APP
+				}
+				callout oauth2 {
+					endpoint az
+					account APP
+					template {
+						allow_pub "{oidc.session.email}.>"
+						allow_pub "test.>"
+						allow_resp
+					}
+				}
+			}
+			policy {
+				match {
+					host 127.0.0.1
+					kind Client
+					connection_type nats
+					username SYS
+				}
+				callout allow {
+					account SYS
+				}
+			}
+			policy {
+				match {
+					connection_type in_process
+					username OAUTH2
+				}
+				callout allow {
+					account OAUTH2
+				}
+			}
+		}
+		server {
+			port 4222
+			http_port 8222
+			system_account SYS
+			jetstream
+			accounts {
+				OAUTH2 {
+					jetstream
+				}
+				APP {
+					jetstream
+				}
+				SYS
+			}
+		}
+	}
+	otelcol {
+		service {
+			extensions health_check pprof zpages
+			pipelines {
+				traces {
+					receivers otlp
+					processors batch
+					exporters debug
+				}
+				metrics {
+					receivers otlp
+					processors batch
+					exporters debug
+				}
+				logs {
+					receivers otlp
+					processors batch
+					exporters debug
+				}
+			}
+			telemetry {
+				logs {
+					level debug
+					initial_fields {
+						service server-01
+					}
+				}
+				metrics {
+					level detailed
+					address 127.0.0.1:8888
+				}
+			}
+		}
+		receivers {
+			otlp {
+				protocols {
+					grpc {
+						endpoint 127.0.0.1:4318
+					}
+					http {
+						endpoint 127.0.0.1:4317
+					}
+				}
+			}
+		}
+		processors {
+			batch
+		}
+		exporters {
+			debug
+		}
+		extensions {
+			health_check {
+				endpoint 127.0.0.1:4315
+			}
+			pprof
+			zpages
+		}
+	}
+	oauth2 {
+		endpoint az {
+			store jetstream {
+				internal
+				username OAUTH2
+				password OAUTH2
+			}
+			cookie_secure
+			cookie_http_only no
+			cookie_domains .localhost
+			email_domains *
+			whitelist_domains .localhost
+			extra_jwt_issuers "https://sts.windows.net/{secret.oauth2_tenant_id@default}/={secret.oauth2_client_id@default}"
+			provider oidc {
+				id azure-ad
+				name "Azure AD"
+				client_id {secret.oauth2_client_id@default}
+				client_secret {secret.oauth2_client_secret@default}
+				scope openid email profile
+				login_url https://login.microsoftonline.com/{secret.oauth2_tenant_id@default}/v2.0/oauth2/authorize
+				redeem_url https://login.microsoftonline.com/{secret.oauth2_tenant_id@default}/v2.0/oauth2/token
+				profile_url https://graph.microsoft.com/v1.0/me
+				oidc_issuer_url https://login.microsoftonline.com/{secret.oauth2_tenant_id@default}/v2.0
+				oidc_jwks_url https://login.microsoftonline.com/common/discovery/keys
+				oidc_audience_claims aud
+				oidc_email_claim email
+				oidc_user_id_claim email
+			}
+		}
+	}
+}
+
+test.localhost {
+	oauth2_session {
+		endpoint az
+	}
+	respond "hello world"
+}
