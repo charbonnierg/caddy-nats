@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/quara-dev/beyond"
 	"github.com/quara-dev/beyond/modules/otelcol/components"
 	"go.opentelemetry.io/collector/component"
@@ -20,6 +21,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(new(OtelCollector))
+	httpcaddyfile.RegisterGlobalOption("otelcol", parseGlobalOption)
 }
 
 type OtelCollector struct {
