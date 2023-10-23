@@ -29,5 +29,4 @@ import (
 	// Secrets modules
 	_ "github.com/quara-dev/beyond/modules/secrets/secretsapp"
 	_ "github.com/quara-dev/beyond/modules/secrets/stores/azure"
-	_ "github.com/quara-dev/beyond/modules/secrets/stores/memory"
 )

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/quara-dev/beyond"
 	interfaces "github.com/quara-dev/beyond/modules/secrets"
 	"go.uber.org/zap"
@@ -14,6 +15,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(new(App))
+	httpcaddyfile.RegisterGlobalOption("secrets", parseGlobalOption)
 }
 
 type App struct {
@@ -22,7 +24,7 @@ type App struct {
 	beyond       *beyond.Beyond
 	defaultStore string
 	stores       map[string]interfaces.Store
-	StoresRaw    map[string]json.RawMessage `json:"stores,omitempty" caddy:"namespace=secrets.store inline_key=module"`
+	StoresRaw    map[string]json.RawMessage `json:"stores,omitempty" caddy:"namespace=secrets.stores inline_key=module"`
 	Automations  []*Automation              `json:"automate,omitempty"`
 }
 

@@ -28,7 +28,7 @@ type AzureKeyvault struct {
 
 func (AzureKeyvault) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "secrets.store.azure_keyvault",
+		ID:  "secrets.stores.azure_keyvault",
 		New: func() caddy.Module { return new(AzureKeyvault) },
 	}
 }
