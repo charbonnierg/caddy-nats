@@ -113,6 +113,7 @@ func (a *App) Provision(ctx caddy.Context) error {
 	if err := a.setTLSConfigOverride(); err != nil {
 		return err
 	}
+	a.logger.Debug("NATS server options", zap.Any("options", a.Options))
 	// Create runner
 	a.runner, err = natsrunner.New().
 		WithOptions(a.Options).
@@ -121,7 +122,7 @@ func (a *App) Provision(ctx caddy.Context) error {
 		Build()
 	// Fail if runner creation failed
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create nats server runner: %w", err)
 	}
 	return nil
 }
@@ -210,9 +211,6 @@ func (a *App) setLeafnodeTLSConnectionPolicies() caddytls.ConnectionPolicies {
 }
 
 func (a *App) setTLSConfigOverride() error {
-	if a.Options.TLS == nil {
-		return nil
-	}
 	// Set standard TLS connection policies
 	standardPolicies := a.setStandardTLSConnectionPolicies()
 	wsPolicies := a.setWebsocketTLSConnectionPolicies()
@@ -236,8 +234,7 @@ func (a *App) setTLSConfigOverride() error {
 	}
 	if wsPolicies != nil {
 		a.logger.Debug("Setting Websocket TLS config override", zap.Any("policies", wsPolicies))
-		tlsConfig := wsPolicies.TLSConfig(a.ctx)
-		a.Options.Websocket.TLS.SetConfigOverride(tlsConfig)
+		a.Options.Websocket.TLS.SetConfigOverride(wsPolicies.TLSConfig(a.ctx))
 	}
 	if leafPolicies != nil {
 		a.logger.Debug("Setting Leafnode TLS config override", zap.Any("policies", leafPolicies))

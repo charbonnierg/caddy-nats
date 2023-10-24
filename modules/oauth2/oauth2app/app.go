@@ -10,6 +10,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/quara-dev/beyond"
 	interfaces "github.com/quara-dev/beyond/modules/oauth2"
+	"github.com/quara-dev/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
 
@@ -28,6 +29,7 @@ func init() {
 // Those secrets are generated automatically when not provided, and in such case are not exposed to other modules.
 type App struct {
 	mutex     *sync.Mutex
+	repl      *caddy.Replacer
 	ctx       caddy.Context
 	logger    *zap.Logger
 	beyond    *beyond.Beyond
@@ -49,12 +51,25 @@ func (a *App) Provision(ctx caddy.Context) error {
 	a.ctx = ctx
 	a.logger = ctx.Logger()
 	a.mutex = &sync.Mutex{}
+	if a.Endpoints == nil {
+		a.Endpoints = []*Endpoint{}
+	}
 	// Register module against beyond module
 	b, err := beyond.RegisterApp(a.ctx, a)
 	if err != nil {
 		return err
 	}
 	a.beyond = b
+	// Load secrets app
+	repl := caddy.NewReplacer()
+	// Load the secrets app
+	secrets, err := secrets.Load(ctx)
+	if err != nil {
+		return err
+	}
+	// Add the secrets replacer vars in order to resolve the API token
+	secrets.AddSecretsReplacerVars(repl)
+	a.repl = repl
 	// Endpoints present in the config at this point are the ones that were configured in the Caddyfile/JSON config.
 	// They were not added using .GetOrAddEndpoint() because this method can only be called after the app is provisioned.
 	// So we need to provision them here.

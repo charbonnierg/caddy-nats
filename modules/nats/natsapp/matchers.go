@@ -55,6 +55,7 @@ func (m *ClientInfoMatcher) Match(request *jwt.AuthorizationRequestClaims) bool 
 
 type ConnectOptsMatcher struct {
 	Name     string `json:"name,omitempty"`
+	Token    string `json:"token,omitempty"`
 	User     string `json:"username,omitempty"`
 	Password string `json:"password,omitempty"`
 	Lang     string `json:"lang,omitempty"`
@@ -74,6 +75,9 @@ func (c *ConnectOptsMatcher) Match(request *jwt.AuthorizationRequestClaims) bool
 		return false
 	}
 	if c.Password != "" && c.Password != request.ConnectOptions.Password {
+		return false
+	}
+	if c.Token != "" && c.Token != request.ConnectOptions.Token {
 		return false
 	}
 	if c.Lang != "" && c.Lang != request.ConnectOptions.Lang {

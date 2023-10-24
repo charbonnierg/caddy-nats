@@ -74,7 +74,7 @@ func (e *Endpoint) provision(app *App) error {
 	if e.Options == nil {
 		return fmt.Errorf("no options found for endpoint %s", e.Name)
 	}
-	e.opts = e.Options.oauth2proxyOptions()
+	e.opts = e.Options.oauth2proxyOptions(app.repl)
 	if e.opts.Cookie.Secret == "" {
 		secret, err := generateRandomASCIIString(32)
 		if err != nil {
@@ -94,8 +94,10 @@ func (e *Endpoint) provision(app *App) error {
 	e.cipher = cipher
 	// Load session store
 	if e.Store == nil {
+
 		// Use cookie store by default
 		store := &CookieStore{}
+
 		err := store.Provision(e.app, &e.opts.Cookie)
 		if err != nil {
 			return fmt.Errorf("error provisioning cookie store for endpoint %s: %v", e.Name, err)

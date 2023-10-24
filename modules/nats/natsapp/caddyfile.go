@@ -84,6 +84,14 @@ func (s *AuthService) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				case "match":
 					for nesting := d.Nesting(); d.NextBlock(nesting); {
 						switch d.Val() {
+						case "token":
+							if connectOpts == nil {
+								connectOpts = new(ConnectOptsMatcher)
+							}
+							if !d.NextArg() {
+								return d.Err("expected token")
+							}
+							connectOpts.Token = d.Val()
 						case "username":
 							if connectOpts == nil {
 								connectOpts = new(ConnectOptsMatcher)

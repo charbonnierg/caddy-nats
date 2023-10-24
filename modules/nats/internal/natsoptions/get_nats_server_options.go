@@ -25,10 +25,6 @@ func (o *Options) GetServerOptions() (*server.Options, error) {
 	if err := o.setGlobalOpts(&serverOpts); err != nil {
 		return nil, err
 	}
-	// Verify and set standard tls options
-	if err := o.setTLSOpts(&serverOpts); err != nil {
-		return nil, err
-	}
 	// Static token auth
 	if err := o.setTokenAuth(&serverOpts); err != nil {
 		return nil, err
@@ -87,6 +83,10 @@ func (o *Options) GetServerOptions() (*server.Options, error) {
 	}
 	// Verify and set resolver options
 	if err := o.setResolverOpts(&serverOpts); err != nil {
+		return nil, err
+	}
+	// Verify and set standard tls options
+	if err := o.setTLSOpts(&serverOpts); err != nil {
 		return nil, err
 	}
 	// Gather options

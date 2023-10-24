@@ -13,6 +13,7 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/quara-dev/beyond/modules/nats/internal/natsauth"
+	"go.uber.org/zap"
 )
 
 type AuthService struct {
@@ -31,6 +32,7 @@ type AuthService struct {
 }
 
 func (s *AuthService) Handle(claims *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error) {
+	s.app.logger.Info("auth callout request", zap.Any("client_infos", claims.ClientInformation))
 	req := &AuthorizationRequest{
 		Claims:  claims,
 		Context: context.TODO(),
@@ -38,15 +40,16 @@ func (s *AuthService) Handle(claims *jwt.AuthorizationRequestClaims) (*jwt.UserC
 	var handler AuthCallout
 	// Match handler for this request
 	matchedHandler, ok := s.Policies.Match(claims)
-	// Fail if no policy matched and there is no default handler
-	if !ok && s.defaultHandler == nil {
-		return nil, errors.New("no matching policy")
-	}
-	// Use default handler if no policy matched
 	if !ok {
+		s.app.logger.Info("using default handler", zap.Any("client_infos", claims.ClientInformation))
 		handler = s.defaultHandler
 	} else {
+		s.app.logger.Info("handler policy matcher", zap.String("handler", string(matchedHandler.HandlerRaw)), zap.Any("client_infos", claims.ClientInformation))
 		handler = matchedHandler
+	}
+	if handler == nil {
+		s.app.logger.Info("no matching policy", zap.Any("client_infos", claims.ClientInformation))
+		return nil, errors.New("no handler")
 	}
 	// Let handler handle the request
 	return handler.Handle(req)
@@ -93,6 +96,9 @@ func (s *AuthService) Provision(app *App) error {
 		handler, ok := unm.(AuthCallout)
 		if !ok {
 			return errors.New("default handler invalid type")
+		}
+		if err := handler.Provision(app); err != nil {
+			return fmt.Errorf("failed to provision default handler: %s", err.Error())
 		}
 		s.defaultHandler = handler
 	}

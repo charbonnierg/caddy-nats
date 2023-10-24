@@ -6,6 +6,7 @@ package oauth2app
 import (
 	"time"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 )
 
@@ -158,35 +159,35 @@ type Options struct {
 	ForceJSONErrors       bool     `json:"force_json_errors,omitempty"`
 }
 
-func (o *Options) oauth2proxyOptions() *options.Options {
+func (o *Options) oauth2proxyOptions(repl *caddy.Replacer) *options.Options {
 	opts := options.NewOptions()
 	opts.Logging.AuthEnabled = false
 	opts.Logging.StandardEnabled = false
 	opts.Logging.RequestEnabled = false
 	opts.ReverseProxy = o.ReverseProxy
 	if o.ProxyPrefix != "" {
-		opts.ProxyPrefix = o.ProxyPrefix
+		opts.ProxyPrefix = repl.ReplaceAll(o.ProxyPrefix, "")
 	}
 	if o.PingPath != "" {
-		opts.PingPath = o.PingPath
+		opts.PingPath = repl.ReplaceAll(o.PingPath, "")
 	}
 	if o.PingUserAgent != "" {
-		opts.PingUserAgent = o.PingUserAgent
+		opts.PingUserAgent = repl.ReplaceAll(o.PingUserAgent, "")
 	}
 	if o.ReadyPath != "" {
-		opts.ReadyPath = o.ReadyPath
+		opts.ReadyPath = repl.ReplaceAll(o.ReadyPath, "")
 	}
 	if o.RealClientIPHeader != "" {
-		opts.RealClientIPHeader = o.RealClientIPHeader
+		opts.RealClientIPHeader = repl.ReplaceAll(o.RealClientIPHeader, "")
 	}
 	if o.TrustedIPs != nil {
 		opts.TrustedIPs = o.TrustedIPs
 	}
 	if o.RawRedirectURL != "" {
-		opts.RawRedirectURL = o.RawRedirectURL
+		opts.RawRedirectURL = repl.ReplaceAll(o.RawRedirectURL, "")
 	}
 	if o.AuthenticatedEmailsFile != "" {
-		opts.AuthenticatedEmailsFile = o.AuthenticatedEmailsFile
+		opts.AuthenticatedEmailsFile = repl.ReplaceAll(o.AuthenticatedEmailsFile, "")
 	}
 	if o.EmailDomains != nil {
 		opts.EmailDomains = o.EmailDomains
@@ -195,61 +196,65 @@ func (o *Options) oauth2proxyOptions() *options.Options {
 		opts.WhitelistDomains = o.WhitelistDomains
 	}
 	if o.HtpasswdFile != "" {
-		opts.HtpasswdFile = o.HtpasswdFile
+		opts.HtpasswdFile = repl.ReplaceAll(o.HtpasswdFile, "")
 	}
 	if o.HtpasswdUserGroups != nil {
 		opts.HtpasswdUserGroups = o.HtpasswdUserGroups
 	}
-	if o.Cookie.Name != "" {
-		opts.Cookie.Name = o.Cookie.Name
+	if o.Cookie != nil {
+		if o.Cookie.Name != "" {
+			opts.Cookie.Name = repl.ReplaceAll(o.Cookie.Name, "")
+		}
+		if o.Cookie.Secret != "" {
+			opts.Cookie.Secret = repl.ReplaceAll(o.Cookie.Secret, "")
+		}
+		if o.Cookie.Domains != nil {
+			opts.Cookie.Domains = o.Cookie.Domains
+		}
+		if o.Cookie.Path != "" {
+			opts.Cookie.Path = repl.ReplaceAll(o.Cookie.Path, "")
+		}
+		if o.Cookie.Expire != 0 {
+			opts.Cookie.Expire = o.Cookie.Expire
+		}
+		if o.Cookie.Refresh != 0 {
+			opts.Cookie.Refresh = o.Cookie.Refresh
+		}
+		if o.Cookie.NoSecure {
+			opts.Cookie.Secure = false
+		}
+		if o.Cookie.NoHTTPOnly {
+			opts.Cookie.HTTPOnly = false
+		}
+		if o.Cookie.SameSite != "" {
+			opts.Cookie.SameSite = o.Cookie.SameSite
+		}
+		if o.Cookie.CSRFPerRequest {
+			opts.Cookie.CSRFPerRequest = o.Cookie.CSRFPerRequest
+		}
+		if o.Cookie.CSRFExpire != 0 {
+			opts.Cookie.CSRFExpire = o.Cookie.CSRFExpire
+		}
 	}
-	if o.Cookie.Secret != "" {
-		opts.Cookie.Secret = o.Cookie.Secret
-	}
-	if o.Cookie.Domains != nil {
-		opts.Cookie.Domains = o.Cookie.Domains
-	}
-	if o.Cookie.Path != "" {
-		opts.Cookie.Path = o.Cookie.Path
-	}
-	if o.Cookie.Expire != 0 {
-		opts.Cookie.Expire = o.Cookie.Expire
-	}
-	if o.Cookie.Refresh != 0 {
-		opts.Cookie.Refresh = o.Cookie.Refresh
-	}
-	if o.Cookie.NoSecure {
-		opts.Cookie.Secure = false
-	}
-	if o.Cookie.NoHTTPOnly {
-		opts.Cookie.HTTPOnly = false
-	}
-	if o.Cookie.SameSite != "" {
-		opts.Cookie.SameSite = o.Cookie.SameSite
-	}
-	if o.Cookie.CSRFPerRequest {
-		opts.Cookie.CSRFPerRequest = o.Cookie.CSRFPerRequest
-	}
-	if o.Cookie.CSRFExpire != 0 {
-		opts.Cookie.CSRFExpire = o.Cookie.CSRFExpire
-	}
-	if o.Templates.Path != "" {
-		opts.Templates.Path = o.Templates.Path
-	}
-	if o.Templates.CustomLogo != "" {
-		opts.Templates.CustomLogo = o.Templates.CustomLogo
-	}
-	if o.Templates.Banner != "" {
-		opts.Templates.Banner = o.Templates.Banner
-	}
-	if o.Templates.Footer != "" {
-		opts.Templates.Footer = o.Templates.Footer
-	}
-	if o.Templates.Debug {
-		opts.Templates.Debug = o.Templates.Debug
-	}
-	if o.Templates.DisplayLoginForm {
-		opts.Templates.DisplayLoginForm = o.Templates.DisplayLoginForm
+	if o.Templates != nil {
+		if o.Templates.Path != "" {
+			opts.Templates.Path = repl.ReplaceAll(o.Templates.Path, "")
+		}
+		if o.Templates.CustomLogo != "" {
+			opts.Templates.CustomLogo = repl.ReplaceAll(o.Templates.CustomLogo, "")
+		}
+		if o.Templates.Banner != "" {
+			opts.Templates.Banner = repl.ReplaceAll(o.Templates.Banner, "")
+		}
+		if o.Templates.Footer != "" {
+			opts.Templates.Footer = repl.ReplaceAll(o.Templates.Footer, "")
+		}
+		if o.Templates.Debug {
+			opts.Templates.Debug = o.Templates.Debug
+		}
+		if o.Templates.DisplayLoginForm {
+			opts.Templates.DisplayLoginForm = o.Templates.DisplayLoginForm
+		}
 	}
 	if o.InjectRequestHeaders != nil {
 		opts.InjectRequestHeaders = o.InjectRequestHeaders.oauth2proxyOptions()
@@ -259,6 +264,19 @@ func (o *Options) oauth2proxyOptions() *options.Options {
 	}
 	if o.Providers != nil {
 		opts.Providers = o.Providers
+		for _, provider := range opts.Providers {
+			provider.ClientID = repl.ReplaceAll(provider.ClientID, "")
+			provider.ClientSecret = repl.ReplaceAll(provider.ClientSecret, "")
+			provider.ClientSecretFile = repl.ReplaceAll(provider.ClientSecretFile, "")
+			provider.OIDCConfig.IssuerURL = repl.ReplaceAll(provider.OIDCConfig.IssuerURL, "")
+			provider.OIDCConfig.JwksURL = repl.ReplaceAll(provider.OIDCConfig.JwksURL, "")
+			provider.LoginURL = repl.ReplaceAll(provider.LoginURL, "")
+			provider.RedeemURL = repl.ReplaceAll(provider.RedeemURL, "")
+			provider.ProfileURL = repl.ReplaceAll(provider.ProfileURL, "")
+			provider.ValidateURL = repl.ReplaceAll(provider.ValidateURL, "")
+			provider.Scope = repl.ReplaceAll(provider.Scope, "")
+			provider.ProtectedResource = repl.ReplaceAll(provider.ProtectedResource, "")
+		}
 	}
 	if o.APIRoutes != nil {
 		opts.APIRoutes = o.APIRoutes
@@ -274,7 +292,11 @@ func (o *Options) oauth2proxyOptions() *options.Options {
 		opts.SkipJwtBearerTokens = o.SkipJwtBearerTokens
 	}
 	if o.ExtraJwtIssuers != nil {
-		opts.ExtraJwtIssuers = o.ExtraJwtIssuers
+		issuers := make([]string, len(o.ExtraJwtIssuers))
+		for i, issuer := range o.ExtraJwtIssuers {
+			issuers[i] = repl.ReplaceAll(issuer, "")
+		}
+		opts.ExtraJwtIssuers = issuers
 	}
 	if o.SkipProviderButton {
 		opts.SkipProviderButton = o.SkipProviderButton

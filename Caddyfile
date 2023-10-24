@@ -1,10 +1,6 @@
 {
+	debug
 	order oauth2_session before handle
-	secrets {
-		stores {
-			default azure_keyvault https://myvault.vault.azure.net
-		}
-	}
 	nats {
 		auth_service {
 			internal_account AUTH
@@ -43,13 +39,31 @@
 					account OAUTH2
 				}
 			}
+			policy {
+				match {
+					token TEST
+				}
+				callout allow {
+					account TEST
+				}
+			}
 		}
 		server {
+			trace_verbose
+			name srv-01
 			port 4222
 			http_port 8222
 			system_account SYS
 			jetstream
+			websocket {
+				port 10443
+				advertise local.quara-dev.com:10443
+				tls local.quara-dev.com
+			}
 			accounts {
+				TEST {
+					jetstream
+				}
 				OAUTH2 {
 					jetstream
 				}
@@ -131,17 +145,17 @@
 			cookie_domains .localhost
 			email_domains *
 			whitelist_domains .localhost
-			extra_jwt_issuers "https://sts.windows.net/{secret.oauth2_tenant_id@default}/={secret.oauth2_client_id@default}"
+			extra_jwt_issuers https://sts.windows.net/96bdcf75-3f33-4995-966b-d8eddb861f9b/=4a224c79-38e2-487f-96e0-5f4febfa4ce1
 			provider oidc {
 				id azure-ad
 				name "Azure AD"
-				client_id {secret.oauth2_client_id@default}
-				client_secret {secret.oauth2_client_secret@default}
+				client_id 4a224c79-38e2-487f-96e0-5f4febfa4ce1
+				client_secret {secret.oauth2-client-secret@az-kv-srv-01}
 				scope openid email profile
-				login_url https://login.microsoftonline.com/{secret.oauth2_tenant_id@default}/v2.0/oauth2/authorize
-				redeem_url https://login.microsoftonline.com/{secret.oauth2_tenant_id@default}/v2.0/oauth2/token
+				login_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/authorize
+				redeem_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/token
 				profile_url https://graph.microsoft.com/v1.0/me
-				oidc_issuer_url https://login.microsoftonline.com/{secret.oauth2_tenant_id@default}/v2.0
+				oidc_issuer_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0
 				oidc_jwks_url https://login.microsoftonline.com/common/discovery/keys
 				oidc_audience_claims aud
 				oidc_email_claim email
@@ -149,9 +163,15 @@
 			}
 		}
 	}
+	secrets {
+		stores {
+			az-kv-srv-01 azure_keyvault https://kv-srv-01.vault.azure.net
+		}
+	}
+	local_certs
 }
 
-test.localhost {
+local.quara-dev.com {
 	oauth2_session {
 		endpoint az
 	}

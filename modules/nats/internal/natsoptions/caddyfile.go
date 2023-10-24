@@ -585,13 +585,12 @@ func parseWebsocket(d *caddyfile.Dispenser, o *Options) error {
 	if o.Websocket == nil {
 		o.Websocket = &Websocket{}
 	}
-	wsopts := o.Websocket
 	if d.NextArg() {
 		port, err := utils.ParsePort(d.Val())
 		if err != nil {
 			return d.Errf("invalid websocket port: %v", err)
 		}
-		wsopts.Port = port
+		o.Websocket.Port = port
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			return d.Err("websocket short syntax requires exactly one port number")
 		}
@@ -599,7 +598,7 @@ func parseWebsocket(d *caddyfile.Dispenser, o *Options) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "host":
-				if !d.AllArgs(&wsopts.Host) {
+				if !d.AllArgs(&o.Websocket.Host) {
 					return d.ArgErr()
 				}
 			case "port":
@@ -611,17 +610,20 @@ func parseWebsocket(d *caddyfile.Dispenser, o *Options) error {
 				if err != nil {
 					return d.Errf("invalid websocket port: %v", err)
 				}
-				wsopts.Port = port
+				o.Websocket.Port = port
 			case "advertise":
-				if !d.AllArgs(&wsopts.Advertise) {
+				if !d.AllArgs(&o.Websocket.Advertise) {
 					return d.Err("websocket.advertise requires exactly one address (including port, but not scheme)")
 				}
 			case "tls":
-				if err := parseTLS(d, wsopts.TLS); err != nil {
+				if o.Websocket.TLS == nil {
+					o.Websocket.TLS = &TLSMap{}
+				}
+				if err := parseTLS(d, o.Websocket.TLS); err != nil {
 					return err
 				}
 			case "no_tls":
-				wsopts.NoTLS = true
+				o.Websocket.NoTLS = true
 			default:
 				return d.Errf("unrecognized websocket subdirective: %s", d.Val())
 			}
@@ -809,6 +811,9 @@ func parseTLS(d *caddyfile.Dispenser, tlsOpts *TLSMap) error {
 		}
 	}
 	if len(domains) > 0 {
+		if tlsOpts.Subjects == nil {
+			tlsOpts.Subjects = []string{}
+		}
 		tlsOpts.Subjects = append(tlsOpts.Subjects, domains...)
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
@@ -822,6 +827,9 @@ func parseTLS(d *caddyfile.Dispenser, tlsOpts *TLSMap) error {
 			}
 			if len(domains) == 0 {
 				return d.Err("tls.sni requires at least one domain name")
+			}
+			if tlsOpts.Subjects == nil {
+				tlsOpts.Subjects = []string{}
 			}
 			tlsOpts.Subjects = append(tlsOpts.Subjects, domains...)
 		case "cert_file":

@@ -125,8 +125,8 @@ func (o *TLSMap) setTLSOpts(tlsMap TLSMapType, opts *server.Options) error {
 			opts.Websocket.TLSPinnedCerts = certs
 		}
 		// If TLS is managed, use the provided tls.Config
-		if o.IsManaged() {
-			opts.Websocket.TLSConfig = o.config
+		if o.config != nil {
+			opts.Websocket.TLSConfig = o.config.Clone()
 			return nil
 		}
 		setConfig = func(cfg *tls.Config) {
@@ -144,7 +144,7 @@ func (o *TLSMap) setTLSOpts(tlsMap TLSMapType, opts *server.Options) error {
 		}
 		opts.LeafNode.TLSTimeout = o.Timeout.Seconds()
 		// If TLS is managed, use the provided tls.Config
-		if o.IsManaged() {
+		if o.config != nil {
 			opts.LeafNode.TLSConfig = o.config.Clone()
 			return nil
 		}

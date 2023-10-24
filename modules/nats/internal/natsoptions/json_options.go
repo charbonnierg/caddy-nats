@@ -341,5 +341,12 @@ func (m *TLSMap) SetConfigOverride(config *tls.Config) {
 		}
 		return _cfg.GetCertificate(hello)
 	}
+	cfg.GetConfigForClient = func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
+		_cfg, err := config.GetConfigForClient(hello)
+		if err != nil {
+			return nil, err
+		}
+		return _cfg, nil
+	}
 	m.config = cfg
 }
