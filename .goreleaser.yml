@@ -12,7 +12,6 @@ builds:
       - arm
     goarm:
       - "7"
-      - "6"
     ignore:
       - goos: darwin
         goarch: arm
@@ -20,3 +19,8 @@ builds:
         goarch: arm
     env:
       - "CGO_ENABLED=0"
+    ldflags:
+      - -s
+      - -w
+    flags:
+      - -trimpath

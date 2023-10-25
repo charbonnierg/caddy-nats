@@ -42,6 +42,7 @@
 			policy {
 				match {
 					token TEST
+					tls_server_name local.quara-dev.com
 				}
 				callout allow {
 					account TEST
@@ -58,7 +59,7 @@
 			websocket {
 				port 10443
 				advertise local.quara-dev.com:10443
-				tls local.quara-dev.com
+				tls local.quara-dev.com other.local.quara-dev.com
 			}
 			accounts {
 				TEST {

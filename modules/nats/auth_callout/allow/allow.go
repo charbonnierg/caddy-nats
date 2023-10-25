@@ -46,13 +46,7 @@ func (a *AllowAuthCallout) Handle(request *natsapp.AuthorizationRequest) (*jwt.U
 		// Apply the template
 		a.Template.Render(request, userClaims)
 	}
-	if a.Account != "" {
-		// The target account must be specified as JWT audience
-		userClaims.Audience = request.ReplaceAll(a.Account, "")
-	} else {
-		// If not specified, the target account is the username
-		userClaims.Audience = request.Claims.ConnectOptions.Username
-	}
+	userClaims.Audience = request.ReplaceAll(a.Account, "")
 	if userClaims.Audience == "" {
 		// If the target account is still empty, deny access
 		return nil, errors.New("no target account specified")

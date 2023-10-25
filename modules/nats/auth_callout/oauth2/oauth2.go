@@ -74,7 +74,8 @@ func (c *OAuth2ProxyAuthCallout) loadOauth2Endpoint() error {
 
 // Handle is called by auth callout caddy module to authenticate a user.
 // It returns either user claims or an error.
-// The account for which the user is authenticated is the username in connect opts.
+// The account for which the user is authenticated is configured at the auth callout level and
+// is the same for all users.
 // This target account is set as Audience in the user claims as required auth_callout caddy module.
 func (c *OAuth2ProxyAuthCallout) Handle(request *natsapp.AuthorizationRequest) (*jwt.UserClaims, error) {
 	// Endpoint will be loaded on first request, then it is saved on
@@ -85,21 +86,15 @@ func (c *OAuth2ProxyAuthCallout) Handle(request *natsapp.AuthorizationRequest) (
 	}
 	// Initialize user claims
 	userClaims := jwt.NewUserClaims(request.Claims.UserNkey)
-	// OAuth2 session state must be presented as password in connect opts (encrypted cookie string)
-	sessionState, err := c.endpoint.DecodeSessionStateFromString(request.Claims.ConnectOptions.Password)
+	// OAuth2 session state must be presented as token in connect opts (encrypted cookie string)
+	sessionState, err := c.endpoint.DecodeSessionStateFromString(request.Claims.ConnectOptions.Token)
 	if err != nil {
 		return nil, errors.New("unable to decode session state")
 	}
 	// Add replacers for session state
 	c.addSessionReplacerVars(request, sessionState)
 	// Set target account
-	if c.Account != "" {
-		// The target account must be specified as JWT audience
-		userClaims.Audience = request.ReplaceAll(c.Account, "")
-	} else {
-		// If not specified, the target account is the username
-		userClaims.Audience = request.Claims.ConnectOptions.Username
-	}
+	userClaims.Audience = request.ReplaceAll(c.Account, "")
 	if userClaims.Audience == "" {
 		// If the target account is still empty, deny access
 		return nil, errors.New("no target account specified")

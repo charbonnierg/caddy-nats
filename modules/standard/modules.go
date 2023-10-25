@@ -29,4 +29,8 @@ import (
 	// Secrets modules
 	_ "github.com/quara-dev/beyond/modules/secrets/secretsapp"
 	_ "github.com/quara-dev/beyond/modules/secrets/stores/azure"
+
+	// Connectors modules
+	_ "github.com/quara-dev/beyond/modules/connectors/connectorsapp"
+	_ "github.com/quara-dev/beyond/modules/connectors/mongo"
 )
