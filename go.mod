@@ -14,7 +14,7 @@ require (
 	github.com/caddyserver/caddy/v2 v2.7.5
 	github.com/damianiandrea/mongodb-nats-connector v0.0.0-20230930202719-75470b87f61e
 	github.com/dustin/go-humanize v1.0.1
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/libdns/digitalocean v0.0.0-20230728223659-4f9064657aea
 	github.com/libdns/libdns v0.2.1
 	github.com/nats-io/jwt/v2 v2.5.2
@@ -23,6 +23,8 @@ require (
 	github.com/nats-io/nkeys v0.4.5
 	github.com/nats-io/prometheus-nats-exporter v0.12.0
 	github.com/oauth2-proxy/oauth2-proxy/v7 v7.0.0-00010101000000-000000000000
+	github.com/onsi/ginkgo/v2 v2.13.0
+	github.com/onsi/gomega v1.29.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector v0.87.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector v0.87.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/servicegraphconnector v0.87.0
@@ -295,7 +297,6 @@ require (
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ohler55/ojg v1.14.5 // indirect
-	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer v0.87.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/ecsutil v0.87.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.87.0 // indirect

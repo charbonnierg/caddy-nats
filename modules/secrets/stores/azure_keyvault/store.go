@@ -1,7 +1,7 @@
 // Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package azure
+package azure_keyvault
 
 import (
 	"errors"
@@ -9,6 +9,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/modules/secrets"
+	"github.com/quara-dev/beyond/pkg/azutils"
 	"go.uber.org/zap"
 )
 
@@ -16,6 +17,8 @@ func init() {
 	caddy.RegisterModule(AzureKeyvault{})
 }
 
+// AzureKeyvault is a secrets secrets.Store implementation
+// that retrieves secrets from Azure Keyvault.
 type AzureKeyvault struct {
 	ctx    caddy.Context
 	logger *zap.Logger
@@ -23,9 +26,11 @@ type AzureKeyvault struct {
 	// The Azure Keyvault URI
 	URI string `json:"uri,omitempty"`
 	// The Azure Keyvault credential config
-	CredentialConfig *AzCredentialConfig `json:"credential,omitempty"`
+	CredentialConfig *azutils.CredentialConfig `json:"credential,omitempty"`
 }
 
+// CaddyModule returns the Caddy module information.
+// It is required to implement the secrets.Store interface.
 func (AzureKeyvault) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "secrets.stores.azure_keyvault",
@@ -34,14 +39,15 @@ func (AzureKeyvault) CaddyModule() caddy.ModuleInfo {
 }
 
 // Provision prepares the store for use.
+// It is required to implement the secrets.Store interface.
 func (s *AzureKeyvault) Provision(app secrets.SecretApp) error {
-	s.ctx = app.Context()
-	s.logger = s.ctx.Logger().Named("azure_keyvault")
 	if s.URI == "" {
 		return errors.New("uri is required")
 	}
+	s.ctx = app.Context()
+	s.logger = s.ctx.Logger().Named("azure_keyvault")
 	if s.CredentialConfig == nil {
-		s.CredentialConfig = NewAzCredentialConfig()
+		s.CredentialConfig = azutils.NewCredentialConfig()
 	}
 	err := s.CredentialConfig.ParseEnv().Build()
 	if err != nil {
@@ -58,6 +64,7 @@ func (s *AzureKeyvault) Provision(app secrets.SecretApp) error {
 }
 
 // Get retrieves a value from the store for a given key.
+// It is required to implement the secrets.Store interface.
 func (s *AzureKeyvault) Get(key string) (string, error) {
 	s.logger.Info("getting secret", zap.String("key", key))
 	v, err := s.client.GetSecret(s.ctx, key)
@@ -65,11 +72,6 @@ func (s *AzureKeyvault) Get(key string) (string, error) {
 		s.logger.Error("error getting secret", zap.Error(err))
 	}
 	return v, err
-}
-
-// Set writes a value to the store for a given existing key.
-func (s *AzureKeyvault) Set(key string, value string) error {
-	return s.client.SetSecret(s.ctx, key, value)
 }
 
 // Interface guards

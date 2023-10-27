@@ -9,7 +9,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/quara-dev/beyond/pkg/utils"
+	"github.com/quara-dev/beyond/pkg/parseutils"
 )
 
 func (o *Options) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -312,7 +312,7 @@ func parsePort(d *caddyfile.Dispenser, o *Options) error {
 	if !d.AllArgs(&raw) {
 		return d.Err("port requires exactly one port number")
 	}
-	port, err := utils.ParsePort(raw)
+	port, err := parseutils.ParsePort(raw)
 	if err != nil {
 		return d.Err(err.Error())
 	}
@@ -326,7 +326,7 @@ func parseHttpPort(d *caddyfile.Dispenser, o *Options) error {
 	if !d.AllArgs(&raw) {
 		return d.Err("http_port requires exactly one port number")
 	}
-	port, err := utils.ParsePort(raw)
+	port, err := parseutils.ParsePort(raw)
 	if err != nil {
 		return d.Err(err.Error())
 	}
@@ -340,7 +340,7 @@ func parseHttpsPort(d *caddyfile.Dispenser, o *Options) error {
 	if !d.AllArgs(&raw) {
 		return d.Err("https_port requires exactly one port number")
 	}
-	port, err := utils.ParsePort(raw)
+	port, err := parseutils.ParsePort(raw)
 	if err != nil {
 		return d.Err(err.Error())
 	}
@@ -368,11 +368,11 @@ func parseMaxPayload(d *caddyfile.Dispenser, o *Options) error {
 	if !d.AllArgs(&raw) {
 		return d.Err("max_payload requires exactly one size value")
 	}
-	size, err := utils.ParseBytes(raw)
+	size, err := parseutils.ParseBytes(raw)
 	if err != nil {
 		return d.Errf("invalid max_payload: %s", err.Error())
 	}
-	size32, err := utils.Int32(size)
+	size32, err := parseutils.Int32(size)
 	if err != nil {
 		return d.Errf("invalid max_payload: %s", err.Error())
 	}
@@ -386,7 +386,7 @@ func parseMaxPending(d *caddyfile.Dispenser, o *Options) error {
 	if !d.AllArgs(&raw) {
 		return d.Err("max_pending requires exactly one size value")
 	}
-	size, err := utils.ParseBytes(raw)
+	size, err := parseutils.ParseBytes(raw)
 	if err != nil {
 		return d.Errf("invalid max_pending: %s", err.Error())
 	}
@@ -400,11 +400,11 @@ func parseMaxControlLine(d *caddyfile.Dispenser, o *Options) error {
 	if !d.AllArgs(&raw) {
 		return d.Err("max_control_line requires exactly one size value")
 	}
-	size, err := utils.ParseBytes(raw)
+	size, err := parseutils.ParseBytes(raw)
 	if err != nil {
 		return d.Errf("invalid max_control_line: %s", err.Error())
 	}
-	size32, err := utils.Int32(size)
+	size32, err := parseutils.Int32(size)
 	if err != nil {
 		return d.Errf("invalid max_control_line: %s", err.Error())
 	}
@@ -500,7 +500,7 @@ func parseJetStream(d *caddyfile.Dispenser, o *Options) error {
 				if !d.AllArgs(&raw) {
 					return d.Err("jetstream.max_memory requires exactly one size value")
 				}
-				size, err := utils.ParseBytes(raw)
+				size, err := parseutils.ParseBytes(raw)
 				if err != nil {
 					return d.Errf("invalid jetstream.max_memory: %s", err.Error())
 				}
@@ -510,7 +510,7 @@ func parseJetStream(d *caddyfile.Dispenser, o *Options) error {
 				if !d.AllArgs(&raw) {
 					return d.Err("jetstream.max_file requires exactly one size value")
 				}
-				size, err := utils.ParseBytes(raw)
+				size, err := parseutils.ParseBytes(raw)
 				if err != nil {
 					return d.Errf("invalid jetstream.max_file: %s", err.Error())
 				}
@@ -532,7 +532,7 @@ func parseMqtt(d *caddyfile.Dispenser, o *Options) error {
 	mqttopts := o.MQTT
 	// Short syntax
 	if d.NextArg() {
-		port, err := utils.ParsePort(d.Val())
+		port, err := parseutils.ParsePort(d.Val())
 		if err != nil {
 			return d.Errf("invalid mqtt port: %v", err)
 		}
@@ -553,7 +553,7 @@ func parseMqtt(d *caddyfile.Dispenser, o *Options) error {
 				if !d.AllArgs(&raw) {
 					return d.Err("mqtt.port requires exactly one port number")
 				}
-				port, err := utils.ParsePort(raw)
+				port, err := parseutils.ParsePort(raw)
 				if err != nil {
 					return d.Errf("invalid mqtt port: %v", err)
 				}
@@ -586,7 +586,7 @@ func parseWebsocket(d *caddyfile.Dispenser, o *Options) error {
 		o.Websocket = &Websocket{}
 	}
 	if d.NextArg() {
-		port, err := utils.ParsePort(d.Val())
+		port, err := parseutils.ParsePort(d.Val())
 		if err != nil {
 			return d.Errf("invalid websocket port: %v", err)
 		}
@@ -606,7 +606,7 @@ func parseWebsocket(d *caddyfile.Dispenser, o *Options) error {
 				if !d.AllArgs(&raw) {
 					return d.Err("websocket.port requires exactly one port number")
 				}
-				port, err := utils.ParsePort(raw)
+				port, err := parseutils.ParsePort(raw)
 				if err != nil {
 					return d.Errf("invalid websocket port: %v", err)
 				}
@@ -641,7 +641,7 @@ func parseLeafnodes(d *caddyfile.Dispenser, o *Options) error {
 	leafopts := o.Leafnode
 	// Short syntax
 	if d.NextArg() {
-		port, err := utils.ParsePort(d.Val())
+		port, err := parseutils.ParsePort(d.Val())
 		if err != nil {
 			return d.Errf("invalid leafnodes port: %v", err)
 		}
@@ -662,7 +662,7 @@ func parseLeafnodes(d *caddyfile.Dispenser, o *Options) error {
 				if !d.AllArgs(&raw) {
 					return d.Err("leafnodes.port requires exactly one port number")
 				}
-				port, err := utils.ParsePort(raw)
+				port, err := parseutils.ParsePort(raw)
 				if err != nil {
 					return d.Errf("invalid leafnode port: %v", err)
 				}

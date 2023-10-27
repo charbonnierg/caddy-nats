@@ -1,13 +1,11 @@
 // Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package secretsapp
+package automation
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"strings"
 	"time"
 
@@ -16,89 +14,57 @@ import (
 	"go.uber.org/zap"
 )
 
+// Handler is a secret automation handler.
+// It is used to handle the secret value when it is fetched.
 type Handler interface {
 	caddy.Module
-	Provision(automation *Automation) error
+	Provision(app secrets.SecretApp, automation *Automation) error
 	Handle(value string) (string, error)
 }
 
-type Secret struct {
-	Store secrets.Store
-	Key   string
-}
-
-func (s Secret) String() string {
-	return s.Key
-}
-
-type Template struct {
-	template *template.Template
-	// This is the template to use for the secret
-	RawTemplate string `json:"template,omitempty"`
-}
-
-func (t *Template) Provision(automation *Automation) error {
-	tmpl, err := template.New("secret").Parse(t.RawTemplate)
-	if err != nil {
-		return err
-	}
-	t.template = tmpl
-	return nil
-}
-
-func (t *Template) Render(value map[string]string) (string, error) {
-	data := map[string]any{}
-	data["values"] = value
-	for k, v := range value {
-		_k := strings.Split(k, "@")
-		data[strings.ReplaceAll(_k[0], "-", "_")] = v
-	}
-	buf := bytes.NewBuffer(nil)
-	err := t.template.Execute(buf, data)
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
+// Automation is a secret automation.
+// It periodically fetches secrets from sources and executes handlers with the secrets.
+// Optionally, a template can be used to transform the secret values into a custom string.
+// By default, the secret values are joined with a newline.
 type Automation struct {
+	app      secrets.SecretApp
 	ctx      caddy.Context
 	logger   *zap.Logger
-	secrets  []Secret
+	sources  []*secrets.Source
 	template *Template
 	handlers []Handler
-	// Public fields
+
 	Interval    time.Duration     `json:"interval,omitempty"`
-	SecretsRaw  []string          `json:"sources,omitempty"`
+	SourcesRaw  []string          `json:"sources,omitempty"`
 	TemplateRaw string            `json:"template,omitempty"`
 	HandlersRaw []json.RawMessage `json:"handlers,omitempty" caddy:"namespace=secrets.handlers inline_key=type"`
 }
 
-func (a *Automation) Provision(app *App) error {
-	a.ctx = app.Context()
-	a.logger = app.Logger().Named("automation")
-	// Parse secrets
-	for _, secretRaw := range a.SecretsRaw {
-		store, key, err := app.getStoreAndKey(secretRaw)
+func (a *Automation) loadSourcesRaw() error {
+	for _, secretRaw := range a.SourcesRaw {
+		source, err := a.app.GetSource(secretRaw)
 		if err != nil {
 			return err
 		}
-		a.secrets = append(a.secrets, Secret{
-			Store: store,
-			Key:   key,
-		})
+		a.sources = append(a.sources, source)
 	}
-	// Parse template
+	return nil
+}
+
+func (a *Automation) loadTemplateRaw() error {
 	if a.TemplateRaw != "" {
 		a.template = &Template{
-			RawTemplate: a.TemplateRaw,
+			TemplateRaw: a.TemplateRaw,
 		}
 		err := a.template.Provision(a)
 		if err != nil {
 			return err
 		}
 	}
-	// Load handlers
+	return nil
+}
+
+func (a *Automation) loadHandlersRaw() error {
 	unm, err := a.ctx.LoadModule(a, "HandlersRaw")
 	if err != nil {
 		return err
@@ -108,11 +74,29 @@ func (a *Automation) Provision(app *App) error {
 		if !ok {
 			return fmt.Errorf("handler is not a Handler: %T", handlerRaw)
 		}
-		err = handler.Provision(a)
+		err = handler.Provision(a.app, a)
 		if err != nil {
 			return err
 		}
 		a.handlers = append(a.handlers, handler)
+	}
+	return nil
+}
+
+// Provision prepares the automation for use.
+func (a *Automation) Provision(app secrets.SecretApp) error {
+	a.app = app
+	a.ctx = app.Context()
+	a.logger = a.ctx.Logger().Named("secrets.automation")
+	// Parse raw fields
+	if err := a.loadSourcesRaw(); err != nil {
+		return err
+	}
+	if err := a.loadTemplateRaw(); err != nil {
+		return err
+	}
+	if err := a.loadHandlersRaw(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -131,7 +115,7 @@ func (a *Automation) Run() error {
 			willRetry := false
 			// Fetch secrets
 			values := map[string]string{}
-			for _, secret := range a.secrets {
+			for _, secret := range a.sources {
 				val, err := secret.Store.Get(secret.Key)
 				if err != nil {
 					a.logger.Error("failed to get secret", zap.String("key", secret.Key), zap.Error(err))

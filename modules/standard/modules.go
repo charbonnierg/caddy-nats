@@ -27,8 +27,10 @@ import (
 	// Telemetry modules
 	_ "github.com/quara-dev/beyond/modules/otelcol"
 	// Secrets modules
+	_ "github.com/quara-dev/beyond/modules/secrets/automation/exec_handler"
+	_ "github.com/quara-dev/beyond/modules/secrets/automation/file_handler"
 	_ "github.com/quara-dev/beyond/modules/secrets/secretsapp"
-	_ "github.com/quara-dev/beyond/modules/secrets/stores/azure"
+	_ "github.com/quara-dev/beyond/modules/secrets/stores/azure_keyvault"
 
 	// Connectors modules
 	_ "github.com/quara-dev/beyond/modules/connectors/connectorsapp"

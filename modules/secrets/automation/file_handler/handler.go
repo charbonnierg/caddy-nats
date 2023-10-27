@@ -1,7 +1,7 @@
 // Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package secretsapp
+package file_handler
 
 import (
 	"encoding/json"
@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/quara-dev/beyond/modules/secrets"
+	"github.com/quara-dev/beyond/modules/secrets/automation"
 	"go.uber.org/zap"
 )
 
@@ -21,7 +23,7 @@ func init() {
 
 // FileHandler is a handler that saves the secret vlaue to a file.
 type FileHandler struct {
-	notifyHandlers []Handler
+	notifyHandlers []automation.Handler
 	logger         *zap.Logger
 	// This is the path to the file to save the secret to
 	File           string            `json:"file,omitempty"`
@@ -39,8 +41,8 @@ func (FileHandler) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (h *FileHandler) Provision(automation *Automation) error {
-	h.logger = automation.ctx.Logger().Named("file_handler")
+func (h *FileHandler) Provision(app secrets.SecretApp, auto *automation.Automation) error {
+	h.logger = app.Context().Logger().Named("secrets.automation.file_handler")
 	parent := filepath.Dir(h.File)
 	stat, err := os.Stat(parent)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -60,16 +62,16 @@ func (h *FileHandler) Provision(automation *Automation) error {
 	} else if !stat.IsDir() {
 		return fmt.Errorf("parent directory is not a directory: %s", parent)
 	}
-	unm, err := automation.ctx.LoadModule(h, "Notify")
+	unm, err := app.Context().LoadModule(h, "Notify")
 	if err != nil {
 		return err
 	}
 	for _, raw := range unm.([]interface{}) {
-		notify, ok := raw.(Handler)
+		notify, ok := raw.(automation.Handler)
 		if !ok {
 			return fmt.Errorf("invalid notify handler type")
 		}
-		if err := notify.Provision(automation); err != nil {
+		if err := notify.Provision(app, auto); err != nil {
 			return err
 		}
 		h.notifyHandlers = append(h.notifyHandlers, notify)
@@ -111,3 +113,8 @@ func (h *FileHandler) Handle(value string) (string, error) {
 	}
 	return h.File, nil
 }
+
+// Interface guards
+var (
+	_ automation.Handler = (*FileHandler)(nil)
+)

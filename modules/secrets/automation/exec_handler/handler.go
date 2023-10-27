@@ -1,7 +1,7 @@
 // Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package secretsapp
+package exec_handler
 
 import (
 	"fmt"
@@ -10,6 +10,9 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/quara-dev/beyond/modules/secrets"
+	"github.com/quara-dev/beyond/modules/secrets/automation"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -17,6 +20,7 @@ func init() {
 }
 
 type ExecHandler struct {
+	logger *zap.Logger
 	// This is the command to execute
 	Command string `json:"command,omitempty"`
 	// This is the arguments to pass to the command
@@ -41,7 +45,8 @@ func (ExecHandler) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (h *ExecHandler) Provision(automation *Automation) error {
+func (h *ExecHandler) Provision(app secrets.SecretApp, auto *automation.Automation) error {
+	h.logger = app.Context().Logger().Named("secrets.automation.exec_handler")
 	if h.WorkingDir != "" {
 		_, err := os.Stat(h.WorkingDir)
 		if err != nil {
@@ -78,3 +83,8 @@ func (h *ExecHandler) Handle(value string) (string, error) {
 	result := strings.TrimSpace(string(out))
 	return result, nil
 }
+
+// Interface guards
+var (
+	_ automation.Handler = (*ExecHandler)(nil)
+)

@@ -1,18 +1,7 @@
-// Copyright 2023 - Guillaume Charbonnier
-// Copyright 2016-2018 The NATS Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2023 QUARA - RGPI
+// SPDX-License-Identifier: Apache-2.0
 
-package utils
+package parseutils
 
 import (
 	"crypto/tls"
@@ -20,7 +9,7 @@ import (
 )
 
 // Where we maintain all of the available ciphers
-var cipherMap = map[string]uint16{
+var CipherMap = map[string]uint16{
 	"TLS_RSA_WITH_RC4_128_SHA":                tls.TLS_RSA_WITH_RC4_128_SHA,
 	"TLS_RSA_WITH_3DES_EDE_CBC_SHA":           tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
 	"TLS_RSA_WITH_AES_128_CBC_SHA":            tls.TLS_RSA_WITH_AES_128_CBC_SHA,
@@ -48,7 +37,7 @@ var cipherMap = map[string]uint16{
 }
 
 // Used to verify that cipher exist when an integer is provided
-var cipherMapByID = map[uint16]string{
+var CipherMapByID = map[uint16]string{
 	tls.TLS_RSA_WITH_RC4_128_SHA:                "TLS_RSA_WITH_RC4_128_SHA",
 	tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA:           "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
 	tls.TLS_RSA_WITH_AES_128_CBC_SHA:            "TLS_RSA_WITH_AES_128_CBC_SHA",
@@ -76,7 +65,7 @@ var cipherMapByID = map[uint16]string{
 }
 
 // Where we maintain available curve preferences
-var curvePreferenceMap = map[string]tls.CurveID{
+var CurvePreferenceMap = map[string]tls.CurveID{
 	"X25519":    tls.X25519,
 	"CurveP256": tls.CurveP256,
 	"CurveP384": tls.CurveP384,
@@ -89,7 +78,7 @@ func ParseCipherFromInt(cipherKey int) (uint16, error) {
 	if err != nil {
 		return 0, fmt.Errorf("invalid cipher key: %s", err.Error())
 	}
-	_, ok := cipherMapByID[key]
+	_, ok := CipherMapByID[key]
 	if !ok {
 		return 0, fmt.Errorf("unknown cipher key: %d", key)
 	}
@@ -98,7 +87,7 @@ func ParseCipherFromInt(cipherKey int) (uint16, error) {
 
 // ParseCipherFromName parses a cipher as a uint16 from a string
 func ParseCipherFromName(cipherName string) (uint16, error) {
-	cipher, exists := cipherMap[cipherName]
+	cipher, exists := CipherMap[cipherName]
 	if !exists {
 		return 0, fmt.Errorf("unrecognized cipher %s", cipherName)
 	}
@@ -108,7 +97,7 @@ func ParseCipherFromName(cipherName string) (uint16, error) {
 
 // ParseCurvePreferenceFromName parses curve preference as a [tls.CurveID] from a string
 func ParseCurvePreferenceFromName(curveName string) (tls.CurveID, error) {
-	curve, exists := curvePreferenceMap[curveName]
+	curve, exists := CurvePreferenceMap[curveName]
 	if !exists {
 		return 0, fmt.Errorf("unrecognized curve preference %s", curveName)
 	}
