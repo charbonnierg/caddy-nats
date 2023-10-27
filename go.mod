@@ -4,7 +4,7 @@ go 1.21
 
 replace github.com/oauth2-proxy/oauth2-proxy/v7 => github.com/charbonnierg/oauth2-proxy/v7 v7.5.1-library-usage-r2
 
-replace github.com/damianiandrea/mongodb-nats-connector => ../mongodb-nats-connector
+replace github.com/damianiandrea/mongodb-nats-connector => github.com/charbonnierg/mongodb-nats-connector v0.0.3-dev
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.2
