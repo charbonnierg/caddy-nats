@@ -32,7 +32,6 @@ import (
 // is used as a middleware, and it calls the endpoint ServeHTTP method..
 type Endpoint struct {
 	app     oauth2.App
-	name    string
 	logger  *zap.Logger
 	cipher  encryption.Cipher
 	store   oauth2.Store
@@ -44,7 +43,7 @@ type Endpoint struct {
 }
 
 func (e *Endpoint) Name() string {
-	return e.name
+	return e.NameRaw
 }
 
 // CaddyModule returns the Caddy module information.
@@ -81,11 +80,10 @@ func (e *Endpoint) Provision(app oauth2.App) error {
 	if e.NameRaw == "" {
 		return errors.New("endpoint name cannot be empty")
 	}
-	e.name = e.NameRaw
-	e.logger = app.Logger().Named(e.name)
+	e.logger = app.Logger().Named(e.Name())
 	// Set options
 	if e.Options == nil {
-		return fmt.Errorf("no options found for endpoint %s", e.name)
+		return fmt.Errorf("no options found for endpoint %s", e.Name())
 	}
 	e.opts = e.Options.oauth2proxyOptions(app.GetReplacer())
 	if e.opts.Cookie.Secret == "" {
@@ -97,7 +95,7 @@ func (e *Endpoint) Provision(app oauth2.App) error {
 	}
 	// Validate options
 	if err := validation.Validate(e.opts); err != nil {
-		return fmt.Errorf("invalid options for endpoint %s: %v", e.name, err)
+		return fmt.Errorf("invalid options for endpoint %s: %v", e.Name(), err)
 	}
 	// Load cipher
 	cipher, err := encryption.NewCFBCipher(encryption.SecretBytes(e.opts.Cookie.Secret))
@@ -113,21 +111,21 @@ func (e *Endpoint) Provision(app oauth2.App) error {
 
 		err := store.Provision(e.app, &e.opts.Cookie)
 		if err != nil {
-			return fmt.Errorf("error provisioning cookie store for endpoint %s: %v", e.name, err)
+			return fmt.Errorf("error provisioning cookie store for endpoint %s: %v", e.Name(), err)
 		}
 		e.store = store
 	} else {
 		unm, err := e.app.Context().LoadModule(e, "Store")
 		if err != nil {
-			return fmt.Errorf("error loading session store for endpoint %s: %v", e.name, err)
+			return fmt.Errorf("error loading session store for endpoint %s: %v", e.Name(), err)
 		}
 		store, ok := unm.(oauth2.Store)
 		if !ok {
-			return fmt.Errorf("invalid session store for endpoint %s", e.name)
+			return fmt.Errorf("invalid session store for endpoint %s", e.Name())
 		}
 		err = store.Provision(e.app, &e.opts.Cookie)
 		if err != nil {
-			return fmt.Errorf("error provisioning session store for endpoint %s: %v", e.name, err)
+			return fmt.Errorf("error provisioning session store for endpoint %s: %v", e.Name(), err)
 		}
 		e.store = store
 	}
@@ -213,7 +211,7 @@ func (e *Endpoint) Equals(other oauth2.Endpoint) bool {
 	if !ok {
 		return false
 	}
-	if e.name != ep2.name {
+	if e.Name() != ep2.Name() {
 		return false
 	}
 	if !e.Options.equals(ep2.Options) {

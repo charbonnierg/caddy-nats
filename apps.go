@@ -14,6 +14,14 @@ import (
 // than beyond namespaces.
 type Apps map[caddy.ModuleID]App
 
+type CaddyAppLoader interface {
+	LoadCaddyApp(id string) (caddy.App, error)
+}
+
+type BeyondAppLoader interface {
+	LoadBeyondApp(id string) (App, error)
+}
+
 // App is an extension to caddy.App interface that also requires the
 // caddy.Module interface.
 type App interface {

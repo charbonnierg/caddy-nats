@@ -3,7 +3,10 @@
 	order oauth2_session before handle
 	nats {
 		auth_service {
-			internal_account AUTH
+			client {
+				internal
+				name auth-service
+			}
 			default deny
 			policy {
 				match {
@@ -137,9 +140,11 @@
 	oauth2 {
 		endpoint az {
 			store jetstream {
-				internal
-				username OAUTH2
-				password OAUTH2
+				client {
+					internal
+					name oauth2-az-endpoint
+					username OAUTH2
+				}
 			}
 			cookie_secure
 			cookie_http_only no

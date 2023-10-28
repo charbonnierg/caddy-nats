@@ -21,10 +21,10 @@ type InternalProvider interface {
 // NATS server. It is lazy and will only connect when
 // the first time Connect method is called.
 type Client struct {
-	closed       bool
-	inprocess    InternalProvider
-	nc           *nats.Conn
-	js           nats.JetStreamContext
+	closed     bool
+	inprocess  InternalProvider
+	connection *Connection
+
 	Internal     bool          `json:"internal,omitempty"`
 	Name         string        `json:"name,omitempty"`
 	Servers      []string      `json:"servers,omitempty"`
@@ -41,6 +41,19 @@ type Client struct {
 	PingInterval time.Duration `json:"ping_interval,omitempty"`
 }
 
+type Connection struct {
+	nc *nats.Conn
+	js nats.JetStreamContext
+}
+
+func (c *Connection) Core() *nats.Conn {
+	return c.nc
+}
+
+func (c *Connection) JetStream() nats.JetStreamContext {
+	return c.js
+}
+
 // SetInternalProvider sets the inprocess server provider.
 func (c *Client) SetInternalProvider(provider InternalProvider) *Client {
 	c.inprocess = provider
@@ -50,12 +63,12 @@ func (c *Client) SetInternalProvider(provider InternalProvider) *Client {
 // Connect connects to the NATS server and returns a JetStream
 // context. If the connection is already established, it returns
 // the existing JetStream context.
-func (c *Client) Connect() (nats.JetStreamContext, error) {
+func (c *Client) Connect() (*Connection, error) {
 	if c.closed {
 		return nil, errors.New("client is closed")
 	}
-	if c.js != nil {
-		return c.js, nil
+	if c.connection != nil {
+		return c.connection, nil
 	}
 	c.validate()
 	opts := nats.GetDefaultOptions()
@@ -71,6 +84,7 @@ func (c *Client) Connect() (nats.JetStreamContext, error) {
 				return nil, fmt.Errorf("failed to get inprocess server: %v", err)
 			}
 			opts.InProcessServer = srv
+			opts.Servers = nil
 		} else {
 			return nil, errors.New("inprocess server provider is not set")
 		}
@@ -121,7 +135,6 @@ func (c *Client) Connect() (nats.JetStreamContext, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to NATS server: %v", err)
 	}
-	c.nc = nc
 	jsopts := []nats.JSOpt{}
 	if c.JSPrefix != "" {
 		jsopts = append(jsopts, nats.APIPrefix(c.JSPrefix))
@@ -134,18 +147,29 @@ func (c *Client) Connect() (nats.JetStreamContext, error) {
 		c.Close()
 		return nil, fmt.Errorf("invalid JetStream configuration: %v", err)
 	}
-	c.js = js
-	return js, nil
+	connection := &Connection{
+		nc: nc,
+		js: js,
+	}
+	return connection, nil
 }
 
 // Close closes the connection to the NATS server.
 func (c *Client) Close() {
-	if c.nc != nil && !c.nc.IsClosed() && !c.nc.IsDraining() {
-		c.nc.Close()
+	defer func() {
+		c.closed = true
+		c.connection = nil
+	}()
+	if c.connection == nil {
+		return
 	}
-	c.nc = nil
-	c.js = nil
-	c.closed = true
+	if c.connection.nc == nil {
+		return
+	}
+	nc := c.connection.nc
+	if !nc.IsClosed() && !nc.IsDraining() {
+		nc.Close()
+	}
 }
 
 // validate checks that the client configuration is valid.

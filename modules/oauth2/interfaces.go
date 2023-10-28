@@ -16,10 +16,10 @@ import (
 
 type App interface {
 	beyond.App
+	beyond.BeyondAppLoader
 	GetEndpoint(name string) (Endpoint, error)
 	GetOrAddEndpoint(endpoint Endpoint) (Endpoint, error)
 	GetReplacer() *caddy.Replacer
-	LoadBeyondApp(name string) (beyond.App, error)
 }
 
 type Endpoint interface {

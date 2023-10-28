@@ -32,12 +32,15 @@ type JetStreamStore struct {
 
 func (s *JetStreamStore) Provision(app oauth2.App, opts *options.Cookie) error {
 	s.logger, _ = zap.NewDevelopment()
+	if s.Client == nil {
+		s.Client = &natsutils.Client{}
+	}
 	if s.Client.Internal {
 		unm, err := app.LoadBeyondApp("nats")
 		if err != nil {
 			return err
 		}
-		natsApp, ok := unm.(nats.NatsApp)
+		natsApp, ok := unm.(nats.App)
 		if !ok {
 			return errors.New("invalid nats app module")
 		}

@@ -23,15 +23,15 @@ type KeyValueStore struct {
 
 func (s *KeyValueStore) lazy() (nats.KeyValue, error) {
 	if s.natskv == nil {
-		js, err := s.client.Connect()
+		conn, err := s.client.Connect()
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to jetstream: %v", err)
 		}
-		kv, err := js.KeyValue(s.name)
+		kv, err := conn.JetStream().KeyValue(s.name)
 		if err != nil {
 			if err == nats.ErrBucketNotFound {
 				// Let's create the key value store
-				kv, err = js.CreateKeyValue(&nats.KeyValueConfig{
+				kv, err = conn.JetStream().CreateKeyValue(&nats.KeyValueConfig{
 					Bucket:      s.name,
 					Description: "oauth2-proxy session store",
 					TTL:         time.Duration(s.ttl),

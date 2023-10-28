@@ -20,7 +20,7 @@ func (s *JetStreamStore) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return err
 				}
 				s.TTL = val
-			case "connection":
+			case "client":
 				s.Client = &natsutils.Client{}
 				err := s.Client.UnmarshalCaddyfile(d)
 				if err != nil {

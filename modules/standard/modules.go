@@ -13,10 +13,9 @@ import (
 	// Docker modules
 	_ "github.com/quara-dev/beyond/modules/docker/app"
 	// NATS modules
-	_ "github.com/quara-dev/beyond/modules/nats/auth_callout/allow"
-	_ "github.com/quara-dev/beyond/modules/nats/auth_callout/deny"
-	_ "github.com/quara-dev/beyond/modules/nats/auth_callout/oauth2"
-	_ "github.com/quara-dev/beyond/modules/nats/natsapp"
+	_ "github.com/quara-dev/beyond/modules/nats/app"
+	_ "github.com/quara-dev/beyond/modules/nats/auth/callout"
+	_ "github.com/quara-dev/beyond/modules/nats/auth/policies"
 
 	// OAuth2 modules
 	_ "github.com/quara-dev/beyond/modules/oauth2/app"
