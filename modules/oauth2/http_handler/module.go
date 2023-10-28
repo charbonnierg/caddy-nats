@@ -12,7 +12,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/quara-dev/beyond/modules/oauth2"
-	"github.com/quara-dev/beyond/modules/oauth2/oauth2app"
+	"github.com/quara-dev/beyond/modules/oauth2/endpoint"
 )
 
 func init() {
@@ -23,8 +23,8 @@ func init() {
 // OAuth2Session is a Caddy module that represents an oauth2 middleware endpoint.
 // It implements the caddyhttp.MiddlewareHandler interface.
 type OAuth2Session struct {
-	endpoint    oauth2.OAuth2Endpoint
-	EndpointRaw *oauth2app.Endpoint `json:"endpoint,omitempty"`
+	endpoint    oauth2.Endpoint
+	EndpointRaw *endpoint.Endpoint `json:"endpoint,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -45,11 +45,11 @@ func (p *OAuth2Session) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to load oauth2 app module: %v", err)
 	}
-	app, ok := unm.(*oauth2app.App)
+	app, ok := unm.(oauth2.App)
 	if !ok {
 		return fmt.Errorf("invalid oauth2 app module")
 	}
-	if p.EndpointRaw.Name == "" {
+	if p.EndpointRaw.NameRaw == "" {
 		return fmt.Errorf("missing endpoint name")
 	}
 	ep, err := app.GetOrAddEndpoint(p.EndpointRaw)

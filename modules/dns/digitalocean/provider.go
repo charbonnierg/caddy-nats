@@ -32,7 +32,7 @@ func (Provider) CaddyModule() caddy.ModuleInfo {
 func (p *Provider) Provision(ctx caddy.Context) error {
 	repl := caddy.NewReplacer()
 	// Load the secrets app
-	secrets, err := secrets.Load(ctx)
+	secrets, err := secrets.LoadCaddyApp(&ctx)
 	if err != nil {
 		return err
 	}

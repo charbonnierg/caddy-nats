@@ -53,6 +53,8 @@ func NewCredentialConfig() *CredentialConfig {
 type CredentialConfig struct {
 	// factory is the generated factory method for creating a credential according to the config.
 	factory func() (azcore.TokenCredential, error)
+	// factories contains factories for creating credentials.
+	factories CredentialFactories
 	// Public fields are used for JSON unmarshalling.
 	ClientId                   string   `json:"client_id,omitempty"`
 	ClientIdFile               string   `json:"client_id_file,omitempty"`
@@ -66,10 +68,6 @@ type CredentialConfig struct {
 	ManagedIdentityResourceId  string   `json:"managed_identity_resource_id,omitempty"`
 	AdditionallyAllowedTenants []string `json:"additionally_allowed_tenants,omitempty"`
 	DisableInstanceDiscovery   bool     `json:"disable_instance_discovery,omitempty"`
-	// These are for testing purposes only
-	clientSecretCredentialFactory    func(tenantID string, clientID string, clientSecret string, options *azidentity.ClientSecretCredentialOptions) (*azidentity.ClientSecretCredential, error)
-	managedIdentityCredentialFactory func(options *azidentity.ManagedIdentityCredentialOptions) (*azidentity.ManagedIdentityCredential, error)
-	defaultAzureCredentialFactory    func(options *azidentity.DefaultAzureCredentialOptions) (*azidentity.DefaultAzureCredential, error)
 }
 
 // ParseEnv parses the environment variables for Azure credentials.
@@ -209,8 +207,9 @@ func (azc *CredentialConfig) GetClientSecret() (string, error) {
 // This method is called automatically by NewCredential when required so you don't need
 // to call it manually.
 func (azc *CredentialConfig) Build() error {
+	azc.setDefaultCredentialFactories()
 	switch {
-	case azc.ClientSecret != "" || azc.ClientSecretFile != "":
+	case azc.ClientId != "" || azc.ClientIdFile != "" || azc.ClientSecret != "" || azc.ClientSecretFile != "":
 		clientSecret, err := azc.GetClientSecret()
 		if err != nil {
 			return err
@@ -224,7 +223,7 @@ func (azc *CredentialConfig) Build() error {
 			return err
 		}
 		azc.factory = func() (azcore.TokenCredential, error) {
-			return azc.newClientSecretCredential(tenant, clientId, clientSecret, &azidentity.ClientSecretCredentialOptions{
+			return azc.factories.ClientSecretCredential(tenant, clientId, clientSecret, &azidentity.ClientSecretCredentialOptions{
 				AdditionallyAllowedTenants: azc.AdditionallyAllowedTenants,
 				DisableInstanceDiscovery:   azc.DisableInstanceDiscovery,
 			})
@@ -240,7 +239,7 @@ func (azc *CredentialConfig) Build() error {
 			return errors.New("managed_identity_client_id and client_id are mutually exclusive")
 		}
 		azc.factory = func() (azcore.TokenCredential, error) {
-			return azc.newManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
+			return azc.factories.ManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
 				ID: azidentity.ClientID(azc.ManagedIdentityClientId),
 			})
 		}
@@ -250,14 +249,14 @@ func (azc *CredentialConfig) Build() error {
 			return errors.New("managed_identity_resource_id and client_id are mutually exclusive")
 		}
 		azc.factory = func() (azcore.TokenCredential, error) {
-			return azc.newManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
+			return azc.factories.ManagedIdentityCredential(&azidentity.ManagedIdentityCredentialOptions{
 				ID: azidentity.ResourceID(azc.ManagedIdentityResourceId),
 			})
 		}
 		return nil
 	case azc.NoDefaultCredentials:
 		azc.factory = func() (azcore.TokenCredential, error) {
-			return azc.newManagedIdentityCredential(nil)
+			return azc.factories.ManagedIdentityCredential(nil)
 		}
 		return nil
 	default:
@@ -266,7 +265,7 @@ func (azc *CredentialConfig) Build() error {
 			return err
 		}
 		azc.factory = func() (azcore.TokenCredential, error) {
-			return azc.newDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{
+			return azc.factories.DefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{
 				AdditionallyAllowedTenants: azc.AdditionallyAllowedTenants,
 				DisableInstanceDiscovery:   azc.DisableInstanceDiscovery,
 				TenantID:                   tenant,
@@ -292,51 +291,39 @@ func (azc *CredentialConfig) NewCredential() (azcore.TokenCredential, error) {
 // If a factory is nil, the default factory will be used.
 // This method is mainly useful for testing. Don't use it in your application unless you want
 // to customize the credential creation process.
-func (azc *CredentialConfig) SetCredentialFactories(factories CredentialFactories) {
-	if factories.clientSecretCredential != nil {
-		azc.clientSecretCredentialFactory = factories.clientSecretCredential
+func (azc *CredentialConfig) SetCredentialFactories(factories CredentialFactories) *CredentialConfig {
+	if factories != nil {
+		azc.factories = factories
 	}
-	if factories.managedIdentityCredential != nil {
-		azc.managedIdentityCredentialFactory = factories.managedIdentityCredential
-	}
-	if factories.defaultAzureCredential != nil {
-		azc.defaultAzureCredentialFactory = factories.defaultAzureCredential
-	}
+	return azc
 }
 
-// Default azure credential wrapper for azidentity package
-func (azc *CredentialConfig) newDefaultAzureCredential(options *azidentity.DefaultAzureCredentialOptions) (*azidentity.DefaultAzureCredential, error) {
-	factory := azc.defaultAzureCredentialFactory
-	if factory == nil {
-		factory = azidentity.NewDefaultAzureCredential
+// Helper method to set default credential factories if they are not set yet.
+func (azc *CredentialConfig) setDefaultCredentialFactories() {
+	if azc.factories == nil {
+		azc.factories = &defaultFactories{}
 	}
-	return factory(options)
-}
-
-// Managed identity credential wrapper for azidentity package
-func (azc *CredentialConfig) newManagedIdentityCredential(options *azidentity.ManagedIdentityCredentialOptions) (*azidentity.ManagedIdentityCredential, error) {
-	factory := azc.managedIdentityCredentialFactory
-	if factory == nil {
-		factory = azidentity.NewManagedIdentityCredential
-	}
-	return factory(options)
-}
-
-// Client secret credential wrapper for azidentity package
-func (azc *CredentialConfig) newClientSecretCredential(tenantID string, clientID string, clientSecret string, options *azidentity.ClientSecretCredentialOptions) (*azidentity.ClientSecretCredential, error) {
-	factory := azc.clientSecretCredentialFactory
-	if factory == nil {
-		factory = azidentity.NewClientSecretCredential
-	}
-	return factory(tenantID, clientID, clientSecret, options)
 }
 
 // CredentialFactories contains factories for creating credentials.
 // If a factory is nil, the default factory will be used.
 // This struct is mainly useful for testing. Don't use it in your application unless you want
 // to customize the credential creation process.
-type CredentialFactories struct {
-	clientSecretCredential    func(tenantID string, clientID string, clientSecret string, options *azidentity.ClientSecretCredentialOptions) (*azidentity.ClientSecretCredential, error)
-	managedIdentityCredential func(options *azidentity.ManagedIdentityCredentialOptions) (*azidentity.ManagedIdentityCredential, error)
-	defaultAzureCredential    func(options *azidentity.DefaultAzureCredentialOptions) (*azidentity.DefaultAzureCredential, error)
+type CredentialFactories interface {
+	ClientSecretCredential(tenantID string, clientID string, clientSecret string, options *azidentity.ClientSecretCredentialOptions) (*azidentity.ClientSecretCredential, error)
+	ManagedIdentityCredential(options *azidentity.ManagedIdentityCredentialOptions) (*azidentity.ManagedIdentityCredential, error)
+	DefaultAzureCredential(options *azidentity.DefaultAzureCredentialOptions) (*azidentity.DefaultAzureCredential, error)
+}
+
+// defaultFactories is the default implementation of CredentialFactories.
+type defaultFactories struct{}
+
+func (f *defaultFactories) ClientSecretCredential(tenantID string, clientID string, clientSecret string, options *azidentity.ClientSecretCredentialOptions) (*azidentity.ClientSecretCredential, error) {
+	return azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, options)
+}
+func (f *defaultFactories) ManagedIdentityCredential(options *azidentity.ManagedIdentityCredentialOptions) (*azidentity.ManagedIdentityCredential, error) {
+	return azidentity.NewManagedIdentityCredential(options)
+}
+func (f *defaultFactories) DefaultAzureCredential(options *azidentity.DefaultAzureCredentialOptions) (*azidentity.DefaultAzureCredential, error) {
+	return azidentity.NewDefaultAzureCredential(options)
 }

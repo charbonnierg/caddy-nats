@@ -3,5 +3,5 @@
 
 package docker
 
-// DockerApp is the interface implemented by the docker caddy app module.
-type DockerApp interface{}
+// App is the interface implemented by the docker caddy app module.
+type App interface{}

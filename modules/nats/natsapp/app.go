@@ -34,7 +34,7 @@ func init() {
 type App struct {
 	ctx                caddy.Context
 	beyond             *beyond.Beyond
-	secrets            secrets.SecretApp
+	secrets            secrets.App
 	tlsApp             *caddytls.TLS
 	logger             *zap.Logger
 	runner             *natsrunner.Runner
@@ -46,7 +46,7 @@ type App struct {
 }
 
 // CaddyModule returns the Caddy module information.
-// It implements the caddy.Module interface.
+// It is required to implement the beyond.App interface.
 func (App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "nats",
@@ -58,6 +58,7 @@ func (App) CaddyModule() caddy.ModuleInfo {
 // It validates and sets up a nats server if options are defined.
 // It also provisions caddy TLS connection policies for the nats server when needed,
 // in order to generate TLS configs for the nats server.
+// It is required to implement the beyond.App interface.
 func (a *App) Provision(ctx caddy.Context) error {
 	var err error
 	a.ctx = ctx
@@ -72,24 +73,24 @@ func (a *App) Provision(ctx caddy.Context) error {
 	// But the Oauth2 module itself may depend on the NATS module.
 	// As such, we must register the NATS module before provisioning auth service.
 	// Register module against beyond module
-	b, err := beyond.RegisterApp(a.ctx, a)
+	b, err := beyond.Register(a.ctx, a)
 	if err != nil {
 		return err
 	}
 	a.beyond = b
 	// Load secrets app module
-	unm, err := a.beyond.LoadApp(a, "secrets")
+	unm, err := a.beyond.LoadApp(secrets.NS)
 	if err != nil {
 		return err
 	}
-	secretsapp, ok := unm.(secrets.SecretApp)
+	secretsapp, ok := unm.(secrets.App)
 	if !ok {
 		return errors.New("secrets app invalid type")
 	}
 	a.secrets = secretsapp
 	// Provision tls app and connections policies
 	a.connectionPolicies = []caddytls.ConnectionPolicies{}
-	tlsApp, err := a.beyond.GetTLSApp()
+	tlsApp, err := a.beyond.LoadTLSApp()
 	if err != nil {
 		return errors.New("tls app invalid type")
 	}
@@ -127,8 +128,9 @@ func (a *App) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// Start starts the app. It implements the caddy.App interface.
+// Start starts the app.
 // It starts the nats server and the auth service if defined.
+// It is required to implement the beyond.App interface.
 func (a *App) Start() error {
 	a.logger.Info("Managing TLS certificates", zap.Strings("subjects", a.subjects))
 	if a.subjects != nil {
@@ -149,8 +151,9 @@ func (a *App) Start() error {
 	return nil
 }
 
-// Stop stops the app. It implements the caddy.App interface.
+// Stop stops the app.
 // It stops the nats server and the auth service if defined.
+// It is required to implement the beyond.App interface.
 func (a *App) Stop() error {
 	// Stop auth service
 	if a.AuthService != nil {
@@ -160,6 +163,12 @@ func (a *App) Stop() error {
 	}
 	// Stop nats runner
 	return a.runner.Stop()
+}
+
+// Validate is a no-op.
+// It is required to implement the beyond.App interface.
+func (a *App) Validate() error {
+	return nil
 }
 
 func (a *App) setStandardTLSConnectionPolicies() caddytls.ConnectionPolicies {

@@ -22,7 +22,7 @@ func init() {
 type AzureKeyvault struct {
 	ctx    caddy.Context
 	logger *zap.Logger
-	client *AzureKeyvaultClient
+	client AzureKeyvaultClient `json:"-"`
 	// The Azure Keyvault URI
 	URI string `json:"uri,omitempty"`
 	// The Azure Keyvault credential config
@@ -40,7 +40,7 @@ func (AzureKeyvault) CaddyModule() caddy.ModuleInfo {
 
 // Provision prepares the store for use.
 // It is required to implement the secrets.Store interface.
-func (s *AzureKeyvault) Provision(app secrets.SecretApp) error {
+func (s *AzureKeyvault) Provision(app secrets.App) error {
 	if s.URI == "" {
 		return errors.New("uri is required")
 	}
@@ -54,7 +54,7 @@ func (s *AzureKeyvault) Provision(app secrets.SecretApp) error {
 		return err
 	}
 	s.logger.Info("provisioning azure keyvault store", zap.String("uri", s.URI))
-	client, err := NewAzureKeyvaultClient(s.URI, s.CredentialConfig)
+	client, err := NewClient(s.URI, s.CredentialConfig)
 	if err != nil {
 		s.logger.Error("error creating azure keyvault client", zap.Error(err))
 		return err

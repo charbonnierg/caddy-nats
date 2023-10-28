@@ -11,7 +11,7 @@ import (
 	_ "github.com/quara-dev/beyond/modules/dns/digitalocean"
 
 	// Docker modules
-	_ "github.com/quara-dev/beyond/modules/docker/dockerapp"
+	_ "github.com/quara-dev/beyond/modules/docker/app"
 	// NATS modules
 	_ "github.com/quara-dev/beyond/modules/nats/auth_callout/allow"
 	_ "github.com/quara-dev/beyond/modules/nats/auth_callout/deny"
@@ -19,18 +19,18 @@ import (
 	_ "github.com/quara-dev/beyond/modules/nats/natsapp"
 
 	// OAuth2 modules
+	_ "github.com/quara-dev/beyond/modules/oauth2/app"
 	_ "github.com/quara-dev/beyond/modules/oauth2/http_handler"
-	_ "github.com/quara-dev/beyond/modules/oauth2/oauth2app"
-	_ "github.com/quara-dev/beyond/modules/oauth2/session_store/jetstream"
-	_ "github.com/quara-dev/beyond/modules/oauth2/session_store/redis"
+	_ "github.com/quara-dev/beyond/modules/oauth2/stores/jetstream"
+	_ "github.com/quara-dev/beyond/modules/oauth2/stores/redis"
 
 	// Telemetry modules
-	_ "github.com/quara-dev/beyond/modules/otelcol"
+	_ "github.com/quara-dev/beyond/modules/otelcol/app"
 	// Secrets modules
-	_ "github.com/quara-dev/beyond/modules/secrets/automation/exec_handler"
-	_ "github.com/quara-dev/beyond/modules/secrets/automation/file_handler"
-	_ "github.com/quara-dev/beyond/modules/secrets/secretsapp"
-	_ "github.com/quara-dev/beyond/modules/secrets/stores/azure_keyvault"
+	_ "github.com/quara-dev/beyond/modules/secrets/app"
+	_ "github.com/quara-dev/beyond/modules/secrets/automation/handlers"
+	_ "github.com/quara-dev/beyond/modules/secrets/automation/triggers"
+	_ "github.com/quara-dev/beyond/modules/secrets/stores"
 
 	// Connectors modules
 	_ "github.com/quara-dev/beyond/modules/connectors/connectorsapp"

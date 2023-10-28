@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
+	"go.uber.org/zap"
 )
 
 // Apps is a map of caddy app modules registered in other namespaces
@@ -19,6 +20,10 @@ type App interface {
 	caddy.Module
 	caddy.App
 	caddy.Provisioner
+	caddy.Validator
+	// Context returns the caddy context for the secrets app.
+	Context() caddy.Context
+	Logger() *zap.Logger
 }
 
 // Get returns the app with the given id (each app has a unique id)

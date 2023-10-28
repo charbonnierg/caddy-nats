@@ -21,11 +21,6 @@ type Beyond struct {
 	ctx    *caddy.Context
 	tls    *caddytls.TLS
 	apps   Apps
-	// Problem with this approach: we cannot ship a binary without NATS
-	// This DOES NOT WORK !!
-	// Nats    *nats.App    `json:"nats,omitempty"`
-	// OAuth2  *oauth2.App  `json:"oauth2,omitempty"`
-	// Secrets *secrets.App `json:"secrets,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.

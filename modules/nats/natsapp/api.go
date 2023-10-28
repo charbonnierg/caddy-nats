@@ -10,16 +10,15 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/quara-dev/beyond"
+	"go.uber.org/zap"
 )
 
 // Reload will reload the NATS server configuration.
-func (a *App) Reload() error {
-	return a.runner.Reload()
-}
+func (a *App) Reload() error { return a.runner.Reload() }
 
-func (a *App) Context() caddy.Context {
-	return a.ctx
-}
+func (a *App) Context() caddy.Context { return a.ctx }
+
+func (a *App) Logger() *zap.Logger { return a.logger }
 
 func (a *App) GetServer() (*server.Server, error) {
 	if a.runner == nil {
@@ -51,9 +50,9 @@ func (a *App) CreateClient(options ...nats.Option) (*nats.Conn, error) {
 	return client, nil
 }
 
-func (a *App) LoadApp(id string) (beyond.App, error) {
+func (a *App) LoadBeyondApp(id string) (beyond.App, error) {
 	if a.beyond == nil {
 		return nil, fmt.Errorf("beyond is not available")
 	}
-	return a.beyond.LoadApp(a, id)
+	return a.beyond.LoadApp(id)
 }

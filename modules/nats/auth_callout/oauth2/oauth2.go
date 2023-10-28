@@ -27,8 +27,8 @@ func init() {
 // to be the oauth2 session state (encrypted cookie string).
 type OAuth2ProxyAuthCallout struct {
 	logger   *zap.Logger
-	oauth    oauth2.OAuth2App
-	endpoint oauth2.OAuth2Endpoint
+	oauth    oauth2.App
+	endpoint oauth2.Endpoint
 	Endpoint string            `json:"endpoint"`
 	Account  string            `json:"account,omitempty"`
 	Template *natsapp.Template `json:"template,omitempty"`
@@ -47,11 +47,11 @@ func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
 func (c *OAuth2ProxyAuthCallout) Provision(app *natsapp.App) error {
 	c.logger = app.Context().Logger().Named("oauth2")
 	// Load oauth2 app
-	unm, err := app.LoadApp("oauth2")
+	unm, err := app.LoadBeyondApp("oauth2")
 	if err != nil {
 		return err
 	}
-	oauthApp, ok := unm.(oauth2.OAuth2App)
+	oauthApp, ok := unm.(oauth2.App)
 	if !ok {
 		return errors.New("invalid oauth2 app module")
 	}

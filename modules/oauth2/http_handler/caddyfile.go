@@ -7,7 +7,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/quara-dev/beyond/modules/oauth2/oauth2app"
+	"github.com/quara-dev/beyond/modules/oauth2/endpoint"
 )
 
 // ParsePublishHandler parses the nats_publish directive. Syntax:
@@ -25,9 +25,9 @@ func (p *OAuth2Session) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			if p.EndpointRaw == nil {
-				p.EndpointRaw = &oauth2app.Endpoint{}
+				p.EndpointRaw = &endpoint.Endpoint{}
 			}
-			if !d.Args(&p.EndpointRaw.Name) {
+			if !d.Args(&p.EndpointRaw.NameRaw) {
 				return d.Err("expected endpoint name")
 			}
 			if err := p.EndpointRaw.UnmarshalCaddyfile(d); err != nil {

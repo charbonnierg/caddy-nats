@@ -4,42 +4,121 @@
 package automation
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/quara-dev/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
 
-// Handler is a secret automation handler.
-// It is used to handle the secret value when it is fetched.
-type Handler interface {
-	caddy.Module
-	Provision(app secrets.SecretApp, automation *Automation) error
-	Handle(value string) (string, error)
-}
+type TriggerKey struct{}
 
 // Automation is a secret automation.
-// It periodically fetches secrets from sources and executes handlers with the secrets.
-// Optionally, a template can be used to transform the secret values into a custom string.
-// By default, the secret values are joined with a newline.
 type Automation struct {
-	app      secrets.SecretApp
-	ctx      caddy.Context
-	logger   *zap.Logger
-	sources  []*secrets.Source
-	template *Template
-	handlers []Handler
-
-	Interval    time.Duration     `json:"interval,omitempty"`
 	SourcesRaw  []string          `json:"sources,omitempty"`
 	TemplateRaw string            `json:"template,omitempty"`
+	TriggerRaw  json.RawMessage   `json:"trigger,omitempty" caddy:"namespace=secrets.trigger inline_key=type"`
 	HandlersRaw []json.RawMessage `json:"handlers,omitempty" caddy:"namespace=secrets.handlers inline_key=type"`
+
+	app      secrets.App
+	ctx      caddy.Context
+	cancel   func()
+	done     chan struct{}
+	logger   *zap.Logger
+	trigger  secrets.Trigger
+	sources  secrets.Sources
+	template *DefaultTemplate
+	handlers []secrets.Handler
 }
 
+// Provision prepares the automation for use.
+func (a *Automation) Provision(app secrets.App) error {
+	a.app = app
+	a.ctx = app.Context()
+	a.logger = a.ctx.Logger().Named("automation")
+	// Parse raw fields
+	if err := a.loadSourcesRaw(); err != nil {
+		return err
+	}
+	if err := a.loadTemplateRaw(); err != nil {
+		return err
+	}
+	if err := a.loadHandlersRaw(); err != nil {
+		return err
+	}
+	if err := a.loadTriggerRaw(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Start starts the automation in background.
+func (a *Automation) Start() error {
+	done := make(chan struct{})
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.cancel = cancel
+	a.done = done
+	go a.loop(ctx, done)
+	return nil
+}
+
+// Stop cancels the automation and waits for it to stop.
+func (a *Automation) Stop() error {
+	a.cancel()
+	<-a.done
+	return nil
+}
+
+// loop is the main loop of the automation.
+func (a *Automation) loop(ctx context.Context, done chan struct{}) {
+	channel := a.trigger.Subscribe(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			done <- struct{}{}
+			return
+		case <-channel:
+			a.logger.Info("running secret automation")
+			// Fetch secrets
+			items, err := a.fetchSecrets()
+			if err != nil {
+				a.logger.Error("failed to get all secrets", zap.Error(err))
+				continue
+			}
+			// Transform secrets into a string
+			value, err := a.formatSecrets(items)
+			if err != nil {
+				a.logger.Error("failed to format secrets", zap.Error(err))
+				continue
+			}
+			// Call handlers
+			err = a.handleSecrets(value)
+			if err != nil {
+				a.logger.Error("failed to handle secrets", zap.Error(err))
+				continue
+			}
+		}
+	}
+}
+
+// loadTriggerRaw loads the trigger from the raw configuration.
+func (a *Automation) loadTriggerRaw() error {
+	unm, err := a.ctx.LoadModule(a, "TriggerRaw")
+	if err != nil {
+		return err
+	}
+	trigger, ok := unm.(secrets.Trigger)
+	if !ok {
+		return fmt.Errorf("trigger is not a Trigger: %T", unm)
+	}
+	a.trigger = trigger
+	return nil
+}
+
+// loadSourcesRaw loads the sources from the raw configuration.
 func (a *Automation) loadSourcesRaw() error {
 	for _, secretRaw := range a.SourcesRaw {
 		source, err := a.app.GetSource(secretRaw)
@@ -51,12 +130,13 @@ func (a *Automation) loadSourcesRaw() error {
 	return nil
 }
 
+// loadTemplateRaw loads the template from the raw configuration.
 func (a *Automation) loadTemplateRaw() error {
 	if a.TemplateRaw != "" {
-		a.template = &Template{
-			TemplateRaw: a.TemplateRaw,
+		a.template = &DefaultTemplate{
+			TemplateBody: a.TemplateRaw,
 		}
-		err := a.template.Provision(a)
+		err := a.template.Provision(a.app, a)
 		if err != nil {
 			return err
 		}
@@ -64,13 +144,14 @@ func (a *Automation) loadTemplateRaw() error {
 	return nil
 }
 
+// loadHandlersRaw loads the handlers from the raw configuration.
 func (a *Automation) loadHandlersRaw() error {
 	unm, err := a.ctx.LoadModule(a, "HandlersRaw")
 	if err != nil {
 		return err
 	}
 	for _, handlerRaw := range unm.([]interface{}) {
-		handler, ok := handlerRaw.(Handler)
+		handler, ok := handlerRaw.(secrets.Handler)
 		if !ok {
 			return fmt.Errorf("handler is not a Handler: %T", handlerRaw)
 		}
@@ -83,79 +164,46 @@ func (a *Automation) loadHandlersRaw() error {
 	return nil
 }
 
-// Provision prepares the automation for use.
-func (a *Automation) Provision(app secrets.SecretApp) error {
-	a.app = app
-	a.ctx = app.Context()
-	a.logger = a.ctx.Logger().Named("secrets.automation")
-	// Parse raw fields
-	if err := a.loadSourcesRaw(); err != nil {
-		return err
+// fetchSecrets fetches all secrets from the sources.
+func (a *Automation) fetchSecrets() (secrets.Secrets, error) {
+	values := secrets.Secrets{}
+	for _, src := range a.sources {
+		val, err := src.Get()
+		if err != nil {
+			a.logger.Error("failed to get secret", zap.String("key", src.Key), zap.String("store", src.StoreName), zap.Error(err))
+			return nil, err
+		}
+		values = append(values, &secrets.Secret{Source: src, Value: val})
 	}
-	if err := a.loadTemplateRaw(); err != nil {
-		return err
-	}
-	if err := a.loadHandlersRaw(); err != nil {
-		return err
-	}
-	return nil
+	return values, nil
 }
 
-// Run starts the automation, and keeps running until the context is cancelled.
-// There is no need to stop the automation, it will stop automatically when the context is cancelled.
-func (a *Automation) Run() error {
-	ticker := time.NewTicker(a.Interval)
-	for {
-		select {
-		case <-a.ctx.Done():
-			ticker.Stop()
-			return nil
-		case <-ticker.C:
-			a.logger.Info("running secret automation")
-			willRetry := false
-			// Fetch secrets
-			values := map[string]string{}
-			for _, secret := range a.sources {
-				val, err := secret.Store.Get(secret.Key)
-				if err != nil {
-					a.logger.Error("failed to get secret", zap.String("key", secret.Key), zap.Error(err))
-					willRetry = true
-					break
-				}
-				values[secret.Key] = val
-			}
-			if willRetry {
-				a.logger.Error("failed to get all secrets", zap.Duration("next_retry", a.Interval))
-				continue
-			}
-			// Transform secrets into a string
-			var value string
-			switch a.template {
-			case nil:
-				// If there is no template, we just join the values with a newline
-				lines := []string{}
-				for k, v := range values {
-					lines = append(lines, fmt.Sprintf("%s=%s", k, v))
-				}
-				value = strings.Join(lines, "\n")
-			default:
-				// If there is a template, we render it
-				var err error
-				value, err = a.template.Render(values)
-				if err != nil {
-					a.logger.Error("failed to render template", zap.Error(err), zap.Duration("next_retry", a.Interval))
-					continue
-				}
-			}
-			// Call handlers
-			var err error
-			for _, handler := range a.handlers {
-				value, err = handler.Handle(value)
-				if err != nil {
-					a.logger.Error("failed to handle secret", zap.Error(err), zap.Duration("next_retry", a.Interval))
-					continue
-				}
-			}
+// formatSecrets transforms the secrets into a string.
+func (a *Automation) formatSecrets(items secrets.Secrets) (string, error) {
+	if a.template != nil {
+		// If there is a template, we render it
+		var err error
+		value, err := a.template.Render(items)
+		if err != nil {
+			return "", err
+		}
+		return value, nil
+	}
+	// If there is no template, we just join the values with a newline
+	lines := []string{}
+	for _, item := range items {
+		lines = append(lines, item.Value)
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+// handleSecrets calls all handlers with the given value.
+func (a *Automation) handleSecrets(value string) error {
+	for _, handler := range a.handlers {
+		_, err := handler.Handle(value)
+		if err != nil {
+			return err
 		}
 	}
+	return nil
 }
