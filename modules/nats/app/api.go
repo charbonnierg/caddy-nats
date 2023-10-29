@@ -10,7 +10,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/quara-dev/beyond"
-	"github.com/quara-dev/beyond/modules/nats/embedded"
+	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 	"go.uber.org/zap"
 )
 

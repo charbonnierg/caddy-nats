@@ -8,22 +8,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/micro"
 	"github.com/nats-io/nkeys"
 )
-
-type InternalProvider interface {
-	GetServer() (*server.Server, error)
-}
 
 // Client represents a connection to a JetStream enabled
 // NATS server. It is lazy and will only connect when
 // the first time Connect method is called.
 type Client struct {
-	closed     bool
-	inprocess  InternalProvider
-	connection *Connection
+	closed        bool
+	inprocess     InternalProvider
+	connection    *Connection
+	microservices []micro.Service
+	services      []*ServiceDefinition
 
 	Internal     bool          `json:"internal,omitempty"`
 	Name         string        `json:"name,omitempty"`
@@ -57,6 +55,12 @@ func (c *Connection) JetStream() nats.JetStreamContext {
 // SetInternalProvider sets the inprocess server provider.
 func (c *Client) SetInternalProvider(provider InternalProvider) *Client {
 	c.inprocess = provider
+	return c
+}
+
+// AddService adds a micro service to the client.
+func (c *Client) AddService(service *ServiceDefinition) *Client {
+	c.services = append(c.services, service)
 	return c
 }
 
@@ -151,6 +155,15 @@ func (c *Client) Connect() (*Connection, error) {
 		nc: nc,
 		js: js,
 	}
+	c.connection = connection
+	// Register services
+	for _, service := range c.services {
+		microservice, err := service.Register(connection)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add service: %v", err)
+		}
+		c.microservices = append(c.microservices, microservice)
+	}
 	return connection, nil
 }
 
@@ -165,6 +178,10 @@ func (c *Client) Close() {
 	}
 	if c.connection.nc == nil {
 		return
+	}
+	// Stop services
+	for _, srv := range c.microservices {
+		srv.Stop()
 	}
 	nc := c.connection.nc
 	if !nc.IsClosed() && !nc.IsDraining() {

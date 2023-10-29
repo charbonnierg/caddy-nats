@@ -6,7 +6,8 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/modules/nats/auth"
-	"github.com/quara-dev/beyond/modules/nats/embedded"
+	natscaddyfile "github.com/quara-dev/beyond/modules/nats/caddyfile"
+	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 )
 
 type Config struct {
@@ -30,7 +31,7 @@ func (a *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if a.ServerRaw == nil {
 					a.ServerRaw = embedded.NewOptions()
 				}
-				if err := a.ServerRaw.UnmarshalCaddyfile(d); err != nil {
+				if err := natscaddyfile.ParseOptions(d, a.ServerRaw); err != nil {
 					return err
 				}
 			case "ready_timeout":

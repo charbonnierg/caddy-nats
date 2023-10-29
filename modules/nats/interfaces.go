@@ -10,10 +10,9 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats-server/v2/server"
-	"github.com/nats-io/nats.go"
 	"github.com/quara-dev/beyond"
-	"github.com/quara-dev/beyond/modules/nats/embedded"
 	"github.com/quara-dev/beyond/pkg/natsutils"
+	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 )
 
 type App interface {
@@ -28,8 +27,8 @@ type App interface {
 type AuthService interface {
 	Client() *natsutils.Client
 	Provision(app App) error
-	Listen(conn *nats.Conn) error
-	Close() error
+	Config() *natsutils.AuthServiceConfig
+	Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error)
 }
 
 type AuthRequest interface {
@@ -40,7 +39,7 @@ type AuthRequest interface {
 
 type AuthCallout interface {
 	Provision(app App) error
-	Handle(request AuthRequest) (*jwt.UserClaims, error)
+	Handle(claims AuthRequest) (*jwt.UserClaims, error)
 }
 
 type Template interface {

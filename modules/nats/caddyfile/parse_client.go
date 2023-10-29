@@ -1,12 +1,13 @@
-package natsutils
+package caddyfile
 
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/natsutils"
 )
 
-func (c *Client) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func ParseClient(d *caddyfile.Dispenser, c *natsutils.Client) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "internal":

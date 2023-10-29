@@ -11,8 +11,9 @@ import (
 	"github.com/quara-dev/beyond"
 	"github.com/quara-dev/beyond/modules/nats"
 	"github.com/quara-dev/beyond/modules/nats/auth"
-	"github.com/quara-dev/beyond/modules/nats/embedded"
 	"github.com/quara-dev/beyond/modules/secrets"
+	"github.com/quara-dev/beyond/pkg/natsutils"
+	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -158,21 +159,32 @@ func (a *App) startAuthService() error {
 	if a.authService == nil {
 		return nil
 	}
+	// Gather auth service config and client
+	cfg := a.authService.Config()
 	client := a.authService.Client()
+	// Set internal provider if needed
 	if client.Internal {
 		client.SetInternalProvider(a)
 	}
+	// Set username and password if needed
 	u, p, err := a.GetAuthUserPass()
 	if err == nil {
 		client.Username = u
 		client.Password = p
 	}
-	// Create connection
-	conn, err := client.Connect()
+	// Create service
+	factory, err := natsutils.NewAuthServiceFactory(cfg)
 	if err != nil {
 		return err
 	}
-	return a.authService.Listen(conn.Core())
+	// Add service to client
+	client = client.AddService(factory.NewService())
+	// Open connection
+	_, err = client.Connect()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Stop stops the app.
@@ -181,12 +193,16 @@ func (a *App) startAuthService() error {
 func (a *App) Stop() error {
 	// Stop auth service
 	if a.authService != nil {
-		if err := a.authService.Close(); err != nil {
-			a.logger.Error("Failed to stop auth service", zap.Error(err))
+		if client := a.authService.Client(); client != nil {
+			client.Close()
 		}
 	}
 	// Stop nats runner
-	return a.runner.Stop()
+	if a.runner != nil {
+		a.logger.Info("Stopping NATS server")
+		return a.runner.Stop()
+	}
+	return nil
 }
 
 // Validate is a no-op.

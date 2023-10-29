@@ -6,6 +6,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/modules/nats/auth/policies"
+	natscaddyfile "github.com/quara-dev/beyond/modules/nats/caddyfile"
 	"github.com/quara-dev/beyond/pkg/natsutils"
 )
 
@@ -21,6 +22,7 @@ type AuthServiceConfig struct {
 	DefaultHandlerRaw json.RawMessage             `json:"handler,omitempty" caddy:"namespace=nats.auth_callout inline_key=module"`
 }
 
+// UnmarshalCaddyfile sets up the auth config from Caddyfile tokens.
 func (s *AuthServiceConfig) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
@@ -34,7 +36,7 @@ func (s *AuthServiceConfig) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "client":
 			s.ClientRaw = &natsutils.Client{}
-			err := s.ClientRaw.UnmarshalCaddyfile(d)
+			err := natscaddyfile.ParseClient(d, s.ClientRaw)
 			if err != nil {
 				return err
 			}

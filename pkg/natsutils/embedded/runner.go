@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/quara-dev/beyond/modules/nats/embedded/internal/natsmetrics"
+	"github.com/quara-dev/beyond/pkg/natsutils/embedded/internal/natsmetrics"
 
 	"github.com/nats-io/nats-server/v2/server"
 	"go.uber.org/zap"

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/quara-dev/beyond/modules/nats/embedded/internal/natsmetrics"
+	"github.com/quara-dev/beyond/pkg/natsutils/embedded/internal/natsmetrics"
 )
 
 func (o *Options) GetExporterOptions() (*natsmetrics.CollectorOptions, error) {

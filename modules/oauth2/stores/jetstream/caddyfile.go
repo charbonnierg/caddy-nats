@@ -3,6 +3,7 @@ package jetstream
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	natscaddyfile "github.com/quara-dev/beyond/modules/nats/caddyfile"
 	"github.com/quara-dev/beyond/pkg/natsutils"
 )
 
@@ -22,7 +23,7 @@ func (s *JetStreamStore) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				s.TTL = val
 			case "client":
 				s.Client = &natsutils.Client{}
-				err := s.Client.UnmarshalCaddyfile(d)
+				err := natscaddyfile.ParseClient(d, s.Client)
 				if err != nil {
 					return err
 				}

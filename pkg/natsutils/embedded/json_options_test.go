@@ -6,7 +6,7 @@ package embedded_test
 import (
 	"testing"
 
-	"github.com/quara-dev/beyond/modules/nats/embedded"
+	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 )
 
 func TestDefaultOptions(t *testing.T) {

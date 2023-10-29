@@ -1,7 +1,7 @@
 // Copyright 2023 QUARA - RGPI
 // SPDX-License-Identifier: Apache-2.0
 
-package embedded
+package caddyfile
 
 import (
 	"strconv"
@@ -9,10 +9,11 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 	"github.com/quara-dev/beyond/pkg/parseutils"
 )
 
-func (o *Options) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 
 	// Do not expect any argument but o block instead
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
@@ -178,13 +179,13 @@ func (o *Options) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	return nil
 }
 
-func parseAccounts(d *caddyfile.Dispenser, o *Options) error {
+func parseAccounts(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if o.Accounts == nil {
-		o.Accounts = []*Account{}
+		o.Accounts = []*embedded.Account{}
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		name := d.Val()
-		acc := Account{Name: name}
+		acc := embedded.Account{Name: name}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "jetstream":
@@ -196,15 +197,15 @@ func parseAccounts(d *caddyfile.Dispenser, o *Options) error {
 	return nil
 }
 
-func parseUsers(d *caddyfile.Dispenser, o *Options) error {
+func parseUsers(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if o.Authorization == nil {
-		o.Authorization = &AuthorizationMap{
-			Users: []User{},
+		o.Authorization = &embedded.AuthorizationMap{
+			Users: []embedded.User{},
 		}
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		name := d.Val()
-		user := User{User: name}
+		user := embedded.User{User: name}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "password":
@@ -221,7 +222,7 @@ func parseUsers(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseServerTags parses the "tags" directive found in o Caddyfile "nats_server" option block.
-func parseServerTags(d *caddyfile.Dispenser, o *Options) error {
+func parseServerTags(d *caddyfile.Dispenser, o *embedded.Options) error {
 	tags := d.RemainingArgs()
 	if len(tags) == 0 {
 		return d.Err("tags requires at least one tag value")
@@ -250,7 +251,7 @@ func parseServerTags(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseNoTLS parses the "no_tls" directive found in o Caddyfile "nats_server" option block.
-func parseNoTLS(d *caddyfile.Dispenser, o *Options) error {
+func parseNoTLS(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if d.NextArg() {
 		return d.Err("no_tls does not take any argument")
 	}
@@ -259,7 +260,7 @@ func parseNoTLS(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseDisableLogging parses the "disable_logging" directive found in o Caddyfile "nats_server" option block.
-func parseDisableLogging(d *caddyfile.Dispenser, o *Options) error {
+func parseDisableLogging(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if d.NextArg() {
 		return d.Err("disable_logging does not take any argument")
 	}
@@ -268,7 +269,7 @@ func parseDisableLogging(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseDisableSublistCache parses the "disable_sublist_cache" directive found in o Caddyfile "nats_server" option block.
-func parseDisableSublistCache(d *caddyfile.Dispenser, o *Options) error {
+func parseDisableSublistCache(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if d.NextArg() {
 		return d.Err("disable_sublist_cache does not take any argument")
 	}
@@ -277,7 +278,7 @@ func parseDisableSublistCache(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseDebug parses the "debug" directive found in o Caddyfile "nats_server" option block.
-func parseDebug(d *caddyfile.Dispenser, o *Options) error {
+func parseDebug(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if d.NextArg() {
 		return d.Err("debug does not take any argument")
 	}
@@ -286,7 +287,7 @@ func parseDebug(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseTrace parses the "trace" directive found in o Caddyfile "nats_server" option block.
-func parseTrace(d *caddyfile.Dispenser, o *Options) error {
+func parseTrace(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if d.NextArg() {
 		return d.Err("trace does not take any argument")
 	}
@@ -296,7 +297,7 @@ func parseTrace(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseTraceVerbose parses the "trace_verbose" directive found in o Caddyfile "nats_server" option block.
-func parseTraceVerbose(d *caddyfile.Dispenser, o *Options) error {
+func parseTraceVerbose(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if d.NextArg() {
 		return d.Err("trace_verbose does not take any argument")
 	}
@@ -307,7 +308,7 @@ func parseTraceVerbose(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parsePort parses the "port" directive found in o Caddyfile "nats_server" option block.
-func parsePort(d *caddyfile.Dispenser, o *Options) error {
+func parsePort(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("port requires exactly one port number")
@@ -321,7 +322,7 @@ func parsePort(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseHttpPort parses the "http_port" directive found in o Caddyfile "nats_server" option block.
-func parseHttpPort(d *caddyfile.Dispenser, o *Options) error {
+func parseHttpPort(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("http_port requires exactly one port number")
@@ -335,7 +336,7 @@ func parseHttpPort(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseHttpsPort parses the "https_port" directive found in o Caddyfile "nats_server" option block.
-func parseHttpsPort(d *caddyfile.Dispenser, o *Options) error {
+func parseHttpsPort(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("https_port requires exactly one port number")
@@ -349,7 +350,7 @@ func parseHttpsPort(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseMaxConnections parses the "max_connections" directive found in o Caddyfile "nats_server" option block.
-func parseMaxConnections(d *caddyfile.Dispenser, o *Options) error {
+func parseMaxConnections(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("max_connections requires exactly one integer value")
@@ -363,7 +364,7 @@ func parseMaxConnections(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseMaxPayload parses the "max_payload" directive found in o Caddyfile "nats_server" option block.
-func parseMaxPayload(d *caddyfile.Dispenser, o *Options) error {
+func parseMaxPayload(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("max_payload requires exactly one size value")
@@ -381,7 +382,7 @@ func parseMaxPayload(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseMaxPending parses the "max_pending" directive found in o Caddyfile "nats_server" option block.
-func parseMaxPending(d *caddyfile.Dispenser, o *Options) error {
+func parseMaxPending(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("max_pending requires exactly one size value")
@@ -395,7 +396,7 @@ func parseMaxPending(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseMaxControlLine parses the "max_control_line" directive found in o Caddyfile "nats_server" option block.
-func parseMaxControlLine(d *caddyfile.Dispenser, o *Options) error {
+func parseMaxControlLine(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("max_control_line requires exactly one size value")
@@ -413,7 +414,7 @@ func parseMaxControlLine(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseMaxSubscriptions parses the "max_subscriptions" directive found in o Caddyfile "nats_server" option block.
-func parseMaxSubscriptions(d *caddyfile.Dispenser, o *Options) error {
+func parseMaxSubscriptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("max_subscriptions requires exactly one integer value")
@@ -427,7 +428,7 @@ func parseMaxSubscriptions(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parsePingInterval parses the "ping_interval" directive found in o Caddyfile "nats_server" option block.
-func parsePingInterval(d *caddyfile.Dispenser, o *Options) error {
+func parsePingInterval(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("ping_interval requires exactly one duration value")
@@ -441,7 +442,7 @@ func parsePingInterval(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parsePingMax parses the "ping_max" directive found in o Caddyfile "nats_server" option block.
-func parsePingMax(d *caddyfile.Dispenser, o *Options) error {
+func parsePingMax(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("ping_max requires exactly one integer value")
@@ -455,7 +456,7 @@ func parsePingMax(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseWriteDeadline parses the "write_deadline" directive found in o Caddyfile "nats_server" option block.
-func parseWriteDeadline(d *caddyfile.Dispenser, o *Options) error {
+func parseWriteDeadline(d *caddyfile.Dispenser, o *embedded.Options) error {
 	raw := ""
 	if !d.AllArgs(&raw) {
 		return d.Err("write_deadline requires exactly one duration value")
@@ -469,10 +470,10 @@ func parseWriteDeadline(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseJetStream parses the "jetstream" directive found in o Caddyfile "nats_server" option block.
-func parseJetStream(d *caddyfile.Dispenser, o *Options) error {
+func parseJetStream(d *caddyfile.Dispenser, o *embedded.Options) error {
 	// Make sure we have o JetStream config
 	if o.JetStream == nil {
-		o.JetStream = &JetStream{}
+		o.JetStream = &embedded.JetStream{}
 	}
 	jsopts := o.JetStream
 	// short-syntax
@@ -524,10 +525,10 @@ func parseJetStream(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseMqtt parses the "mqtt" directive found in o Caddyfile "nats_server" option block.
-func parseMqtt(d *caddyfile.Dispenser, o *Options) error {
+func parseMqtt(d *caddyfile.Dispenser, o *embedded.Options) error {
 	// Make sure we have o MQTT config
 	if o.MQTT == nil {
-		o.MQTT = &MQTT{}
+		o.MQTT = &embedded.MQTT{}
 	}
 	mqttopts := o.MQTT
 	// Short syntax
@@ -580,10 +581,10 @@ func parseMqtt(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseWebsocket parses the "websocket" directive found in o Caddyfile "nats_server" option block.
-func parseWebsocket(d *caddyfile.Dispenser, o *Options) error {
+func parseWebsocket(d *caddyfile.Dispenser, o *embedded.Options) error {
 	// Make sure we have o Websocket config
 	if o.Websocket == nil {
-		o.Websocket = &Websocket{}
+		o.Websocket = &embedded.Websocket{}
 	}
 	if d.NextArg() {
 		port, err := parseutils.ParsePort(d.Val())
@@ -617,7 +618,7 @@ func parseWebsocket(d *caddyfile.Dispenser, o *Options) error {
 				}
 			case "tls":
 				if o.Websocket.TLS == nil {
-					o.Websocket.TLS = &TLSMap{}
+					o.Websocket.TLS = &embedded.TLSMap{}
 				}
 				if err := parseTLS(d, o.Websocket.TLS); err != nil {
 					return err
@@ -633,10 +634,10 @@ func parseWebsocket(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseLeafnodes parse the "leafnodes" directive found in o Caddyfile "nats_server" option block.
-func parseLeafnodes(d *caddyfile.Dispenser, o *Options) error {
+func parseLeafnodes(d *caddyfile.Dispenser, o *embedded.Options) error {
 	// Make sure we have o LeafNode config
 	if o.Leafnode == nil {
-		o.Leafnode = &Leafnode{}
+		o.Leafnode = &embedded.Leafnode{}
 	}
 	leafopts := o.Leafnode
 	// Short syntax
@@ -691,10 +692,10 @@ func parseLeafnodes(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseRemoteLeafnodes parse the "remote_leafnodes" directive found in o Caddyfile "nats_server" option block.
-func parseRemoteLeafnodes(d *caddyfile.Dispenser, leafopts *Leafnode) error {
-	leafopts.Remotes = []Remote{}
+func parseRemoteLeafnodes(d *caddyfile.Dispenser, leafopts *embedded.Leafnode) error {
+	leafopts.Remotes = []embedded.Remote{}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
-		remote := Remote{Url: d.Val()}
+		remote := embedded.Remote{Url: d.Val()}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "url":
@@ -719,7 +720,7 @@ func parseRemoteLeafnodes(d *caddyfile.Dispenser, leafopts *Leafnode) error {
 }
 
 // parseOperator parses the "operator" directive found in o Caddyfile "nats_server" option block.
-func parseOperator(d *caddyfile.Dispenser, o *Options) error {
+func parseOperator(d *caddyfile.Dispenser, o *embedded.Options) error {
 	if o.Operators == nil {
 		o.Operators = []string{}
 	}
@@ -737,7 +738,7 @@ func parseOperator(d *caddyfile.Dispenser, o *Options) error {
 }
 
 // parseResolver parses the "resolver" directive found in o Caddyfile "nats_server" option block.
-// func parseResolver(d *caddyfile.Dispenser, o *Options) error {
+// func parseResolver(d *caddyfile.Dispenser, o *embedded.Options) error {
 // 	if !d.NextArg() {
 // 		return d.Err("resolver requires exactly one resolver type followed by optional subdirectives")
 // 	}
@@ -802,7 +803,7 @@ func parseOperator(d *caddyfile.Dispenser, o *Options) error {
 // }
 
 // parseTLS parses the "tls" directive found in o Caddyfile "nats_server" option block.
-func parseTLS(d *caddyfile.Dispenser, tlsOpts *TLSMap) error {
+func parseTLS(d *caddyfile.Dispenser, tlsOpts *embedded.TLSMap) error {
 	domains := []string{}
 	subjects := d.RemainingArgs()
 	for _, subject := range subjects {
@@ -850,10 +851,10 @@ func parseTLS(d *caddyfile.Dispenser, tlsOpts *TLSMap) error {
 }
 
 // parseMetrics parses the "metrics" directive found in o Caddyfile "nats_server" option block.
-func parseMetrics(d *caddyfile.Dispenser, o *Options) error {
+func parseMetrics(d *caddyfile.Dispenser, o *embedded.Options) error {
 	// Make sure we have o Metrics config
 	if o.Metrics == nil {
-		o.Metrics = &Metrics{}
+		o.Metrics = &embedded.Metrics{}
 	}
 	metricopts := o.Metrics
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
