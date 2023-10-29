@@ -2,6 +2,7 @@ package caddyutils
 
 import (
 	"errors"
+	"io/fs"
 	"strconv"
 	"strings"
 	"time"
@@ -76,6 +77,18 @@ func ParseString(d *caddyfile.Dispenser, dest *string) error {
 		return d.Err("expected a string value")
 	}
 	*dest = d.Val()
+	return nil
+}
+
+func ParsePermissions(d *caddyfile.Dispenser, dest *fs.FileMode) error {
+	if !d.NextArg() {
+		return d.Err("expected permission value")
+	}
+	val, err := strconv.ParseUint(d.Val(), 8, 32)
+	if err != nil {
+		return d.Errf("invalid permissions value: %s", d.Val())
+	}
+	*dest = fs.FileMode(val)
 	return nil
 }
 

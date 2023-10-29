@@ -174,8 +174,8 @@
 		}
 	}
 	secrets {
-		stores {
-			az-kv-srv-01 azure_keyvault https://kv-srv-01.vault.azure.net
+		store az-kv-srv-01 azure_keyvault {
+			uri https://kv-srv-01.vault.azure.net
 		}
 	}
 	local_certs

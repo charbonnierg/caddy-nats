@@ -210,13 +210,11 @@ func parseSubjectMapping(d *caddyfile.Dispenser, account *embedded.Account) erro
 		if err := caddyutils.ExpectString(d, "to"); err != nil {
 			return err
 		}
-		inlineSubjects := []string{}
-		if err := caddyutils.ParseStringArray(d, &inlineSubjects, false); err != nil {
+		dest := server.MapDest{Weight: 100}
+		if err := caddyutils.ParseString(d, &dest.Subject); err != nil {
 			return err
 		}
-		for _, inlineSubject := range inlineSubjects {
-			mapping.MapDest = append(mapping.MapDest, server.NewMapDest(inlineSubject, 100))
-		}
+		mapping.MapDest = append(mapping.MapDest, &dest)
 		account.Mappings = append(account.Mappings, &mapping)
 	} else {
 		// Long syntax

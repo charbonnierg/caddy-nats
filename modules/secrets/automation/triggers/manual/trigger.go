@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/modules/secrets"
 	"github.com/quara-dev/beyond/modules/secrets/automation"
 )
@@ -39,6 +40,10 @@ func (t *ManualTrigger) Subscribe(ctx context.Context) <-chan context.Context {
 
 func (t *ManualTrigger) Trigger() {
 	t.channel <- context.WithValue(context.Background(), automation.TriggerKey{}, t)
+}
+
+func (t *ManualTrigger) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	return nil
 }
 
 var (

@@ -117,12 +117,7 @@ func (r *Runner) Running() bool {
 	return r.server.Running()
 }
 
-// Start will start the NATS server and wait for it to be ready for connections.
-// If the server is not ready for connections before the deadline, an error is
-// returned.
-func (r *Runner) Start() error {
-	// Start the server
-	r.server.Start()
+func (r *Runner) setupAccounts() error {
 	// Lookup and enable jetstream for accounts + add imports
 	for _, acc := range r.Options.Accounts {
 		account, err := r.server.LookupAccount(acc.Name)
@@ -219,6 +214,27 @@ func (r *Runner) Start() error {
 				}
 			}
 		}
+		if acc.Mappings != nil {
+			for _, mapping := range acc.Mappings {
+				err := account.AddWeightedMappings(mapping.Subject, mapping.MapDest...)
+				if err != nil {
+					return fmt.Errorf("failed to add weighted mapping: %s", err.Error())
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// Start will start the NATS server and wait for it to be ready for connections.
+// If the server is not ready for connections before the deadline, an error is
+// returned.
+func (r *Runner) Start() error {
+	// Start the server
+	r.server.Start()
+	if err := r.setupAccounts(); err != nil {
+		r.server.Shutdown()
+		return err
 	}
 	// Wait for server to be ready for connections
 	if r.ReadyDeadline != 0 {
