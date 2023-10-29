@@ -70,7 +70,7 @@ sudo setcap cap_net_bind_service=+ep ./caddy
 Start the example:
 
 ```bash
-./caddy run -c example.json
+./caddy run
 ```
 
 - Visit `https://localhost`. You should be redirected to configured OAuth2 provider to authenticate. Once authentication is succesfull, you should be redirected back to `https://localhost` and see metrics displayed in the page.
@@ -110,12 +110,11 @@ nats server ls --username SYS --password "not used"
 
 ### Caddyfile
 
-No support for caddyfile at the moment.
+Checkout the [example Caddyfile](./Caddyfile).
 
 ### JSON file
 
-Checkout the file [example.json](./example.json) to see how to configure an NATS server with TLS certificates managed by caddy and auth callout service running as caddy module.
-
+Checkout the [example caddy.json](./example.json) equivalent to [example Caddyfile](./Caddyfile)
 ## Next steps
 
 - Use replacers to avoid writing signing key in config
