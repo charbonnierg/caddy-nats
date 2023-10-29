@@ -80,6 +80,5 @@ func (o *Options) setCollectorFlags(opts *natsmetrics.CollectorOptions) error {
 	opts.GetGatewayz = o.Metrics.Gatewayz
 	opts.GetLeafz = o.Metrics.Leafz
 	opts.GetJszFilter = o.Metrics.JszFilter
-	opts.GetReplicatorVarz = o.Metrics.ReplicatorVarz
 	return nil
 }

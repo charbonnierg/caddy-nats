@@ -17,7 +17,7 @@ type AzureKeyvaultClient interface {
 
 // NewClient creates a new AzureKeyvaultClient
 func NewClient(uri string, cfg *azutils.CredentialConfig) (AzureKeyvaultClient, error) {
-	creds, err := cfg.NewCredential()
+	creds, err := cfg.Authenticate()
 	if err != nil {
 		return nil, err
 	}

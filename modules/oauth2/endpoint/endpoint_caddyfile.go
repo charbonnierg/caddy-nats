@@ -111,11 +111,10 @@ func (ep *Endpoint) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "reverse_proxy":
 			makeOptions(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.ReverseProxy)
 			if err != nil {
 				return err
 			}
-			ep.Options.ReverseProxy = val
 		case "cookie_name":
 			makeOptionsCookie(ep)
 			if !d.AllArgs(&ep.Options.Cookie.Name) {
@@ -152,18 +151,16 @@ func (ep *Endpoint) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			ep.Options.Cookie.Refresh = val
 		case "cookie_secure":
 			makeOptionsCookie(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBoolReverse(d, &ep.Options.Cookie.NoSecure)
 			if err != nil {
 				return err
 			}
-			ep.Options.Cookie.NoSecure = !val
 		case "cookie_http_only":
 			makeOptionsCookie(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBoolReverse(d, &ep.Options.Cookie.NoHTTPOnly)
 			if err != nil {
 				return err
 			}
-			ep.Options.Cookie.NoHTTPOnly = !val
 		case "cookie_same_site":
 			makeOptionsCookie(ep)
 			if !d.AllArgs(&ep.Options.Cookie.SameSite) {
@@ -171,11 +168,10 @@ func (ep *Endpoint) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "csrf_per_request":
 			makeOptionsCookie(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.Cookie.CSRFPerRequest)
 			if err != nil {
 				return err
 			}
-			ep.Options.Cookie.CSRFPerRequest = val
 		case "csrf_expire":
 			makeOptionsCookie(ep)
 			val, err := caddy.ParseDuration(d.Val())
@@ -205,18 +201,16 @@ func (ep *Endpoint) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "display_login_form":
 			makeOptionsTemplates(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.Templates.DisplayLoginForm)
 			if err != nil {
 				return err
 			}
-			ep.Options.Templates.DisplayLoginForm = val
 		case "display_debug":
 			makeOptionsTemplates(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.Templates.Debug)
 			if err != nil {
 				return err
 			}
-			ep.Options.Templates.Debug = val
 		case "inject_request_header":
 			makeOptions(ep)
 			if ep.Options.InjectRequestHeaders == nil {
@@ -320,29 +314,25 @@ func (ep *Endpoint) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.ArgErr()
 					}
 				case "oidc_insecure_allow_unverified_email":
-					val, err := caddyutils.ParseBool(d)
+					err := caddyutils.ParseBool(d, &p.OIDCConfig.InsecureAllowUnverifiedEmail)
 					if err != nil {
 						return err
 					}
-					p.OIDCConfig.InsecureAllowUnverifiedEmail = val
 				case "oidc_insecure_skip_issuer_verification":
-					val, err := caddyutils.ParseBool(d)
+					err := caddyutils.ParseBool(d, &p.OIDCConfig.InsecureSkipIssuerVerification)
 					if err != nil {
 						return err
 					}
-					p.OIDCConfig.InsecureSkipIssuerVerification = val
 				case "oidc_insecure_skip_nonce":
-					val, err := caddyutils.ParseBool(d)
+					err := caddyutils.ParseBool(d, &p.OIDCConfig.InsecureSkipNonce)
 					if err != nil {
 						return err
 					}
-					p.OIDCConfig.InsecureSkipNonce = val
 				case "oidc_skip_discovery":
-					val, err := caddyutils.ParseBool(d)
+					err := caddyutils.ParseBool(d, &p.OIDCConfig.SkipDiscovery)
 					if err != nil {
 						return err
 					}
-					p.OIDCConfig.SkipDiscovery = val
 				case "oidc_email_claim":
 					if !d.AllArgs(&p.OIDCConfig.EmailClaim) {
 						return d.ArgErr()
@@ -411,11 +401,10 @@ func (ep *Endpoint) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "skip_jwt_bearer_tokens":
 			makeOptions(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.SkipJwtBearerTokens)
 			if err != nil {
 				return err
 			}
-			ep.Options.SkipJwtBearerTokens = val
 		case "extra_jwt_issuers":
 			makeOptions(ep)
 			if ep.Options.ExtraJwtIssuers == nil {
@@ -428,32 +417,28 @@ func (ep *Endpoint) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "skip_provider_button":
 			makeOptions(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.SkipProviderButton)
 			if err != nil {
 				return err
 			}
-			ep.Options.SkipProviderButton = val
 		case "ssl_insecure_skip_verify":
 			makeOptions(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.SSLInsecureSkipVerify)
 			if err != nil {
 				return err
 			}
-			ep.Options.SSLInsecureSkipVerify = val
 		case "skip_auth_preflight":
 			makeOptions(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.SkipAuthPreflight)
 			if err != nil {
 				return err
 			}
-			ep.Options.SkipAuthPreflight = val
 		case "force_json_errors":
 			makeOptions(ep)
-			val, err := caddyutils.ParseBool(d)
+			err := caddyutils.ParseBool(d, &ep.Options.ForceJSONErrors)
 			if err != nil {
 				return err
 			}
-			ep.Options.ForceJSONErrors = val
 		default:
 			return d.Errf("unrecognized subdirective: %s", d.Val())
 		}

@@ -18,7 +18,7 @@ type Source struct {
 
 // String returns the string representation of the source.
 func (s *Source) String() string {
-	return s.StoreName + "@" + s.Key
+	return s.Key + "@" + s.StoreName
 }
 
 // Get returns the value of the secret.

@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/quara-dev/beyond/pkg/fnutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded/internal/natsmetrics"
 
 	"github.com/nats-io/nats-server/v2/server"
@@ -122,17 +123,100 @@ func (r *Runner) Running() bool {
 func (r *Runner) Start() error {
 	// Start the server
 	r.server.Start()
-	// Lookup and enable jetstream for accounts
+	// Lookup and enable jetstream for accounts + add imports
 	for _, acc := range r.Options.Accounts {
+		account, err := r.server.LookupAccount(acc.Name)
+		if err != nil {
+			return fmt.Errorf("account was not initialized: %s", err.Error())
+		}
 		if acc.JetStream {
-			account, err := r.server.LookupAccount(acc.Name)
-			if err != nil {
-				return fmt.Errorf("account was not initialized: %s", err.Error())
-			}
 			// Enable jetstream
 			err = account.EnableJetStream(nil)
 			if err != nil {
 				return fmt.Errorf("failed to enabled jetstream for account: %s", err.Error())
+			}
+		}
+	}
+	// Look once again to add exports
+	for _, acc := range r.Options.Accounts {
+		account, err := r.server.LookupAccount(acc.Name)
+		if err != nil {
+			return fmt.Errorf("account was not initialized: %s", err.Error())
+		}
+		// Enable exports
+		if acc.Services != nil {
+			for _, export := range acc.Services.Export {
+				var targets []*server.Account
+				if export.To != nil {
+					for _, target := range export.To {
+						targetAccount, err := r.server.LookupAccount(target)
+						if err != nil {
+							return fmt.Errorf("account was not initialized: %s", err.Error())
+						}
+						targets = append(targets, targetAccount)
+					}
+				}
+				err := account.AddServiceExportWithResponse(export.Subject, server.Singleton, targets)
+				if err != nil {
+					return fmt.Errorf("failed to add service export: %s", err.Error())
+				} else {
+					r.logger.Info("Added service export", zap.String("subject", export.Subject), zap.Strings("targets", export.To))
+				}
+			}
+		}
+		// Enable stream exports
+		if acc.Streams != nil {
+			for _, export := range acc.Streams.Export {
+				var targets []*server.Account
+				if export.To != nil {
+					for _, target := range export.To {
+						targetAccount, err := r.server.LookupAccount(target)
+						if err != nil {
+							return fmt.Errorf("account was not initialized: %s", err.Error())
+						}
+						targets = append(targets, targetAccount)
+					}
+				}
+				err := account.AddStreamExport(export.Subject, targets)
+				if err != nil {
+					return fmt.Errorf("failed to add stream export: %s", err.Error())
+				} else {
+					r.logger.Info("Added stream export", zap.String("subject", export.Subject), zap.Strings("targets", export.To))
+				}
+			}
+		}
+	}
+	// Look once again to add imports
+	for _, acc := range r.Options.Accounts {
+		account, err := r.server.LookupAccount(acc.Name)
+		if err != nil {
+			return fmt.Errorf("account was not initialized: %s", err.Error())
+		}
+		if acc.Services != nil {
+			for _, import_ := range acc.Services.Import {
+				remoteAcc, err := r.server.LookupAccount(import_.Account)
+				if err != nil {
+					return fmt.Errorf("account was not initialized: %s", err.Error())
+				}
+				to := fnutils.DefaultIfEmptyString(import_.To, import_.Subject)
+				err = account.AddServiceImport(remoteAcc, import_.Subject, to)
+				if err != nil {
+					return fmt.Errorf("failed to add service import from %s on %s: %s", import_.Account, import_.Subject, err.Error())
+				} else {
+					r.logger.Info("Added service import", zap.String("subject", import_.Subject), zap.String("from", import_.Account), zap.String("to", to))
+				}
+			}
+		}
+		if acc.Streams != nil {
+			for _, import_ := range acc.Streams.Import {
+				remoteAcc, err := r.server.LookupAccount(import_.Account)
+				if err != nil {
+					return fmt.Errorf("account was not initialized: %s", err.Error())
+				}
+				err = remoteAcc.AddStreamImport(account, import_.Subject, import_.To)
+				if err != nil {
+					return fmt.Errorf("failed to add stream import: %s", err.Error())
+				}
 			}
 		}
 	}

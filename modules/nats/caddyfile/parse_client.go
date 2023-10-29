@@ -1,7 +1,6 @@
 package caddyfile
 
 import (
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/pkg/caddyutils"
 	"github.com/quara-dev/beyond/pkg/natsutils"
@@ -11,68 +10,61 @@ func ParseClient(d *caddyfile.Dispenser, c *natsutils.Client) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "internal":
-			val, err := caddyutils.ParseBool(d)
-			if err != nil {
+			if err := caddyutils.ParseBool(d, &c.Internal); err != nil {
 				return err
 			}
-			c.Internal = val
 		case "name":
-			if !d.AllArgs(&c.Name) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.Name); err != nil {
+				return err
 			}
 		case "servers":
-			if c.Servers == nil {
-				c.Servers = []string{}
+			if err := caddyutils.ParseStringArray(d, &c.Servers, false); err != nil {
+				return err
 			}
-			c.Servers = append(c.Servers, caddyutils.ParseStringArray(d)...)
 		case "username":
-			if !d.AllArgs(&c.Username) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.Username); err != nil {
+				return err
 			}
 		case "password":
-			if !d.AllArgs(&c.Password) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.Password); err != nil {
+				return err
 			}
 		case "token":
-			if !d.AllArgs(&c.Token) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.Token); err != nil {
+				return err
 			}
 		case "credentials":
-			if !d.AllArgs(&c.Credentials) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.Credentials); err != nil {
+				return err
 			}
 		case "seed":
-			if !d.AllArgs(&c.Seed) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.Seed); err != nil {
+				return err
 			}
 		case "jwt":
-			if !d.AllArgs(&c.Jwt) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.Jwt); err != nil {
+				return err
 			}
 		case "jetstream_domain":
-			if !d.AllArgs(&c.JSDomain) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.JSDomain); err != nil {
+				return err
 			}
 		case "jetstream_prefix":
-			if !d.AllArgs(&c.JSPrefix) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.JSPrefix); err != nil {
+				return err
 			}
 		case "inbox_prefix":
-			if !d.AllArgs(&c.InboxPrefix) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &c.InboxPrefix); err != nil {
+				return err
 			}
 		case "no_randomize":
-			val, err := caddyutils.ParseBool(d)
-			if err != nil {
+			if err := caddyutils.ParseBool(d, &c.NoRandomize); err != nil {
 				return err
 			}
-			c.NoRandomize = val
 		case "ping_interval":
-			val, err := caddy.ParseDuration(d.Val())
-			if err != nil {
+			if err := caddyutils.ParseDuration(d, &c.PingInterval); err != nil {
 				return err
 			}
-			c.PingInterval = val
 		default:
 			return d.Errf("unrecognized subdirective '%s'", d.Val())
 		}

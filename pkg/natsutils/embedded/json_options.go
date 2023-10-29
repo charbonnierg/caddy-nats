@@ -77,7 +77,7 @@ type Options struct {
 	MemoryResolver   *MemoryAccountResolver `json:"memory_resolver,omitempty"`
 	Cluster          *Cluster               `json:"cluster,omitempty"`
 	Websocket        *Websocket             `json:"websocket,omitempty"`
-	MQTT             *MQTT                  `json:"mqtt,omitempty"`
+	Mqtt             *MQTT                  `json:"mqtt,omitempty"`
 	JetStream        *JetStream             `json:"jetstream,omitempty"`
 	Leafnode         *Leafnode              `json:"leafnode,omitempty"`
 	Metrics          *Metrics               `json:"metrics,omitempty"`
@@ -107,6 +107,38 @@ type User struct {
 	AllowedConnectionTypes []string            `json:"allowed_connection_types,omitempty"`
 }
 
+type ServiceImport struct {
+	Account string `json:"account"`
+	Subject string `json:"subject"`
+	To      string `json:"to,omitempty"`
+}
+
+type StreamImport struct {
+	Account string `json:"account"`
+	Subject string `json:"subject"`
+	To      string `json:"to,omitempty"`
+}
+
+type ServiceExport struct {
+	Subject string   `json:"subject"`
+	To      []string `json:"to,omitempty"`
+}
+
+type StreamExport struct {
+	Subject string   `json:"subject"`
+	To      []string `json:"to,omitempty"`
+}
+
+type Streams struct {
+	Import []StreamImport `json:"imports,omitempty"`
+	Export []StreamExport `json:"exports,omitempty"`
+}
+
+type Services struct {
+	Import []ServiceImport `json:"imports,omitempty"`
+	Export []ServiceExport `json:"exports,omitempty"`
+}
+
 type AccountLimits = jwt.AccountLimits
 
 // Account is the configuration for a server account.
@@ -115,9 +147,9 @@ type Account struct {
 	Name               string              `json:"name,omitempty"`
 	NKey               string              `json:"nkey,omitempty"`
 	Users              []User              `json:"users,omitempty"`
-	Exports            []string            `json:"exports,omitempty"`
-	Imports            []string            `json:"imports,omitempty"`
 	JetStream          bool                `json:"jetstream,omitempty"`
+	Streams            *Streams            `json:"streams,omitempty"`
+	Services           *Services           `json:"services,omitempty"`
 	DefaultPermissions *server.Permissions `json:"default_permissions,omitempty"`
 	Mappings           []*SubjectMapping   `json:"mappings,omitempty"`
 	Limits             *AccountLimits      `json:"limits,omitempty"`
@@ -287,17 +319,16 @@ type MemoryAccountResolver struct {
 // Only /varz metrics are enabled by defaul, other metrics must be enabled
 // explicitly.
 type Metrics struct {
-	ServerLabel    string `json:"server_label,omitempty"`
-	ServerUrl      string `json:"server_url,omitempty"`
-	Healthz        bool   `json:"healthz,omitempty"`
-	Connz          bool   `json:"connz,omitempty"`
-	ConnzDetailed  bool   `json:"connz_detailed,omitempty"`
-	Subz           bool   `json:"subz,omitempty"`
-	Routez         bool   `json:"routez,omitempty"`
-	Gatewayz       bool   `json:"gatewayz,omitempty"`
-	Leafz          bool   `json:"leafz,omitempty"`
-	ReplicatorVarz bool   `json:"replicator_varz,omitempty"`
-	JszFilter      string `json:"jsz_filter,omitempty"`
+	ServerLabel   string `json:"server_label,omitempty"`
+	ServerUrl     string `json:"server_url,omitempty"`
+	Healthz       bool   `json:"healthz,omitempty"`
+	Connz         bool   `json:"connz,omitempty"`
+	ConnzDetailed bool   `json:"connz_detailed,omitempty"`
+	Subz          bool   `json:"subz,omitempty"`
+	Routez        bool   `json:"routez,omitempty"`
+	Gatewayz      bool   `json:"gatewayz,omitempty"`
+	Leafz         bool   `json:"leafz,omitempty"`
+	JszFilter     string `json:"jsz_filter,omitempty"`
 }
 
 // TLSMap is a configuration block for TLSMap servers.

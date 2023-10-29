@@ -20,36 +20,8 @@ var (
 	ErrClientSecretNotSpecified = errors.New("client_secret or client_secret_file must be specified")
 )
 
-// NewCredentialConfig creates a new AzCredentialConfig with all fields set to their zero value.
-// Environment variables are NOT parsed. If you want to parse environment
-// variables, use ParseEnv method after creating the config.
-// This method is strictly equivalent to:
-//
-//	&AzCredentialConfig{}
-func NewCredentialConfig() *CredentialConfig {
-	return &CredentialConfig{}
-}
-
 // CredentialConfig is a configuration for creating an Azure credential.
 // All fields are optional.
-// Basic usage:
-//
-//	// Create a config from env
-//	azc := azure.NewAzCredentialConfig().ParseEnv()
-//	// Validate config (optional)
-//	err := azc.ParseEnv().Build()
-//	if err != nil {
-//	// Handle error
-//	// ...
-//	}
-//	// Create a credential
-//	cred, err := azc.NewCredential()
-//	if err != nil {
-//	// Handle error
-//	// ...
-//	}
-//	// Use the credential
-//	// ...
 type CredentialConfig struct {
 	// factory is the generated factory method for creating a credential according to the config.
 	factory func() (azcore.TokenCredential, error)
@@ -207,7 +179,9 @@ func (azc *CredentialConfig) GetClientSecret() (string, error) {
 // This method is called automatically by NewCredential when required so you don't need
 // to call it manually.
 func (azc *CredentialConfig) Build() error {
-	azc.setDefaultCredentialFactories()
+	if azc.factories == nil {
+		azc.factories = &defaultFactories{}
+	}
 	switch {
 	case azc.ClientId != "" || azc.ClientIdFile != "" || azc.ClientSecret != "" || azc.ClientSecretFile != "":
 		clientSecret, err := azc.GetClientSecret()
@@ -275,9 +249,9 @@ func (azc *CredentialConfig) Build() error {
 	}
 }
 
-// NewCredential creates a new Azure credential based on the config.
+// Authenticate creates a new Azure credential based on the config.
 // If the config is invalid, it returns an error.
-func (azc *CredentialConfig) NewCredential() (azcore.TokenCredential, error) {
+func (azc *CredentialConfig) Authenticate() (azcore.TokenCredential, error) {
 	if azc.factory == nil {
 		err := azc.Build()
 		if err != nil {
@@ -296,13 +270,6 @@ func (azc *CredentialConfig) SetCredentialFactories(factories CredentialFactorie
 		azc.factories = factories
 	}
 	return azc
-}
-
-// Helper method to set default credential factories if they are not set yet.
-func (azc *CredentialConfig) setDefaultCredentialFactories() {
-	if azc.factories == nil {
-		azc.factories = &defaultFactories{}
-	}
 }
 
 // CredentialFactories contains factories for creating credentials.

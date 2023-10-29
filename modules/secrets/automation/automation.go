@@ -14,13 +14,17 @@ import (
 	"go.uber.org/zap"
 )
 
+func init() {
+	caddy.RegisterModule(Automation{})
+}
+
 type TriggerKey struct{}
 
 // Automation is a secret automation.
 type Automation struct {
 	SourcesRaw  []string          `json:"sources,omitempty"`
 	TemplateRaw string            `json:"template,omitempty"`
-	TriggerRaw  json.RawMessage   `json:"trigger,omitempty" caddy:"namespace=secrets.trigger inline_key=type"`
+	TriggerRaw  json.RawMessage   `json:"trigger,omitempty" caddy:"namespace=secrets.triggers inline_key=type"`
 	HandlersRaw []json.RawMessage `json:"handlers,omitempty" caddy:"namespace=secrets.handlers inline_key=type"`
 
 	app      secrets.App
@@ -32,6 +36,13 @@ type Automation struct {
 	sources  secrets.Sources
 	template *DefaultTemplate
 	handlers []secrets.Handler
+}
+
+func (Automation) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "secrets.automation",
+		New: func() caddy.Module { return new(Automation) },
+	}
 }
 
 // Provision prepares the automation for use.

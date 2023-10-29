@@ -73,8 +73,12 @@
 				}
 				APP {
 					jetstream
+					import_stream "$SYS.REQ.SERVER.PING" from "SYS"
+					}
 				}
-				SYS
+				SYS {
+					export_stream "$SYS.REQ.SERVER.PING" to "APP"
+				}
 			}
 		}
 	}

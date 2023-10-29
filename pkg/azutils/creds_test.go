@@ -9,7 +9,7 @@ import (
 
 var _ = Describe("Creds", func() {
 	Context("using client secret auth", func() {
-		creds := azutils.NewCredentialConfig()
+		creds := new(azutils.CredentialConfig)
 		creds.ClientId = "client-id"
 		creds.ClientSecret = "client-secret"
 		creds.TenantId = "tenant-id"
@@ -63,7 +63,7 @@ var _ = Describe("Creds", func() {
 		})
 	})
 	Context("using default identity", func() {
-		creds := azutils.NewCredentialConfig()
+		creds := new(azutils.CredentialConfig)
 		It("cannot build if no auth is set", func() {
 			creds := *creds
 			creds.NoDefaultCredentials = true
@@ -88,7 +88,7 @@ var _ = Describe("Creds", func() {
 		})
 	})
 	Context("using managed identity", func() {
-		creds := azutils.NewCredentialConfig()
+		creds := new(azutils.CredentialConfig)
 		creds.NoDefaultCredentials = true
 		It("return an error if both resource id and resource id are set", func() {
 			creds := *creds

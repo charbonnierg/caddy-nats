@@ -501,7 +501,7 @@ func (o *Options) setJetStreamOpts(opts *server.Options) error {
 }
 
 func (o *Options) setMqttOpts(opts *server.Options) error {
-	if o.MQTT == nil {
+	if o.Mqtt == nil {
 		return nil
 	}
 	if o.JetStream == nil {
@@ -511,21 +511,21 @@ func (o *Options) setMqttOpts(opts *server.Options) error {
 		return errors.New("mqtt cannot be enabled without server name")
 	}
 	// Set default port if none specified
-	var port = o.MQTT.Port
+	var port = o.Mqtt.Port
 	if port == 0 {
-		if o.MQTT.TLS != nil {
+		if o.Mqtt.TLS != nil {
 			port = 8883
 		} else {
 			port = 1883
 		}
 	}
-	opts.MQTT.Host = o.MQTT.Host
+	opts.MQTT.Host = o.Mqtt.Host
 	opts.MQTT.Port = port
-	opts.MQTT.Username = o.MQTT.Username
-	opts.MQTT.Password = o.MQTT.Password
-	opts.MQTT.AuthTimeout = o.MQTT.AuthTimeout
-	opts.MQTT.StreamReplicas = o.MQTT.StreamReplicas
-	opts.MQTT.NoAuthUser = o.MQTT.NoAuthUser
+	opts.MQTT.Username = o.Mqtt.Username
+	opts.MQTT.Password = o.Mqtt.Password
+	opts.MQTT.AuthTimeout = o.Mqtt.AuthTimeout
+	opts.MQTT.StreamReplicas = o.Mqtt.StreamReplicas
+	opts.MQTT.NoAuthUser = o.Mqtt.NoAuthUser
 	return nil
 }
 

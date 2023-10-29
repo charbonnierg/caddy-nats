@@ -21,7 +21,7 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/server"
 	"github.com/quara-dev/beyond/modules/oauth2"
 	cookiestore "github.com/quara-dev/beyond/modules/oauth2/stores/cookie"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/httputils"
 	"github.com/quara-dev/beyond/pkg/secretutils"
 	"go.uber.org/zap"
 )
@@ -140,10 +140,7 @@ func (e *Endpoint) Provision(app oauth2.App) error {
 // an endpoint without access to the endpoint instance.
 func (e *Endpoint) DecodeSessionState(cookies []*http.Cookie) (*sessions.SessionState, error) {
 	e.logger.Info("decoding session state", zap.Any("cookies", cookies))
-	cookie, err := caddyutils.JoinCookies(cookies, e.opts.Cookie.Name)
-	if err != nil {
-		return nil, err
-	}
+	cookie := httputils.JoinCookies(cookies, e.opts.Cookie.Name)
 	req := &http.Request{}
 	req.Header = http.Header{}
 	req.AddCookie(cookie)
@@ -161,10 +158,7 @@ func (e *Endpoint) DecodeSessionState(cookies []*http.Cookie) (*sessions.Session
 // attribute or method, so it is not possible to decode session state for
 // an endpoint without access to the endpoint instance.
 func (e *Endpoint) DecodeSessionStateFromString(cookie string) (*sessions.SessionState, error) {
-	cookies, err := caddyutils.ParseCookies(cookie)
-	if err != nil {
-		return nil, err
-	}
+	cookies := httputils.ParseCookies(cookie)
 	return e.DecodeSessionState(cookies)
 }
 

@@ -4,204 +4,377 @@
 package caddyfile
 
 import (
-	"strconv"
-	"strings"
-
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/nats-io/nats-server/v2/server"
+	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/fnutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 	"github.com/quara-dev/beyond/pkg/parseutils"
 )
 
+// ParseOptions parses the "nats_server" option block found in the Caddyfile.
 func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 
 	// Do not expect any argument but o block instead
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
-		case "tls":
-			if err := parseTLS(d, o.TLS); err != nil {
-				return err
-			}
 		case "no_tls":
-			if err := parseNoTLS(d, o); err != nil {
+			if err := caddyutils.ParseBool(d, &o.NoTLS); err != nil {
 				return err
 			}
-		case "server_name":
-			if !d.AllArgs(&o.ServerName) {
-				return d.Err("server_name requires exactly one name value")
-			}
-		// Alias for server_name
-		case "name":
-			if !d.AllArgs(&o.ServerName) {
-				return d.Err("name requires exactly one name value")
-			}
-		case "server_tags":
-			if err := parseServerTags(d, o); err != nil {
+		case "name", "server_name":
+			if err := caddyutils.ParseString(d, &o.ServerName); err != nil {
 				return err
 			}
-		// Alias for "server_tags"
-		case "tags":
-			if err := parseServerTags(d, o); err != nil {
+		case "tags", "server_tags":
+			if err := caddyutils.ParseKeyValuePairs(d, &o.ServerTags, ":"); err != nil {
 				return err
 			}
-		case "host":
-			if !d.AllArgs(&o.Host) {
-				return d.Err("host requires exactly one listen address")
-			}
-		case "port":
-			if err := parsePort(d, o); err != nil {
+		case "host", "server_host":
+			if err := caddyutils.ParseString(d, &o.Host); err != nil {
 				return err
 			}
-		case "advertise":
-			if !d.AllArgs(&o.Advertise) {
-				return d.Err("advertise requires exactly one address (including port, but not scheme)")
-			}
-		case "debug":
-			if err := parseDebug(d, o); err != nil {
+		case "port", "server_port":
+			if err := caddyutils.ParsePort(d, &o.Port); err != nil {
 				return err
 			}
-		case "trace":
-			if err := parseTrace(d, o); err != nil {
+		case "advertise", "client_advertise":
+			if err := caddyutils.ParseString(d, &o.Advertise); err != nil {
 				return err
 			}
-		case "trace_verbose":
-			if err := parseTraceVerbose(d, o); err != nil {
+		case "debug", "enable_debug":
+			if err := caddyutils.ParseBool(d, &o.Debug); err != nil {
 				return err
 			}
-		case "http_port":
-			if err := parseHttpPort(d, o); err != nil {
+		case "trace", "enable_trace":
+			if err := caddyutils.ParseBool(d, &o.Trace); err != nil {
 				return err
 			}
-		case "http_host":
-			if !d.AllArgs(&o.HTTPHost) {
-				return d.Err("invalid http_host option")
+			if o.Trace {
+				o.Debug = true
 			}
-		case "https_port":
-			if err := parseHttpsPort(d, o); err != nil {
+		case "trace_verbose", "enable_trace_verbose":
+			if err := caddyutils.ParseBool(d, &o.TraceVerbose); err != nil {
 				return err
 			}
-		case "http_base_path":
-			if !d.AllArgs(&o.HTTPBasePath) {
-				return d.Err("http_base_path requires exactly one path")
+			if o.TraceVerbose {
+				o.Debug = true
+				o.Trace = true
 			}
-		case "disable_logging":
-			if err := parseDisableLogging(d, o); err != nil {
+		case "http_port", "monitoring_port":
+			if err := caddyutils.ParsePort(d, &o.HTTPPort); err != nil {
 				return err
 			}
-		case "disable_sublist_cache":
-			if err := parseDisableSublistCache(d, o); err != nil {
+		case "http_host", "monitoring_host":
+			if err := caddyutils.ParseString(d, &o.HTTPHost); err != nil {
 				return err
 			}
-		case "max_connections":
-			if err := parseMaxConnections(d, o); err != nil {
+		case "https_port", "monitoring_tls_port":
+			if err := caddyutils.ParsePort(d, &o.HTTPSPort); err != nil {
+				return err
+			}
+		case "http_base_path", "monitoring_base_path":
+			if err := caddyutils.ParseString(d, &o.HTTPBasePath); err != nil {
+				return err
+			}
+		case "no_log", "disable_logging":
+			if err := caddyutils.ParseBool(d, &o.NoLog); err != nil {
+				return err
+			}
+		case "no_sublist_cache", "disable_sublist_cache":
+			if err := caddyutils.ParseBool(d, &o.NoSublistCache); err != nil {
+				return err
+			}
+		case "max_conn", "max_connections":
+			if err := caddyutils.ParseInt(d, &o.MaxConn); err != nil {
 				return err
 			}
 		case "max_payload":
-			if err := parseMaxPayload(d, o); err != nil {
+			if err := caddyutils.ParseByteSizeI32(d, &o.MaxPayload); err != nil {
 				return err
 			}
 		case "max_pending":
-			if err := parseMaxPending(d, o); err != nil {
+			if err := caddyutils.ParseByteSizeI64(d, &o.MaxPending); err != nil {
 				return err
 			}
-		case "max_subscriptions":
-			if err := parseMaxSubscriptions(d, o); err != nil {
+		case "max_subs", "max_subscriptions":
+			if err := caddyutils.ParseInt(d, &o.MaxSubs); err != nil {
 				return err
 			}
 		case "max_control_line":
-			if err := parseMaxControlLine(d, o); err != nil {
+			if err := caddyutils.ParseByteSizeI32(d, &o.MaxControlLine); err != nil {
 				return err
 			}
 		case "ping_interval":
-			if err := parsePingInterval(d, o); err != nil {
+			if err := caddyutils.ParseDuration(d, &o.PingInterval); err != nil {
 				return err
 			}
-		case "ping_max":
-			if err := parsePingMax(d, o); err != nil {
+		case "max_pings_out", "ping_max":
+			if err := caddyutils.ParseInt(d, &o.MaxPingsOut); err != nil {
 				return err
 			}
 		case "write_deadline":
-			if err := parseWriteDeadline(d, o); err != nil {
+			if err := caddyutils.ParseDuration(d, &o.WriteDeadline); err != nil {
 				return err
 			}
 		case "no_auth_user":
-			if !d.AllArgs(&o.NoAuthUser) {
-				return d.ArgErr()
-			}
-		case "jetstream":
-			if err := parseJetStream(d, o); err != nil {
-				return err
-			}
-		case "mqtt":
-			if err := parseMqtt(d, o); err != nil {
-				return err
-			}
-		case "websocket":
-			if err := parseWebsocket(d, o); err != nil {
-				return err
-			}
-		case "leafnodes":
-			if err := parseLeafnodes(d, o); err != nil {
-				return err
-			}
-		case "operator":
-			if err := parseOperator(d, o); err != nil {
+			if err := caddyutils.ParseString(d, &o.NoAuthUser); err != nil {
 				return err
 			}
 		case "system_account":
-			if !d.AllArgs(&o.SystemAccount) {
-				return d.Err("system_account requires exactly one account name")
+			if err := caddyutils.ParseString(d, &o.SystemAccount); err != nil {
+				return err
+			}
+		case "tls":
+			o.TLS = fnutils.DefaultIfNil(o.TLS, &embedded.TLSMap{})
+			if err := parseTLS(d, o.TLS); err != nil {
+				return err
+			}
+		case "jetstream":
+			o.JetStream = fnutils.DefaultIfNil(o.JetStream, &embedded.JetStream{})
+			if err := parseJetStream(d, o.JetStream); err != nil {
+				return err
+			}
+		case "mqtt":
+			o.Mqtt = fnutils.DefaultIfNil(o.Mqtt, &embedded.MQTT{})
+			if err := parseMqtt(d, o.Mqtt); err != nil {
+				return err
+			}
+		case "websocket":
+			o.Websocket = fnutils.DefaultIfNil(o.Websocket, &embedded.Websocket{})
+			if err := parseWebsocket(d, o.Websocket); err != nil {
+				return err
+			}
+		case "leafnodes", "leafnode":
+			o.Leafnode = fnutils.DefaultIfNil(o.Leafnode, &embedded.Leafnode{})
+			if err := parseLeafnodes(d, o.Leafnode); err != nil {
+				return err
+			}
+		case "operators", "operator":
+			o.Operators = fnutils.DefaultIfEmpty(o.Operators, []string{})
+			if err := caddyutils.ParseStringArray(d, &o.Operators, false); err != nil {
+				return err
 			}
 		case "accounts":
-			if err := parseAccounts(d, o); err != nil {
+			o.Accounts = fnutils.DefaultIfEmpty(o.Accounts, []*embedded.Account{})
+			if err := parseAccounts(d, &o.Accounts); err != nil {
 				return err
 			}
 		case "users":
-			if err := parseUsers(d, o); err != nil {
+			o.Authorization = fnutils.DefaultIfNil(o.Authorization, &embedded.AuthorizationMap{})
+			o.Authorization.Users = fnutils.DefaultIfEmpty(o.Authorization.Users, []embedded.User{})
+			if err := parseAuthUsers(d, o.Authorization); err != nil {
 				return err
 			}
-			// case "resolver":
-		// 	if err := parseResolver(d, o); err != nil {
-		// 		return err
-		// 	}
 		case "metrics":
-			if err := parseMetrics(d, o); err != nil {
+			o.Metrics = fnutils.DefaultIfNil(o.Metrics, &embedded.Metrics{})
+			if err := parseMetrics(d, o.Metrics); err != nil {
 				return err
 			}
+		case "full_resolver":
+			o.FullResolver = fnutils.DefaultIfNil(o.FullResolver, &embedded.FullAccountResolver{})
+			if err := parseFullResolver(d, o.FullResolver); err != nil {
+				return err
+			}
+		case "cache_resolver":
+			o.CacheResolver = fnutils.DefaultIfNil(o.CacheResolver, &embedded.CacheAccountResolver{})
+			if err := parseCacheResolver(d, o.CacheResolver); err != nil {
+				return err
+			}
+		case "memory_resolver":
+			o.MemoryResolver = fnutils.DefaultIfNil(o.MemoryResolver, &embedded.MemoryAccountResolver{})
+			if err := parseMemoryResolver(d, o.MemoryResolver); err != nil {
+				return err
+			}
+		case "resolver":
+			return d.Err("resolver directive has been removed, use full_resolver, cache_resolver or memory_resolver instead")
 		default:
 			return d.Errf("unrecognized nats_server subdirective: %s", d.Val())
 		}
 	}
-	// Listen on localhost only by default if not configured otherwise
-	if o.HTTPPort != 0 && o.HTTPHost == "" {
-		o.HTTPHost = "127.0.0.1"
+	return nil
+}
+
+func parseSubjectMapping(d *caddyfile.Dispenser, account *embedded.Account) error {
+	if account == nil {
+		return d.Err("internal error: account is nil. Please open a bug report.")
+	}
+	if account.Mappings == nil {
+		return d.Err("internal error: mappings is nil. Please open a bug report.")
+	}
+	mapping := embedded.SubjectMapping{MapDest: []*server.MapDest{}}
+	if err := caddyutils.ParseString(d, &mapping.Subject); err != nil {
+		return err
+	}
+	if d.CountRemainingArgs() > 0 {
+		if err := caddyutils.ExpectString(d, "to"); err != nil {
+			return err
+		}
+		inlineSubjects := []string{}
+		if err := caddyutils.ParseStringArray(d, &inlineSubjects, false); err != nil {
+			return err
+		}
+		for _, inlineSubject := range inlineSubjects {
+			mapping.MapDest = append(mapping.MapDest, server.NewMapDest(inlineSubject, 100))
+		}
+		account.Mappings = append(account.Mappings, &mapping)
+	} else {
+		// Long syntax
+		for nesting := d.Nesting(); d.NextBlock(nesting); {
+			if d.Val() != "to" {
+				return d.Errf("unrecognized subject mapping subdirective: %s", d.Val())
+			}
+			dest := server.MapDest{}
+			if err := caddyutils.ParseString(d, &dest.Subject); err != nil {
+				return err
+			}
+			if d.CountRemainingArgs() > 0 {
+				if err := caddyutils.ExpectString(d, "weight"); err != nil {
+					return err
+				}
+				if err := caddyutils.ParseUInt8(d, &dest.Weight); err != nil {
+					return err
+				}
+			} else {
+				dest.Weight = 100
+			}
+			mapping.MapDest = append(mapping.MapDest, &dest)
+		}
+		account.Mappings = append(account.Mappings, &mapping)
 	}
 	return nil
 }
 
-func parseAccounts(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if o.Accounts == nil {
-		o.Accounts = []*embedded.Account{}
+// parseAccounts parses the "accounts" directive found in the Caddyfile "nats_server" option block.
+func parseAccounts(d *caddyfile.Dispenser, accounts *[]*embedded.Account) error {
+	if accounts == nil {
+		return d.Err("internal error: accounts is nil. Please open a bug report.")
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
-		name := d.Val()
-		acc := embedded.Account{Name: name}
+		acc := embedded.Account{Name: d.Val()}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "jetstream":
-				acc.JetStream = true
+				if err := caddyutils.ParseBool(d, &acc.JetStream); err != nil {
+					return err
+				}
+			case "map_subject":
+				acc.Mappings = fnutils.DefaultIfEmpty(acc.Mappings, []*embedded.SubjectMapping{})
+				if err := parseSubjectMapping(d, &acc); err != nil {
+					return err
+				}
+			case "export_service":
+				if acc.Services == nil {
+					acc.Services = &embedded.Services{}
+				}
+				if acc.Services.Export == nil {
+					acc.Services.Export = []embedded.ServiceExport{}
+				}
+				export := embedded.ServiceExport{}
+				if err := caddyutils.ParseString(d, &export.Subject); err != nil {
+					return err
+				}
+				if d.CountRemainingArgs() > 0 {
+					if err := caddyutils.ExpectString(d, "to"); err != nil {
+						return err
+					}
+					if err := caddyutils.ParseStringArray(d, &export.To, false); err != nil {
+						return err
+					}
+				}
+				acc.Services.Export = append(acc.Services.Export, export)
+			case "import_service":
+				if acc.Services == nil {
+					acc.Services = &embedded.Services{}
+				}
+				if acc.Services.Import == nil {
+					acc.Services.Import = []embedded.ServiceImport{}
+				}
+				import_ := embedded.ServiceImport{}
+				if err := caddyutils.ParseString(d, &import_.Subject); err != nil {
+					return err
+				}
+				if d.CountRemainingArgs() > 0 {
+					if err := caddyutils.ExpectString(d, "from"); err != nil {
+						return err
+					}
+					if err := caddyutils.ParseString(d, &import_.Account); err != nil {
+						return err
+					}
+				}
+				if d.CountRemainingArgs() > 0 {
+					if err := caddyutils.ExpectString(d, "to"); err != nil {
+						return err
+					}
+					if err := caddyutils.ParseString(d, &import_.To); err != nil {
+						return err
+					}
+				}
+				acc.Services.Import = append(acc.Services.Import, import_)
+			case "export_stream":
+				if acc.Streams == nil {
+					acc.Streams = &embedded.Streams{}
+				}
+				if acc.Streams.Export == nil {
+					acc.Streams.Export = []embedded.StreamExport{}
+				}
+				export := embedded.StreamExport{}
+				if err := caddyutils.ParseString(d, &export.Subject); err != nil {
+					return err
+				}
+				if d.CountRemainingArgs() > 0 {
+					if err := caddyutils.ExpectString(d, "to"); err != nil {
+						return err
+					}
+					if err := caddyutils.ParseStringArray(d, &export.To, false); err != nil {
+						return err
+					}
+				}
+				acc.Streams.Export = append(acc.Streams.Export, export)
+			case "import_stream":
+				if acc.Streams == nil {
+					acc.Streams = &embedded.Streams{}
+				}
+				if acc.Streams.Import == nil {
+					acc.Streams.Import = []embedded.StreamImport{}
+				}
+				import_ := embedded.StreamImport{}
+				if err := caddyutils.ParseString(d, &import_.Subject); err != nil {
+					return err
+				}
+				if d.CountRemainingArgs() > 0 {
+					if err := caddyutils.ExpectString(d, "from"); err != nil {
+						return err
+					}
+					if err := caddyutils.ParseString(d, &import_.Account); err != nil {
+						return err
+					}
+				}
+				if d.CountRemainingArgs() > 0 {
+					if err := caddyutils.ExpectString(d, "to"); err != nil {
+						return err
+					}
+					if err := caddyutils.ParseString(d, &import_.To); err != nil {
+						return err
+					}
+				}
+				acc.Streams.Import = append(acc.Streams.Import, import_)
+			default:
+				return d.Errf("unrecognized account subdirective: %s", d.Val())
 			}
 		}
-		o.Accounts = append(o.Accounts, &acc)
+		*accounts = append(*accounts, &acc)
 	}
 	return nil
 }
 
-func parseUsers(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if o.Authorization == nil {
-		o.Authorization = &embedded.AuthorizationMap{
-			Users: []embedded.User{},
-		}
+// parseAuthUsers parses the "users" directive found in the Caddyfile "nats_server" option block.
+func parseAuthUsers(d *caddyfile.Dispenser, auth *embedded.AuthorizationMap) error {
+	if auth == nil {
+		return d.Err("internal error: authorization map is nil. Please open a bug report.")
+	}
+	if auth.Users == nil {
+		return d.Err("internal error: authorization map users field is nil. Please open a bug report.")
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		name := d.Val()
@@ -209,273 +382,24 @@ func parseUsers(d *caddyfile.Dispenser, o *embedded.Options) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "password":
-				if !d.AllArgs(&user.Password) {
-					return d.Err("password requires exactly one password value")
+				if err := caddyutils.ParseString(d, &user.Password); err != nil {
+					return err
 				}
 			default:
 				return d.Errf("unrecognized user subdirective: %s", d.Val())
 			}
 		}
-		o.Authorization.Users = append(o.Authorization.Users, user)
+		auth.Users = append(auth.Users, user)
 	}
 	return nil
 }
 
-// parseServerTags parses the "tags" directive found in o Caddyfile "nats_server" option block.
-func parseServerTags(d *caddyfile.Dispenser, o *embedded.Options) error {
-	tags := d.RemainingArgs()
-	if len(tags) == 0 {
-		return d.Err("tags requires at least one tag value")
-	}
-	validTags := map[string]string{}
-	for _, tag := range tags {
-		if len(tag) == 0 {
-			return d.Err("empty tag value")
-		}
-		keyvalue := strings.Split(tag, ":")
-		if len(keyvalue) != 2 {
-			return d.Err("invalid tag value")
-		}
-		key := strings.TrimSpace(keyvalue[0])
-		value := strings.TrimSpace(keyvalue[1])
-		if len(key) == 0 || len(value) == 0 {
-			return d.Err("empty tag key or value")
-		}
-		if _, ok := validTags[key]; ok {
-			return d.Err("duplicate tag key")
-		}
-		validTags[key] = value
-	}
-	o.ServerTags = validTags
-	return nil
-}
-
-// parseNoTLS parses the "no_tls" directive found in o Caddyfile "nats_server" option block.
-func parseNoTLS(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if d.NextArg() {
-		return d.Err("no_tls does not take any argument")
-	}
-	o.NoTLS = true
-	return nil
-}
-
-// parseDisableLogging parses the "disable_logging" directive found in o Caddyfile "nats_server" option block.
-func parseDisableLogging(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if d.NextArg() {
-		return d.Err("disable_logging does not take any argument")
-	}
-	o.NoLog = true
-	return nil
-}
-
-// parseDisableSublistCache parses the "disable_sublist_cache" directive found in o Caddyfile "nats_server" option block.
-func parseDisableSublistCache(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if d.NextArg() {
-		return d.Err("disable_sublist_cache does not take any argument")
-	}
-	o.NoSublistCache = true
-	return nil
-}
-
-// parseDebug parses the "debug" directive found in o Caddyfile "nats_server" option block.
-func parseDebug(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if d.NextArg() {
-		return d.Err("debug does not take any argument")
-	}
-	o.Debug = true
-	return nil
-}
-
-// parseTrace parses the "trace" directive found in o Caddyfile "nats_server" option block.
-func parseTrace(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if d.NextArg() {
-		return d.Err("trace does not take any argument")
-	}
-	o.Debug = true
-	o.Trace = true
-	return nil
-}
-
-// parseTraceVerbose parses the "trace_verbose" directive found in o Caddyfile "nats_server" option block.
-func parseTraceVerbose(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if d.NextArg() {
-		return d.Err("trace_verbose does not take any argument")
-	}
-	o.Debug = true
-	o.Trace = true
-	o.TraceVerbose = true
-	return nil
-}
-
-// parsePort parses the "port" directive found in o Caddyfile "nats_server" option block.
-func parsePort(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("port requires exactly one port number")
-	}
-	port, err := parseutils.ParsePort(raw)
-	if err != nil {
-		return d.Err(err.Error())
-	}
-	o.Port = port
-	return nil
-}
-
-// parseHttpPort parses the "http_port" directive found in o Caddyfile "nats_server" option block.
-func parseHttpPort(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("http_port requires exactly one port number")
-	}
-	port, err := parseutils.ParsePort(raw)
-	if err != nil {
-		return d.Err(err.Error())
-	}
-	o.HTTPPort = port
-	return nil
-}
-
-// parseHttpsPort parses the "https_port" directive found in o Caddyfile "nats_server" option block.
-func parseHttpsPort(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("https_port requires exactly one port number")
-	}
-	port, err := parseutils.ParsePort(raw)
-	if err != nil {
-		return d.Err(err.Error())
-	}
-	o.HTTPSPort = port
-	return nil
-}
-
-// parseMaxConnections parses the "max_connections" directive found in o Caddyfile "nats_server" option block.
-func parseMaxConnections(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("max_connections requires exactly one integer value")
-	}
-	t, err := strconv.Atoi(raw)
-	if err != nil {
-		return d.Errf("invalid max_connections: %v", err)
-	}
-	o.MaxConn = t
-	return nil
-}
-
-// parseMaxPayload parses the "max_payload" directive found in o Caddyfile "nats_server" option block.
-func parseMaxPayload(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("max_payload requires exactly one size value")
-	}
-	size, err := parseutils.ParseBytes(raw)
-	if err != nil {
-		return d.Errf("invalid max_payload: %s", err.Error())
-	}
-	size32, err := parseutils.Int32(size)
-	if err != nil {
-		return d.Errf("invalid max_payload: %s", err.Error())
-	}
-	o.MaxPayload = size32
-	return nil
-}
-
-// parseMaxPending parses the "max_pending" directive found in o Caddyfile "nats_server" option block.
-func parseMaxPending(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("max_pending requires exactly one size value")
-	}
-	size, err := parseutils.ParseBytes(raw)
-	if err != nil {
-		return d.Errf("invalid max_pending: %s", err.Error())
-	}
-	o.MaxPending = int64(size)
-	return nil
-}
-
-// parseMaxControlLine parses the "max_control_line" directive found in o Caddyfile "nats_server" option block.
-func parseMaxControlLine(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("max_control_line requires exactly one size value")
-	}
-	size, err := parseutils.ParseBytes(raw)
-	if err != nil {
-		return d.Errf("invalid max_control_line: %s", err.Error())
-	}
-	size32, err := parseutils.Int32(size)
-	if err != nil {
-		return d.Errf("invalid max_control_line: %s", err.Error())
-	}
-	o.MaxControlLine = size32
-	return nil
-}
-
-// parseMaxSubscriptions parses the "max_subscriptions" directive found in o Caddyfile "nats_server" option block.
-func parseMaxSubscriptions(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("max_subscriptions requires exactly one integer value")
-	}
-	count, err := strconv.Atoi(raw)
-	if err != nil {
-		return d.Errf("invalid max_subscriptions: %v", err)
-	}
-	o.MaxSubs = count
-	return nil
-}
-
-// parsePingInterval parses the "ping_interval" directive found in o Caddyfile "nats_server" option block.
-func parsePingInterval(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("ping_interval requires exactly one duration value")
-	}
-	duration, err := caddy.ParseDuration(raw)
-	if err != nil {
-		return d.Errf("invalid ping_interval: %v", err)
-	}
-	o.PingInterval = duration
-	return nil
-}
-
-// parsePingMax parses the "ping_max" directive found in o Caddyfile "nats_server" option block.
-func parsePingMax(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("ping_max requires exactly one integer value")
-	}
-	max, err := strconv.Atoi(d.Val())
-	if err != nil {
-		return d.Errf("invalid ping_max: %v", err)
-	}
-	o.MaxPingsOut = max
-	return nil
-}
-
-// parseWriteDeadline parses the "write_deadline" directive found in o Caddyfile "nats_server" option block.
-func parseWriteDeadline(d *caddyfile.Dispenser, o *embedded.Options) error {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return d.Err("write_deadline requires exactly one duration value")
-	}
-	duration, err := caddy.ParseDuration(raw)
-	if err != nil {
-		return d.Errf("invalid write_deadline: %v", err)
-	}
-	o.WriteDeadline = duration
-	return nil
-}
-
-// parseJetStream parses the "jetstream" directive found in o Caddyfile "nats_server" option block.
-func parseJetStream(d *caddyfile.Dispenser, o *embedded.Options) error {
+// parseJetStream parses the "jetstream" directive found in the Caddyfile "nats_server" option block.
+func parseJetStream(d *caddyfile.Dispenser, jsopts *embedded.JetStream) error {
 	// Make sure we have o JetStream config
-	if o.JetStream == nil {
-		o.JetStream = &embedded.JetStream{}
+	if jsopts == nil {
+		return d.Err("internal error: jetstream config is nil. Please open a bug report.")
 	}
-	jsopts := o.JetStream
 	// short-syntax
 	if d.NextArg() {
 		jsopts.StoreDir = d.Val()
@@ -489,33 +413,21 @@ func parseJetStream(d *caddyfile.Dispenser, o *embedded.Options) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "domain":
-				if !d.AllArgs(&jsopts.Domain) {
-					return d.Err("jetstream.domain requires exactly one domain name")
+				if err := caddyutils.ParseString(d, &jsopts.Domain); err != nil {
+					return err
 				}
-			case "store_dir":
-				if !d.AllArgs(&jsopts.StoreDir) {
-					return d.Err("jetstream.store_dir requires exactly one path")
+			case "store", "store_dir", "store_directory":
+				if err := caddyutils.ParseString(d, &jsopts.StoreDir); err != nil {
+					return err
 				}
 			case "max_memory":
-				raw := ""
-				if !d.AllArgs(&raw) {
-					return d.Err("jetstream.max_memory requires exactly one size value")
+				if err := caddyutils.ParseByteSizeI64(d, &jsopts.MaxMemory); err != nil {
+					return err
 				}
-				size, err := parseutils.ParseBytes(raw)
-				if err != nil {
-					return d.Errf("invalid jetstream.max_memory: %s", err.Error())
+			case "max_file", "max_disk":
+				if err := caddyutils.ParseByteSizeI64(d, &jsopts.MaxFile); err != nil {
+					return err
 				}
-				jsopts.MaxMemory = int64(size)
-			case "max_file":
-				raw := ""
-				if !d.AllArgs(&raw) {
-					return d.Err("jetstream.max_file requires exactly one size value")
-				}
-				size, err := parseutils.ParseBytes(raw)
-				if err != nil {
-					return d.Errf("invalid jetstream.max_file: %s", err.Error())
-				}
-				jsopts.MaxFile = int64(size)
 			default:
 				return d.Errf("unrecognized jetstream subdirective: %s", d.Val())
 			}
@@ -524,15 +436,14 @@ func parseJetStream(d *caddyfile.Dispenser, o *embedded.Options) error {
 	return nil
 }
 
-// parseMqtt parses the "mqtt" directive found in o Caddyfile "nats_server" option block.
-func parseMqtt(d *caddyfile.Dispenser, o *embedded.Options) error {
+// parseMqtt parses the "mqtt" directive found in the Caddyfile "nats_server" option block.
+func parseMqtt(d *caddyfile.Dispenser, mqttopts *embedded.MQTT) error {
 	// Make sure we have o MQTT config
-	if o.MQTT == nil {
-		o.MQTT = &embedded.MQTT{}
+	if mqttopts == nil {
+		return d.Err("internal error: mqtt config is nil. Please open a bug report.")
 	}
-	mqttopts := o.MQTT
-	// Short syntax
 	if d.NextArg() {
+		// Short syntax
 		port, err := parseutils.ParsePort(d.Val())
 		if err != nil {
 			return d.Errf("invalid mqtt port: %v", err)
@@ -541,33 +452,42 @@ func parseMqtt(d *caddyfile.Dispenser, o *embedded.Options) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			return d.Err("mqtt short syntax requires exactly one port number")
 		}
-		// Long syntax
 	} else {
+		// Long syntax
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
+			case "no_tls":
+				if err := caddyutils.ParseBool(d, &mqttopts.NoTLS); err != nil {
+					return err
+				}
 			case "host":
-				if !d.AllArgs(&mqttopts.Host) {
-					return d.ArgErr()
+				if err := caddyutils.ParseString(d, &mqttopts.Host); err != nil {
+					return err
 				}
 			case "port":
-				raw := ""
-				if !d.AllArgs(&raw) {
-					return d.Err("mqtt.port requires exactly one port number")
+				if err := caddyutils.ParsePort(d, &mqttopts.Port); err != nil {
+					return err
 				}
-				port, err := parseutils.ParsePort(raw)
-				if err != nil {
-					return d.Errf("invalid mqtt port: %v", err)
-				}
-				mqttopts.Port = port
 			case "jetstream_domain":
-				if !d.AllArgs(&mqttopts.JSDomain) {
-					return d.Err("mqtt.jetstream_domain requires exactly one value")
+				if err := caddyutils.ParseString(d, &mqttopts.JSDomain); err != nil {
+					return err
 				}
-			case "no_tls":
-				if d.NextArg() {
-					return d.Err("mqtt.no_tls does not take any argument")
+			case "stream_replicas":
+				if err := caddyutils.ParseInt(d, &mqttopts.StreamReplicas); err != nil {
+					return err
 				}
-				mqttopts.NoTLS = true
+			case "user", "username":
+				if err := caddyutils.ParseString(d, &mqttopts.Username); err != nil {
+					return err
+				}
+			case "password":
+				if err := caddyutils.ParseString(d, &mqttopts.Password); err != nil {
+					return err
+				}
+			case "no_auth_user":
+				if err := caddyutils.ParseString(d, &mqttopts.NoAuthUser); err != nil {
+					return err
+				}
 			case "tls":
 				if err := parseTLS(d, mqttopts.TLS); err != nil {
 					return err
@@ -580,51 +500,72 @@ func parseMqtt(d *caddyfile.Dispenser, o *embedded.Options) error {
 	return nil
 }
 
-// parseWebsocket parses the "websocket" directive found in o Caddyfile "nats_server" option block.
-func parseWebsocket(d *caddyfile.Dispenser, o *embedded.Options) error {
+// parseWebsocket parses the "websocket" directive found in the Caddyfile "nats_server" option block.
+func parseWebsocket(d *caddyfile.Dispenser, wsopts *embedded.Websocket) error {
 	// Make sure we have o Websocket config
-	if o.Websocket == nil {
-		o.Websocket = &embedded.Websocket{}
+	if wsopts == nil {
+		return d.Err("internal error: websocket config is nil. Please open a bug report.")
 	}
 	if d.NextArg() {
 		port, err := parseutils.ParsePort(d.Val())
 		if err != nil {
 			return d.Errf("invalid websocket port: %v", err)
 		}
-		o.Websocket.Port = port
+		wsopts.Port = port
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			return d.Err("websocket short syntax requires exactly one port number")
 		}
 	} else {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
-			case "host":
-				if !d.AllArgs(&o.Websocket.Host) {
-					return d.ArgErr()
-				}
-			case "port":
-				raw := ""
-				if !d.AllArgs(&raw) {
-					return d.Err("websocket.port requires exactly one port number")
-				}
-				port, err := parseutils.ParsePort(raw)
-				if err != nil {
-					return d.Errf("invalid websocket port: %v", err)
-				}
-				o.Websocket.Port = port
-			case "advertise":
-				if !d.AllArgs(&o.Websocket.Advertise) {
-					return d.Err("websocket.advertise requires exactly one address (including port, but not scheme)")
-				}
-			case "tls":
-				if o.Websocket.TLS == nil {
-					o.Websocket.TLS = &embedded.TLSMap{}
-				}
-				if err := parseTLS(d, o.Websocket.TLS); err != nil {
+			case "no_tls":
+				if err := caddyutils.ParseBool(d, &wsopts.NoTLS); err != nil {
 					return err
 				}
-			case "no_tls":
-				o.Websocket.NoTLS = true
+			case "host":
+				if err := caddyutils.ParseString(d, &wsopts.Host); err != nil {
+					return err
+				}
+			case "port":
+				if err := caddyutils.ParsePort(d, &wsopts.Port); err != nil {
+					return err
+				}
+			case "advertise", "client_advertise":
+				if err := caddyutils.ParseString(d, &wsopts.Advertise); err != nil {
+					return err
+				}
+			case "user", "username":
+				if err := caddyutils.ParseString(d, &wsopts.Username); err != nil {
+					return err
+				}
+			case "password":
+				if err := caddyutils.ParseString(d, &wsopts.Password); err != nil {
+					return err
+				}
+			case "no_auth_user":
+				if err := caddyutils.ParseString(d, &wsopts.NoAuthUser); err != nil {
+					return err
+				}
+			case "compression", "enable_compression":
+				if err := caddyutils.ParseBool(d, &wsopts.Compression); err != nil {
+					return err
+				}
+			case "same_origin", "require_same_origin":
+				if err := caddyutils.ParseBool(d, &wsopts.SameOrigin); err != nil {
+					return err
+				}
+			case "allowed_origins":
+				if err := caddyutils.ParseStringArray(d, &wsopts.AllowedOrigins, false); err != nil {
+					return err
+				}
+			case "jwt_cookie":
+				if err := caddyutils.ParseString(d, &wsopts.JWTCookie); err != nil {
+					return err
+				}
+			case "tls":
+				if err := parseTLS(d, wsopts.TLS); err != nil {
+					return err
+				}
 			default:
 				return d.Errf("unrecognized websocket subdirective: %s", d.Val())
 			}
@@ -633,13 +574,12 @@ func parseWebsocket(d *caddyfile.Dispenser, o *embedded.Options) error {
 	return nil
 }
 
-// parseLeafnodes parse the "leafnodes" directive found in o Caddyfile "nats_server" option block.
-func parseLeafnodes(d *caddyfile.Dispenser, o *embedded.Options) error {
+// parseLeafnodes parse the "leafnodes" directive found in the Caddyfile "nats_server" option block.
+func parseLeafnodes(d *caddyfile.Dispenser, leafopts *embedded.Leafnode) error {
 	// Make sure we have o LeafNode config
-	if o.Leafnode == nil {
-		o.Leafnode = &embedded.Leafnode{}
+	if leafopts == nil {
+		return d.Err("internal error: leafnode config is nil. Please open a bug report.")
 	}
-	leafopts := o.Leafnode
 	// Short syntax
 	if d.NextArg() {
 		port, err := parseutils.ParsePort(d.Val())
@@ -655,34 +595,27 @@ func parseLeafnodes(d *caddyfile.Dispenser, o *embedded.Options) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "host":
-				if !d.AllArgs(&leafopts.Host) {
-					return d.ArgErr()
+				if err := caddyutils.ParseString(d, &leafopts.Host); err != nil {
+					return err
 				}
 			case "port":
-				raw := ""
-				if !d.AllArgs(&raw) {
-					return d.Err("leafnodes.port requires exactly one port number")
+				if err := caddyutils.ParsePort(d, &leafopts.Port); err != nil {
+					return err
 				}
-				port, err := parseutils.ParsePort(raw)
-				if err != nil {
-					return d.Errf("invalid leafnode port: %v", err)
-				}
-				leafopts.Port = port
 			case "advertise":
-				if !d.AllArgs(&leafopts.Advertise) {
-					return d.Err("leafnodes.advertise requires exactly one address (including port, but not scheme)")
+				if err := caddyutils.ParseString(d, &leafopts.Advertise); err != nil {
+					return err
+				}
+			case "no_tls":
+				if err := caddyutils.ParseBool(d, &leafopts.NoTLS); err != nil {
+					return err
 				}
 			case "tls":
 				if err := parseTLS(d, leafopts.TLS); err != nil {
 					return err
 				}
-			case "no_tls":
-				if d.NextArg() {
-					return d.Err("leafnodes.no_tls does not take any argument")
-				}
-				leafopts.NoTLS = true
 			case "remotes":
-				if err := parseRemoteLeafnodes(d, leafopts); err != nil {
+				if err := parseRemoteLeafnodes(d, &leafopts.Remotes); err != nil {
 					return err
 				}
 			}
@@ -691,202 +624,312 @@ func parseLeafnodes(d *caddyfile.Dispenser, o *embedded.Options) error {
 	return nil
 }
 
-// parseRemoteLeafnodes parse the "remote_leafnodes" directive found in o Caddyfile "nats_server" option block.
-func parseRemoteLeafnodes(d *caddyfile.Dispenser, leafopts *embedded.Leafnode) error {
-	leafopts.Remotes = []embedded.Remote{}
+// parseRemoteLeafnodes parse the "remote_leafnodes" directive found in the Caddyfile "nats_server" option block.
+func parseRemoteLeafnodes(d *caddyfile.Dispenser, remotes *[]embedded.Remote) error {
+	if remotes == nil {
+		return d.Err("internal error: remotes is nil. Please open a bug report.")
+	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		remote := embedded.Remote{Url: d.Val()}
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "url":
-				if !d.AllArgs(&remote.Url) {
-					return d.ArgErr()
+				if err := caddyutils.ParseString(d, &remote.Url); err != nil {
+					return err
+				}
+			case "urls":
+				if err := caddyutils.ParseStringArray(d, &remote.Urls, false); err != nil {
+					return err
+				}
+			case "hub":
+				if err := caddyutils.ParseBool(d, &remote.Hub); err != nil {
+					return err
+				}
+			case "deny_import":
+				if err := caddyutils.ParseStringArray(d, &remote.DenyImports, false); err != nil {
+					return err
+				}
+			case "deny_export":
+				if err := caddyutils.ParseStringArray(d, &remote.DenyExports, false); err != nil {
+					return err
 				}
 			case "account":
-				if !d.AllArgs(&remote.Account) {
-					return d.ArgErr()
+				if err := caddyutils.ParseString(d, &remote.Account); err != nil {
+					return err
 				}
 			case "credentials":
-				if !d.AllArgs(&remote.Credentials) {
-					return d.ArgErr()
+				if err := caddyutils.ParseString(d, &remote.Credentials); err != nil {
+					return err
+				}
+			case "websocket":
+				for nesting := d.Nesting(); d.NextBlock(nesting); {
+					switch d.Val() {
+					case "compression":
+						if err := caddyutils.ParseBool(d, &remote.Websocket.Compression); err != nil {
+							return err
+						}
+					case "no_masking":
+						if err := caddyutils.ParseBool(d, &remote.Websocket.NoMasking); err != nil {
+							return err
+						}
+					default:
+						return d.Errf("unrecognized remote leafnode websocket subdirective: %s", d.Val())
+					}
 				}
 			default:
-				return d.Errf("unrecognized subdirective: %s", d.Val())
+				return d.Errf("unrecognized remote leafnode subdirective: %s", d.Val())
 			}
 		}
-		leafopts.Remotes = append(leafopts.Remotes, remote)
+		*remotes = append(*remotes, remote)
 	}
 	return nil
 }
 
-// parseOperator parses the "operator" directive found in o Caddyfile "nats_server" option block.
-func parseOperator(d *caddyfile.Dispenser, o *embedded.Options) error {
-	if o.Operators == nil {
-		o.Operators = []string{}
+// parseCacheResolver parses the "cache_resolver" directive found in the Caddyfile "nats_server" option block.
+func parseCacheResolver(d *caddyfile.Dispenser, resolveropts *embedded.CacheAccountResolver) error {
+	// Make sure we have o CacheAccountResolver config
+	if resolveropts == nil {
+		return d.Err("internal error: cache resolver config is nil. Please open a bug report.")
 	}
-	op := ""
-	if !d.AllArgs(&op) {
-		return d.Err("operator requires exactly one operator name")
-	}
-	for _, existing := range o.Operators {
-		if existing == op {
-			return nil
+	// Short syntax
+	if d.NextArg() {
+		resolveropts.Path = d.Val()
+		if d.NextArg() {
+			return d.Err("cache resolver short syntax requires exactly one path")
+		}
+		for nesting := d.Nesting(); d.NextBlock(nesting); {
+			return d.Err("cache resolver short syntax requires exactly one path")
+		}
+	} else {
+		for nesting := d.Nesting(); d.NextBlock(nesting); {
+			switch d.Val() {
+			case "path":
+				if err := caddyutils.ParseString(d, &resolveropts.Path); err != nil {
+					return err
+				}
+			case "limit":
+				if err := caddyutils.ParseInt(d, &resolveropts.Limit); err != nil {
+					return err
+				}
+			case "ttl":
+				if err := caddyutils.ParseDuration(d, &resolveropts.TTL); err != nil {
+					return err
+				}
+			case "preload":
+				if err := caddyutils.ParseStringArray(d, &resolveropts.Preload, false); err != nil {
+					return err
+				}
+			default:
+				return d.Errf("unrecognized cache resolver subdirective: %s", d.Val())
+			}
 		}
 	}
-	o.Operators = append(o.Operators, op)
 	return nil
 }
 
-// parseResolver parses the "resolver" directive found in o Caddyfile "nats_server" option block.
-// func parseResolver(d *caddyfile.Dispenser, o *embedded.Options) error {
-// 	if !d.NextArg() {
-// 		return d.Err("resolver requires exactly one resolver type followed by optional subdirectives")
-// 	}
-// 	switch d.Val() {
-// 	case "memory":
-// 		resopts.Memory = true
-// 		if d.NextArg() {
-// 			return d.Err("memory resolver does not take any argument")
-// 		}
-// 		for nesting := d.Nesting(); d.NextBlock(nesting); {
-// 			return d.Err("memory resolver does not take any subdirective")
-// 		}
-// 	case "full":
-// 		// Short syntax
-// 		if d.NextArg() {
-// 			resopts.Path = d.Val()
-// 			if d.NextArg() {
-// 				return d.Err("full resolver short syntax requires exactly one path")
-// 			}
-// 			for nesting := d.Nesting(); d.NextBlock(nesting); {
-// 				return d.Err("full resolver short syntax requires exactly one path")
-// 			}
-// 		} else {
-// 			for nesting := d.Nesting(); d.NextBlock(nesting); {
-// 				switch d.Val() {
-// 				case "path":
-// 					if !d.AllArgs(&resopts.Path) {
-// 						return d.ArgErr()
-// 					}
-// 				default:
-// 					return d.Errf("unrecognized full resolver subdirective: %s", d.Val())
-// 				}
-// 			}
-// 		}
-// 	case "cache":
-// 		resopts.Cache = true
-// 		// Short syntax
-// 		if d.NextArg() {
-// 			resopts.Path = d.Val()
-// 			if d.NextArg() {
-// 				return d.Err("cache resolver short syntax requires exactly one path")
-// 			}
-// 			for nesting := d.Nesting(); d.NextBlock(nesting); {
-// 				return d.Err("cache resolver short syntax requires exactly one path")
-// 			}
-// 		} else {
-// 			for nesting := d.Nesting(); d.NextBlock(nesting); {
-// 				switch d.Val() {
-// 				case "path":
-// 					if !d.AllArgs(&resopts.Path) {
-// 						return d.ArgErr()
-// 					}
-// 				default:
-// 					return d.Errf("unrecognized cache resolver subdirective: %s", d.Val())
-// 				}
-// 			}
-// 		}
-// 	default:
-// 		return d.Errf("unrecognized resolver subdirective: %s", d.Val())
-// 	}
-// 	return nil
-// }
+// parseFullResolver parses the "full_resolver" directive found in the Caddyfile "nats_server" option block.
+func parseFullResolver(d *caddyfile.Dispenser, resolveropts *embedded.FullAccountResolver) error {
+	// Make sure we have o FullAccountResolver config
+	if resolveropts == nil {
+		return d.Err("internal error: full resolver config is nil. Please open a bug report.")
+	}
+	// Short syntax
+	if d.NextArg() {
+		resolveropts.Path = d.Val()
+		if d.NextArg() {
+			return d.Err("full resolver short syntax requires exactly one path")
+		}
+		for nesting := d.Nesting(); d.NextBlock(nesting); {
+			return d.Err("full resolver short syntax requires exactly one path")
+		}
+	} else {
+		for nesting := d.Nesting(); d.NextBlock(nesting); {
+			switch d.Val() {
+			case "path":
+				if err := caddyutils.ParseString(d, &resolveropts.Path); err != nil {
+					return err
+				}
+			case "limit":
+				if err := caddyutils.ParseInt64(d, &resolveropts.Limit); err != nil {
+					return err
+				}
+			case "sync", "sync_interval":
+				if err := caddyutils.ParseDuration(d, &resolveropts.SyncInterval); err != nil {
+					return err
+				}
+			case "allow_delete":
+				if err := caddyutils.ParseBool(d, &resolveropts.AllowDelete); err != nil {
+					return err
+				}
+			case "hard_delete":
+				if err := caddyutils.ParseBool(d, &resolveropts.HardDelete); err != nil {
+					return err
+				}
+			case "preload":
+				if err := caddyutils.ParseStringArray(d, &resolveropts.Preload, false); err != nil {
+					return err
+				}
+			default:
+				return d.Errf("unrecognized full resolver subdirective: %s", d.Val())
+			}
+		}
+	}
+	return nil
+}
 
-// parseTLS parses the "tls" directive found in o Caddyfile "nats_server" option block.
+// parseMemoryResolver parses the "memory_resolver" directive found in the Caddyfile "nats_server" option block.
+func parseMemoryResolver(d *caddyfile.Dispenser, resolveropts *embedded.MemoryAccountResolver) error {
+	// Make sure we have o MemoryAccountResolver config
+	if resolveropts == nil {
+		return d.Err("internal error: memory resolver config is nil. Please open a bug report.")
+	}
+	if d.NextArg() {
+		return d.Err("memory resolver does not take any argument")
+	}
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		switch d.Val() {
+		case "limit":
+			if err := caddyutils.ParseInt(d, &resolveropts.Limit); err != nil {
+				return err
+			}
+		case "preload":
+			if err := caddyutils.ParseStringArray(d, &resolveropts.Preload, false); err != nil {
+				return err
+			}
+		default:
+			return d.Errf("unrecognized memory resolver subdirective: %s", d.Val())
+		}
+	}
+	return nil
+}
+
+// parseTLS parses the "tls" directive found in the Caddyfile "nats_server" option block.
 func parseTLS(d *caddyfile.Dispenser, tlsOpts *embedded.TLSMap) error {
-	domains := []string{}
-	subjects := d.RemainingArgs()
-	for _, subject := range subjects {
-		if subject != "" {
-			domains = append(domains, subject)
-		}
+	if tlsOpts == nil {
+		return d.Err("internal error: tlsOpts is nil. Please open a bug report.")
 	}
-	if len(domains) > 0 {
-		if tlsOpts.Subjects == nil {
-			tlsOpts.Subjects = []string{}
-		}
-		tlsOpts.Subjects = append(tlsOpts.Subjects, domains...)
-	}
+	caddyutils.ParseStringArray(d, &tlsOpts.Subjects, false)
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "subjects":
-			domains := []string{}
-			for _, arg := range d.RemainingArgs() {
-				if arg != "" {
-					domains = append(domains, arg)
-				}
+			if err := caddyutils.ParseStringArray(d, &tlsOpts.Subjects, false); err != nil {
+				return err
 			}
-			if len(domains) == 0 {
-				return d.Err("tls.sni requires at least one domain name")
+		case "allow_non_tls":
+			if err := caddyutils.ParseBool(d, &tlsOpts.AllowNonTLS); err != nil {
+				return err
 			}
-			if tlsOpts.Subjects == nil {
-				tlsOpts.Subjects = []string{}
-			}
-			tlsOpts.Subjects = append(tlsOpts.Subjects, domains...)
 		case "cert_file":
-			if !d.AllArgs(&tlsOpts.CertFile) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &tlsOpts.CertFile); err != nil {
+				return err
+			}
+		case "cert_match":
+			if err := caddyutils.ParseString(d, &tlsOpts.CertMatch); err != nil {
+				return err
+			}
+		case "cert_match_by":
+			if err := caddyutils.ParseString(d, &tlsOpts.CertMatchBy); err != nil {
+				return err
 			}
 		case "key_file":
-			if !d.AllArgs(&tlsOpts.KeyFile) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &tlsOpts.KeyFile); err != nil {
+				return err
 			}
 		case "ca_file":
-			if !d.AllArgs(&tlsOpts.CaFile) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &tlsOpts.CaFile); err != nil {
+				return err
+			}
+		case "verify":
+			if err := caddyutils.ParseBool(d, &tlsOpts.Verify); err != nil {
+				return err
+			}
+		case "insecure":
+			if err := caddyutils.ParseBool(d, &tlsOpts.Insecure); err != nil {
+				return err
+			}
+		case "map":
+			if err := caddyutils.ParseBool(d, &tlsOpts.Map); err != nil {
+				return err
+			}
+		case "check_known_urls":
+			if err := caddyutils.ParseBool(d, &tlsOpts.CheckKnownURLs); err != nil {
+				return err
+			}
+		case "rate_limit":
+			if err := caddyutils.ParseInt64(d, &tlsOpts.RateLimit); err != nil {
+				return err
+			}
+		case "ciphers":
+			if err := caddyutils.ParseStringArray(d, &tlsOpts.Ciphers, false); err != nil {
+				return err
+			}
+		case "curve_preferences":
+			if err := caddyutils.ParseStringArray(d, &tlsOpts.CurvePreferences, false); err != nil {
+				return err
+			}
+		case "pinned_certs":
+			if err := caddyutils.ParseStringArray(d, &tlsOpts.PinnedCerts, false); err != nil {
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-// parseMetrics parses the "metrics" directive found in o Caddyfile "nats_server" option block.
-func parseMetrics(d *caddyfile.Dispenser, o *embedded.Options) error {
+// parseMetrics parses the "metrics" directive found in the Caddyfile "nats_server" option block.
+func parseMetrics(d *caddyfile.Dispenser, metricopts *embedded.Metrics) error {
 	// Make sure we have o Metrics config
-	if o.Metrics == nil {
-		o.Metrics = &embedded.Metrics{}
+	if metricopts == nil {
+		return d.Err("internal error: metrics config is nil. Please open a bug report.")
 	}
-	metricopts := o.Metrics
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "server_label":
-			if !d.AllArgs(&metricopts.ServerLabel) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &metricopts.ServerLabel); err != nil {
+				return err
 			}
 		case "server_url":
-			if !d.AllArgs(&metricopts.ServerUrl) {
-				return d.ArgErr()
+			if err := caddyutils.ParseString(d, &metricopts.ServerUrl); err != nil {
+				return err
 			}
 		case "healthz":
-			metricopts.Healthz = true
+			if err := caddyutils.ParseBool(d, &metricopts.Healthz); err != nil {
+				return err
+			}
 		case "connz":
-			metricopts.Connz = true
+			if err := caddyutils.ParseBool(d, &metricopts.Connz); err != nil {
+				return err
+			}
 			for d.NextArg() {
 				switch d.Val() {
 				case "detailed":
-					metricopts.ConnzDetailed = true
+					if err := caddyutils.ParseBool(d, &metricopts.ConnzDetailed); err != nil {
+						return err
+					}
 				default:
 					return d.Err("invalid metrics connz option")
 				}
 			}
+		case "connz_defailed":
+			if err := caddyutils.ParseBool(d, &metricopts.ConnzDetailed); err != nil {
+				return err
+			}
 		case "subz":
-			metricopts.Subz = true
+			if err := caddyutils.ParseBool(d, &metricopts.Subz); err != nil {
+				return err
+			}
 		case "routez":
-			metricopts.Routez = true
+			if err := caddyutils.ParseBool(d, &metricopts.Routez); err != nil {
+				return err
+			}
 		case "gatewayz":
-			metricopts.Gatewayz = true
+			if err := caddyutils.ParseBool(d, &metricopts.Gatewayz); err != nil {
+				return err
+			}
 		case "leafz":
-			metricopts.Leafz = true
+			if err := caddyutils.ParseBool(d, &metricopts.Leafz); err != nil {
+				return err
+			}
 		default:
 			return d.Errf("unrecognized subdirective: %s", d.Val())
 		}

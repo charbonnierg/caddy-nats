@@ -47,7 +47,7 @@ func (s *AzureKeyvault) Provision(app secrets.App) error {
 	s.ctx = app.Context()
 	s.logger = s.ctx.Logger().Named("azure_keyvault")
 	if s.CredentialConfig == nil {
-		s.CredentialConfig = azutils.NewCredentialConfig()
+		s.CredentialConfig = new(azutils.CredentialConfig)
 	}
 	err := s.CredentialConfig.ParseEnv().Build()
 	if err != nil {

@@ -20,7 +20,7 @@ func (s *AzureKeyvault) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.Err("expected a single argument for uri directive")
 				}
 			case "creds":
-				s.CredentialConfig = azutils.NewCredentialConfig()
+				s.CredentialConfig = new(azutils.CredentialConfig)
 				if err := s.CredentialConfig.UnmarshalCaddyfile(d); err != nil {
 					return err
 				}

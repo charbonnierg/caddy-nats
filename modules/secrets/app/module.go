@@ -122,14 +122,13 @@ func (a *App) loadStoresRaw() error {
 
 // loadAutomations is used to provision all automations found in Automations property
 func (a *App) loadAutomations() error {
-	// Let's load and provision all stores
-	unm, err := a.ctx.LoadModule(a, "AutomationsRaw")
-	if err != nil {
-		return err
-	}
 	// Let's load and provision all automations
-	for _, raw := range unm.([]interface{}) {
-		automation, ok := raw.(secrets.Automation)
+	for _, raw := range a.AutomationsRaw {
+		unm, err := a.ctx.LoadModuleByID("secrets.automation", raw)
+		if err != nil {
+			return err
+		}
+		automation, ok := unm.(secrets.Automation)
 		if !ok {
 			return errors.New("failed to load automation")
 		}

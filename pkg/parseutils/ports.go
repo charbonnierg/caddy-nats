@@ -13,11 +13,11 @@ import (
 func ParsePort(value string) (int, error) {
 	t, err := strconv.Atoi(value)
 	if err != nil {
-		return 0, fmt.Errorf("cannot decode port: %v", err)
+		return 0, fmt.Errorf("cannot decode port: %w", err)
 	}
 	port, err := UInt16(t)
 	if err != nil {
-		return 0, fmt.Errorf("invalid port: %v", err)
+		return 0, fmt.Errorf("invalid port: %w", err)
 	}
 	return int(port), nil
 }
