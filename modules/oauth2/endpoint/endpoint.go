@@ -187,6 +187,7 @@ func (e *Endpoint) Setup() error {
 	validator := server.NewValidator(e.opts.EmailDomains, e.opts.AuthenticatedEmailsFile)
 	proxy, err := server.NewEmbeddedOauthProxy(e.opts, validator, e.store.GetStore(), &up)
 	if err != nil {
+		e.logger.Error("failed to create oauth2-proxy", zap.Error(err))
 		return err
 	}
 	up.setSessionLoader(proxy.LoadCookiedSession)

@@ -487,6 +487,7 @@ func parseMqtt(d *caddyfile.Dispenser, mqttopts *embedded.MQTT) error {
 					return err
 				}
 			case "tls":
+				mqttopts.TLS = fnutils.DefaultIfNil(mqttopts.TLS, &embedded.TLSMap{})
 				if err := parseTLS(d, mqttopts.TLS); err != nil {
 					return err
 				}
@@ -561,6 +562,7 @@ func parseWebsocket(d *caddyfile.Dispenser, wsopts *embedded.Websocket) error {
 					return err
 				}
 			case "tls":
+				wsopts.TLS = fnutils.DefaultIfNil(wsopts.TLS, &embedded.TLSMap{})
 				if err := parseTLS(d, wsopts.TLS); err != nil {
 					return err
 				}
@@ -609,6 +611,7 @@ func parseLeafnodes(d *caddyfile.Dispenser, leafopts *embedded.Leafnode) error {
 					return err
 				}
 			case "tls":
+				leafopts.TLS = fnutils.DefaultIfNil(leafopts.TLS, &embedded.TLSMap{})
 				if err := parseTLS(d, leafopts.TLS); err != nil {
 					return err
 				}
@@ -908,7 +911,7 @@ func parseMetrics(d *caddyfile.Dispenser, metricopts *embedded.Metrics) error {
 					return d.Err("invalid metrics connz option")
 				}
 			}
-		case "connz_defailed":
+		case "connz_detailed":
 			if err := caddyutils.ParseBool(d, &metricopts.ConnzDetailed); err != nil {
 				return err
 			}

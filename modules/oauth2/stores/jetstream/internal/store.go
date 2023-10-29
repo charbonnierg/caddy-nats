@@ -15,7 +15,7 @@ import (
 )
 
 func NewStore(name string, client *natsutils.Client, ttl time.Duration, logger *zap.Logger) *Store {
-	return &Store{kvstore: KeyValueStore{name: name, client: client, ttl: ttl}, logger: logger}
+	return &Store{kvstore: KeyValueStore{name: name, client: client, ttl: ttl, logger: logger.Named("kv")}, logger: logger}
 }
 
 type Store struct {
@@ -51,7 +51,12 @@ func (s *Store) Load(ctx context.Context, key string) ([]byte, error) {
 		s.logger.Error("failed to get key", zap.Error(err))
 		return nil, err
 	}
-	return decode(item.Value())
+	t, err := decode(item.Value())
+	if err != nil {
+		s.logger.Error("failed to decode session state", zap.Error(err))
+		return nil, err
+	}
+	return t, nil
 }
 
 func (s *Store) VerifyConnection(ctx context.Context) error {
@@ -80,7 +85,11 @@ func (s *Store) Save(ctx context.Context, key string, value []byte, expires time
 		return err
 	}
 	_, err = kv.Put(key, encoded)
-	return err
+	if err != nil {
+		s.logger.Error("failed to put key", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 // encode will encode arbitrary data with an expiration time.

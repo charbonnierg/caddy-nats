@@ -31,7 +31,7 @@ type JetStreamStore struct {
 }
 
 func (s *JetStreamStore) Provision(app oauth2.App, opts *options.Cookie) error {
-	s.logger, _ = zap.NewDevelopment()
+	s.logger = app.Logger().Named("oauth2-jetstream")
 	if s.Client == nil {
 		s.Client = &natsutils.Client{}
 	}
@@ -62,6 +62,7 @@ func (JetStreamStore) CaddyModule() caddy.ModuleInfo {
 }
 
 func (s *JetStreamStore) GetStore() sessionsapi.SessionStore {
+	s.logger.Info("Loading store", zap.String("name", s.Name))
 	return s.sessionsstore
 }
 

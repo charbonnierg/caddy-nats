@@ -9,12 +9,14 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/quara-dev/beyond/pkg/natsutils"
+	"go.uber.org/zap"
 )
 
 // KeyValueStore is a JetStream key-value store.
 // It is lazy and will only connect the first time
 // kv method is called.
 type KeyValueStore struct {
+	logger *zap.Logger
 	natskv nats.KeyValue
 	name   string
 	ttl    time.Duration
@@ -23,6 +25,7 @@ type KeyValueStore struct {
 
 func (s *KeyValueStore) lazy() (nats.KeyValue, error) {
 	if s.natskv == nil {
+		s.logger.Info("connecting to jetstream")
 		conn, err := s.client.Connect()
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to jetstream: %v", err)
@@ -30,6 +33,7 @@ func (s *KeyValueStore) lazy() (nats.KeyValue, error) {
 		kv, err := conn.JetStream().KeyValue(s.name)
 		if err != nil {
 			if err == nats.ErrBucketNotFound {
+				s.logger.Info("creating jetstream key-value store")
 				// Let's create the key value store
 				kv, err = conn.JetStream().CreateKeyValue(&nats.KeyValueConfig{
 					Bucket:      s.name,

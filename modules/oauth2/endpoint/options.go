@@ -264,7 +264,8 @@ func (o *Options) oauth2proxyOptions(repl *caddy.Replacer) *options.Options {
 	}
 	if o.Providers != nil {
 		opts.Providers = o.Providers
-		for _, provider := range opts.Providers {
+		for idx := range opts.Providers {
+			provider := &opts.Providers[idx]
 			provider.ClientID = repl.ReplaceAll(provider.ClientID, "")
 			provider.ClientSecret = repl.ReplaceAll(provider.ClientSecret, "")
 			provider.ClientSecretFile = repl.ReplaceAll(provider.ClientSecretFile, "")

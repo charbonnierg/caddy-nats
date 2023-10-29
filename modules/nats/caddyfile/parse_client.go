@@ -7,9 +7,17 @@ import (
 )
 
 func ParseClient(d *caddyfile.Dispenser, c *natsutils.Client) error {
+	if d.NextArg() {
+		switch d.Val() {
+		case "in_process":
+			c.Internal = true
+		default:
+			c.Name = d.Val()
+		}
+	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
-		case "internal":
+		case "in_process", "internal":
 			if err := caddyutils.ParseBool(d, &c.Internal); err != nil {
 				return err
 			}

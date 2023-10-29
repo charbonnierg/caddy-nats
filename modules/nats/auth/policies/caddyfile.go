@@ -39,7 +39,7 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Err("expected password")
 					}
 					connectOpts.Password = d.Val()
-				case "connection_name":
+				case "client_name", "connection_name":
 					if connectOpts == nil {
 						connectOpts = new(ConnectOptsMatcher)
 					}
@@ -47,7 +47,7 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Err("expected name")
 					}
 					connectOpts.Name = d.Val()
-				case "connection_type":
+				case "type", "connection_type":
 					if clientInfo == nil {
 						clientInfo = new(ClientInfoMatcher)
 					}
@@ -76,6 +76,8 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Err("expected host")
 					}
 					clientInfo.Host = d.Val()
+				default:
+					return d.Errf("unknown matcher '%s'", d.Val())
 				}
 			}
 		case "callout":

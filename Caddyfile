@@ -1,15 +1,82 @@
 {
-	debug
 	order oauth2_session before handle
+	debug
+	cert_issuer internal
+	servers {
+		metrics
+	}
+	secrets {
+		store az-kv-srv-01 azure_keyvault https://kv-srv-01.vault.azure.net
+		automate {
+			source some-secret@az-kv-srv-01
+			interval 1h
+			template "The value is: {some-secret@az-kv-srv-01}"
+			handle file {
+				path ./secret.txt
+				chmod 0600
+				notify exec {
+					command touch ./some-other-file
+				}
+			}
+		}
+	}
 	nats {
+		server {
+			debug
+			name srv-01
+			port 4222
+			tls local.quara-dev.com
+			http_port 8222
+			system_account SYS
+			accounts {
+				OAUTH2 {
+					jetstream
+				}
+				APP {
+					map_subject "canary.req.>" {
+						to "req.>" weight 50
+						to "beta.req.>" weight 50
+					}
+					map_subject "pub.>" to "pub.srv-01.>"
+				}
+				SYS {
+					export_service "$SYS.REQ.SERVER.PING" to MONITORING
+				}
+				MONITORING {
+					import_service "$SYS.REQ.SERVER.PING" from SYS
+				}
+			}
+			jetstream {
+				max_disk 10GB
+				max_memory 1GB
+			}
+			websocket {
+				port 10443
+				advertise nats.local.quara-dev.com:10443
+				tls nats.local.quara-dev.com
+			}
+			metrics {
+				connz
+				connz_detailed
+			}
+		}
 		auth_service {
-			client {
-				internal
+			client in_process {
 				name auth-service
 			}
 			default deny
 			policy {
 				match {
+					type in_process
+					client_name oauth2-az-endpoint
+				}
+				callout allow {
+					account OAUTH2
+				}
+			}
+			policy {
+				match {
+					type websocket
 					username APP
 				}
 				callout oauth2 {
@@ -24,10 +91,8 @@
 			}
 			policy {
 				match {
+					token SYS
 					host 127.0.0.1
-					kind Client
-					connection_type nats
-					username SYS
 				}
 				callout allow {
 					account SYS
@@ -35,50 +100,45 @@
 			}
 			policy {
 				match {
-					connection_type in_process
-					username OAUTH2
+					token monitoring
+					host 127.0.0.1
 				}
 				callout allow {
-					account OAUTH2
-				}
-			}
-			policy {
-				match {
-					token TEST
-					tls_server_name local.quara-dev.com
-				}
-				callout allow {
-					account TEST
+					account MONITORING
 				}
 			}
 		}
-		server {
-			trace_verbose
-			name srv-01
-			port 4222
-			http_port 8222
-			system_account SYS
-			jetstream
-			websocket {
-				port 10443
-				advertise local.quara-dev.com:10443
-				tls local.quara-dev.com other.local.quara-dev.com
+	}
+	oauth2 {
+		endpoint az {
+			store jetstream {
+				name OAUTH2-SESSIONS
+				client in_process {
+					name oauth2-az-endpoint
+				}
 			}
-			accounts {
-				TEST {
-					jetstream
-				}
-				OAUTH2 {
-					jetstream
-				}
-				APP {
-					jetstream
-					import_stream "$SYS.REQ.SERVER.PING" from "SYS"
-					}
-				}
-				SYS {
-					export_stream "$SYS.REQ.SERVER.PING" to "APP"
-				}
+			display_debug
+			cookie_secure
+			cookie_name _oauth2_session
+			cookie_http_only no
+			cookie_domains .local.quara-dev.com
+			email_domains *
+			whitelist_domains .local.quara-dev.com
+			extra_jwt_issuers https://sts.windows.net/96bdcf75-3f33-4995-966b-d8eddb861f9b/=4a224c79-38e2-487f-96e0-5f4febfa4ce1
+			provider oidc {
+				id azure-ad
+				name "Azure AD"
+				client_id "4a224c79-38e2-487f-96e0-5f4febfa4ce1"
+				client_secret "{secret.oauth2-client-secret@az-kv-srv-01}"
+				scope openid email profile
+				login_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/authorize
+				redeem_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/token
+				profile_url https://graph.microsoft.com/v1.0/me
+				oidc_issuer_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0
+				oidc_jwks_url https://login.microsoftonline.com/common/discovery/keys
+				oidc_audience_claims aud
+				oidc_email_claim email
+				oidc_user_id_claim email
 			}
 		}
 	}
@@ -141,49 +201,20 @@
 			zpages
 		}
 	}
-	oauth2 {
-		endpoint az {
-			store jetstream {
-				client {
-					internal
-					name oauth2-az-endpoint
-					username OAUTH2
-				}
-			}
-			cookie_secure
-			cookie_http_only no
-			cookie_domains .localhost
-			email_domains *
-			whitelist_domains .localhost
-			extra_jwt_issuers https://sts.windows.net/96bdcf75-3f33-4995-966b-d8eddb861f9b/=4a224c79-38e2-487f-96e0-5f4febfa4ce1
-			provider oidc {
-				id azure-ad
-				name "Azure AD"
-				client_id 4a224c79-38e2-487f-96e0-5f4febfa4ce1
-				client_secret {secret.oauth2-client-secret@az-kv-srv-01}
-				scope openid email profile
-				login_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/authorize
-				redeem_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/token
-				profile_url https://graph.microsoft.com/v1.0/me
-				oidc_issuer_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0
-				oidc_jwks_url https://login.microsoftonline.com/common/discovery/keys
-				oidc_audience_claims aud
-				oidc_email_claim email
-				oidc_user_id_claim email
-			}
-		}
-	}
-	secrets {
-		store az-kv-srv-01 azure_keyvault {
-			uri https://kv-srv-01.vault.azure.net
-		}
-	}
-	local_certs
 }
 
 local.quara-dev.com {
+	log
 	oauth2_session {
 		endpoint az
 	}
 	respond "hello world"
+}
+
+metrics.local.quara-dev.com {
+	log
+	oauth2_session {
+		endpoint az
+	}
+	metrics
 }

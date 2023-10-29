@@ -14,6 +14,6 @@
 /nats2.conf
 /config.json
 /caddy
-/caddy.json
+/caddy.exe
 /config-operator.json
 /cmd/qnats

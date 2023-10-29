@@ -76,6 +76,9 @@ func (s *AuthService) Provision(app nats.App) error {
 		client := *s.ClientRaw
 		s.client = client
 	}
+	if s.client.Name == "" {
+		s.client.Name = "auth_service"
+	}
 	if s.AuthSigningKey != "" && s.InternalAccount != "" {
 		return errors.New("auth signing key and internal account are mutually exclusive")
 	}

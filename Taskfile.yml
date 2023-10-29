@@ -33,14 +33,35 @@ tasks:
 
   build:
     desc: Build caddy server with all modules
+    deps:
+      - build:linux
+      - build:windows
+
+  build:darwin:
+    desc: Build for darwin
     cmds:
-      - mkdir -p dist
+      - go build -o caddy ./cmd/caddy
+    env:
+      GOOS: darwin
+      GOARCH: amd64
+
+  build:linux:
+    desc: Build for linux
+    cmds:
       - go build -o caddy ./cmd/caddy
       - sudo setcap cap_net_bind_service=+ep ./caddy
     env:
       CGO_ENABLED: 0
 
-  xbuild:
+  build:windows:
+    desc: Build for windows
+    cmds:
+      - go build -o caddy.exe ./cmd/caddy
+    env:
+      GOOS: windows
+      GOARCH: amd64
+
+  release:build:
     desc: Build cross-platform caddy server with all modules
     cmds:
       - goreleaser build --clean
