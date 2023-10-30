@@ -16,15 +16,6 @@ func Int32(i int) (int32, error) {
 	return int32(i), nil
 }
 
-// UInt32 converts int to uint32 in a safe way.
-// You get error when the value is out of the 32-bit unsigned range (0 through 4294967295).
-func UInt32(i int) (uint32, error) {
-	if i > (1<<32-1) || i < 0 {
-		return 0, ErrUInt32OutOfRange
-	}
-	return uint32(i), nil
-}
-
 // Int16 converts int to int16 in a safe way.
 // You get error when the value is out of the 16-bit range (-32768 through 32767).
 func Int16(i int) (int16, error) {
