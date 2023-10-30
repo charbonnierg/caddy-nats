@@ -15,6 +15,7 @@ require (
 	github.com/damianiandrea/mongodb-nats-connector v0.0.0-20230930202719-75470b87f61e
 	github.com/docker/docker v24.0.6+incompatible
 	github.com/docker/go-connections v0.4.1-0.20210727194412-58542c764a11
+	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/google/go-cmp v0.6.0
 	github.com/libdns/digitalocean v0.0.0-20230728223659-4f9064657aea
@@ -173,7 +174,6 @@ require (
 	github.com/digitalocean/godo v1.99.0 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
 	github.com/envoyproxy/go-control-plane v0.11.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.2 // indirect
