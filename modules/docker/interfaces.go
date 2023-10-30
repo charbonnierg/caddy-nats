@@ -3,5 +3,15 @@
 
 package docker
 
+import (
+	"github.com/caddyserver/caddy/v2"
+	"github.com/docker/docker/api/types/container"
+)
+
 // App is the interface implemented by the docker caddy app module.
 type App interface{}
+
+type Container interface {
+	ContainerConfig(repl *caddy.Replacer) (*container.Config, error)
+	ContainerHostConfig(repl *caddy.Replacer) (*container.HostConfig, error)
+}
