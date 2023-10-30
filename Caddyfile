@@ -20,12 +20,35 @@
 			}
 		}
 	}
+	docker {
+		network mynetwork {
+			driver bridge
+			ipam {
+				subnet 172.200.200.0/24
+				gateway 172.200.200.1
+			}
+		}
+		container test {
+			image docker.io/library/alpine:latest
+			command sleep 3600
+			network mynetwork
+			restart always
+			mount /data/test to /data
+			environment {
+				ENV1 "value1"
+				ENV2 "value2"
+			}
+			env ENV3 "value3"
+			label com.quara-dev.service "test"
+			label com.quara-dev.service.version "1.0.0"
+			label com.quara-dev.service.env "dev"
+		}
+	}
 	nats {
 		server {
 			debug
 			name srv-01
 			port 4222
-			tls local.quara-dev.com
 			http_port 8222
 			system_account SYS
 			accounts {

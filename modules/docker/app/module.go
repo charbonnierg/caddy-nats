@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/quara-dev/beyond"
 	"github.com/quara-dev/beyond/modules/docker"
 	"github.com/quara-dev/beyond/modules/secrets"
@@ -15,16 +16,20 @@ import (
 
 func init() {
 	caddy.RegisterModule(new(App))
+	httpcaddyfile.RegisterGlobalOption("docker", parseGlobalOption)
 }
 
 type App struct {
-	client      *DockerClient
-	specs       []*ContainerSpec
-	definitions []*ContainerDefinition
-	ctx         caddy.Context
-	logger      *zap.Logger
-	Client      *ClientOptions        `json:"client,omitempty"`
-	Containers  map[string]*Container `json:"containers,omitempty"`
+	client          *DockerClient
+	containersSpecs []*ContainerSpec
+	networksSpecs   []*NetworkSpec
+	containers      []*ContainerDefinition
+	networks        []*NetworkDefinition
+	ctx             caddy.Context
+	logger          *zap.Logger
+	Client          *ClientOptions        `json:"client,omitempty"`
+	Containers      map[string]*Container `json:"containers,omitempty"`
+	Networks        map[string]*Network   `json:"networks,omitempty"`
 }
 
 func (App) CaddyModule() caddy.ModuleInfo {
@@ -37,7 +42,8 @@ func (App) CaddyModule() caddy.ModuleInfo {
 func (a *App) Provision(ctx caddy.Context) error {
 	a.ctx = ctx
 	a.logger = ctx.Logger()
-	a.definitions = []*ContainerDefinition{}
+	a.containers = []*ContainerDefinition{}
+	a.networks = []*NetworkDefinition{}
 	// This will load the beyond module and register the "secrets" app within beyond module
 	b, err := beyond.Register(ctx, a)
 	if err != nil {
@@ -58,6 +64,16 @@ func (a *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 	a.client = client
+	for name, n := range a.Networks {
+		cfg, err := n.NetworkConfig(repl)
+		if err != nil {
+			return err
+		}
+		a.networks = append(a.networks, &NetworkDefinition{
+			Name:   name,
+			Config: cfg,
+		})
+	}
 	for name, c := range a.Containers {
 		cfg, err := c.ContainerConfig(repl)
 		if err != nil {
@@ -67,10 +83,15 @@ func (a *App) Provision(ctx caddy.Context) error {
 		if err != nil {
 			return err
 		}
-		a.definitions = append(a.definitions, &ContainerDefinition{
-			Name:       name,
-			Config:     cfg,
-			HostConfig: hostCfg,
+		networkCfg, err := c.ContainerNetworkConfig(repl)
+		if err != nil {
+			return err
+		}
+		a.containers = append(a.containers, &ContainerDefinition{
+			Name:             name,
+			Config:           cfg,
+			HostConfig:       hostCfg,
+			NetworkingConfig: networkCfg,
 		})
 	}
 	return nil
@@ -78,20 +99,28 @@ func (a *App) Provision(ctx caddy.Context) error {
 
 func (a *App) Start() error {
 	a.logger.Info("Starting docker app")
-	for _, d := range a.definitions {
+	for _, n := range a.networks {
+		a.logger.Info("Provisioning network", zap.String("name", n.Name))
+		spec, err := a.client.ProvisionNetwork(n)
+		if err != nil {
+			return err
+		}
+		a.networksSpecs = append(a.networksSpecs, spec)
+	}
+	for _, d := range a.containers {
 		a.logger.Info("Starting container", zap.String("name", d.Name), zap.String("image", d.Config.Image))
 		spec, err := a.client.RunContainer(d)
 		if err != nil {
 			return err
 		}
-		a.specs = append(a.specs, spec)
+		a.containersSpecs = append(a.containersSpecs, spec)
 	}
 	return nil
 }
 
 func (a *App) Stop() error {
 	a.logger.Info("Stopping docker app")
-	for _, s := range a.specs {
+	for _, s := range a.containersSpecs {
 		a.logger.Info("Stopping container", zap.String("name", s.Definition.Name), zap.String("image", s.Definition.Config.Image))
 		if err := a.client.RemoveContainer(s.ID); err != nil {
 			return err

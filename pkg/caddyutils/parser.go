@@ -104,6 +104,23 @@ func ParseInt(d *caddyfile.Dispenser, dest *int) error {
 	return nil
 }
 
+func ParseIntArray(d *caddyfile.Dispenser, dest *[]int) error {
+	values := []string{}
+	if err := ParseStringArray(d, &values, false); err != nil {
+		return err
+	}
+	ports := make([]int, len(values))
+	for idx, value := range values {
+		port, err := parseutils.ParsePort(value)
+		if err != nil {
+			return err
+		}
+		ports[idx] = port
+	}
+	*dest = append(*dest, ports...)
+	return nil
+}
+
 func ParseUInt8(d *caddyfile.Dispenser, dest *uint8) error {
 	var value int
 	if err := ParseInt(d, &value); err != nil {
@@ -190,6 +207,18 @@ func ParseDuration(d *caddyfile.Dispenser, dest *time.Duration) error {
 		return d.Errf("invalid duration value: %s", d.Val())
 	}
 	*dest = val
+	return nil
+}
+
+func ParseSecondsDuration(d *caddyfile.Dispenser, dest *int) error {
+	var duration time.Duration
+	if err := ParseDuration(d, &duration); err != nil {
+		return err
+	}
+	seconds := int(duration.Seconds())
+	if duration > 0 && seconds == 0 {
+		seconds = 1
+	}
 	return nil
 }
 

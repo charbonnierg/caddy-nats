@@ -2,16 +2,29 @@ package app
 
 import (
 	"context"
+	"errors"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 )
 
+type NetworkDefinition struct {
+	Name   string
+	Config *types.NetworkCreate
+}
+
 type ContainerDefinition struct {
-	Name       string
-	Config     *container.Config
-	HostConfig *container.HostConfig
+	Name             string
+	Config           *container.Config
+	HostConfig       *container.HostConfig
+	NetworkingConfig *network.NetworkingConfig
+}
+
+type NetworkSpec struct {
+	ID         string
+	Definition *NetworkDefinition
 }
 
 type ContainerSpec struct {
@@ -46,12 +59,55 @@ func (o *ClientOptions) Opts() []client.Opt {
 	return opts
 }
 
+func (c *DockerClient) networkExists(definition *NetworkDefinition) (*NetworkSpec, error) {
+	response, err := c.client.NetworkInspect(c.ctx, definition.Name, types.NetworkInspectOptions{})
+	if err != nil {
+		if client.IsErrNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if response.Driver != definition.Config.Driver {
+		return nil, errors.New("network driver mismatch")
+	}
+	return &NetworkSpec{
+		ID:         response.ID,
+		Definition: definition,
+	}, nil
+}
+
+func (c *DockerClient) ProvisionNetwork(definition *NetworkDefinition) (*NetworkSpec, error) {
+	existing, err := c.networkExists(definition)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return existing, nil
+	}
+	if definition.Config == nil {
+		return nil, errors.New("network config is nil")
+	}
+	response, err := c.client.NetworkCreate(
+		c.ctx,
+		definition.Name,
+		*definition.Config,
+	)
+	if err != nil {
+		return nil, err
+	}
+	nid := response.ID
+	return &NetworkSpec{
+		ID:         nid,
+		Definition: definition,
+	}, nil
+}
+
 func (c *DockerClient) RunContainer(definition *ContainerDefinition) (*ContainerSpec, error) {
 	response, err := c.client.ContainerCreate(
 		c.ctx,
 		definition.Config,
 		definition.HostConfig,
-		nil,
+		definition.NetworkingConfig,
 		nil,
 		definition.Name,
 	)

@@ -8,12 +8,20 @@ import (
 	"github.com/docker/docker/api/types/blkiodev"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 	"github.com/quara-dev/beyond/modules/docker"
 	"github.com/quara-dev/beyond/pkg/datatypes"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 )
+
+// EndpointIPAMConfig represents IPAM configurations for the endpoint
+type EndpointIPAMConfig struct {
+	IPv4Address  string   `json:"ipv4_address,omitempty"`
+	IPv6Address  string   `json:"ipv6_address,omitempty"`
+	LinkLocalIPs []string `json:"link_local_ips,omitempty"`
+}
 
 type Mount struct {
 	Type           string                `json:",omitempty"`
@@ -33,8 +41,8 @@ type PortBinding struct {
 	ContainerPort int    `json:"container,omitempty"`
 }
 
-// HealthConfig holds configuration settings for the HEALTHCHECK feature.
-type HealthConfig struct {
+// HealthcheckConfig holds configuration settings for the HEALTHCHECK feature.
+type HealthcheckConfig struct {
 	Test        []string      `json:"test,omitempty"`
 	Interval    time.Duration `json:"interval,omitempty"`
 	Timeout     time.Duration `json:"timeout,omitempty"`
@@ -174,25 +182,44 @@ type HostConfig struct {
 	Init          *bool    `json:"init,omitempty"`           // Run a custom init inside the container, if null, use the daemon's configured settings
 }
 
+type NetworkConfig struct {
+	// Configurations
+	Links   []string `json:"links,omitempty"`
+	Aliases []string `json:"aliases,omitempty"`
+	// Operational data
+	NetworkID           string              `json:"id,omitempty"`
+	EndpointID          string              `json:"endpoint_id,omitempty"`
+	Gateway             string              `json:"gateway,omitempty"`
+	IPAMConfig          *EndpointIPAMConfig `json:"ipam_config,omitempty"`
+	IPAddress           string              `json:"ip_address,omitempty"`
+	IPPrefixLen         int                 `json:"ip_prefix_len,omitempty"`
+	IPv6Gateway         string              `json:"ipv6_gateway,omitempty"`
+	GlobalIPv6Address   string              `json:"global_ipv6_address,omitempty"`
+	GlobalIPv6PrefixLen int                 `json:"global_ipv6_prefix_len,omitempty"`
+	MacAddress          string              `json:"mac_address,omitempty"`
+	DriverOpts          map[string]string   `json:"driver_opts,omitempty"`
+}
+
 type Container struct {
 	HostConfig
 	Resources
-	Image           string            `json:"image"`
-	Hostname        string            `json:"hostname,omitempty"`
-	Domainname      string            `json:"domain,omitempty"`
-	User            string            `json:"user,omitempty"`
-	ExposedPorts    []int             `json:"ports,omitempty"`
-	Env             map[string]string `json:"env,omitempty"`
-	Cmd             []string          `json:"cmd,omitempty"`
-	Healthcheck     *HealthConfig     `json:"healthcheck,omitempty"`
-	Volumes         []string          `json:"volumes,omitempty"`
-	WorkingDir      string            `json:"working_dir,omitempty"`
-	Entrypoint      []string          `json:"entrypoint,omitempty"`
-	NetworkDisabled bool              `json:"network_disabled,omitempty"`
-	MacAddress      string            `json:"mac_address,omitempty"`
-	Labels          map[string]string `json:"labels,omitempty"`
-	StopSignal      string            `json:"stop_signal,omitempty"`
-	StopTimeout     *int              `json:"stop_timeout,omitempty"`
+	Image           string             `json:"image"`
+	Hostname        string             `json:"hostname,omitempty"`
+	Domainname      string             `json:"domain,omitempty"`
+	User            string             `json:"user,omitempty"`
+	ExposedPorts    []int              `json:"ports,omitempty"`
+	Env             map[string]string  `json:"env,omitempty"`
+	Cmd             []string           `json:"cmd,omitempty"`
+	Healthcheck     *HealthcheckConfig `json:"healthcheck,omitempty"`
+	Volumes         []string           `json:"volumes,omitempty"`
+	WorkingDir      string             `json:"working_dir,omitempty"`
+	Entrypoint      []string           `json:"entrypoint,omitempty"`
+	NetworkDisabled bool               `json:"network_disabled,omitempty"`
+	MacAddress      string             `json:"mac_address,omitempty"`
+	Labels          map[string]string  `json:"labels,omitempty"`
+	StopSignal      string             `json:"stop_signal,omitempty"`
+	StopTimeout     *int               `json:"stop_timeout,omitempty"`
+	Networks        []*NetworkConfig   `json:"networks,omitempty"`
 }
 
 func (c *Container) logConfig() container.LogConfig {
@@ -493,6 +520,36 @@ func (c *Container) ContainerHostConfig(repl *caddy.Replacer) (*container.HostCo
 			IOMaximumBandwidth:   c.IOMaximumBandwidth,
 		},
 	}, nil
+}
+
+func (c *Container) ContainerNetworkConfig(repl *caddy.Replacer) (*network.NetworkingConfig, error) {
+	cfg := network.NetworkingConfig{}
+	endpoints := make(map[string]*network.EndpointSettings)
+	for _, n := range c.Networks {
+		ipam := &network.EndpointIPAMConfig{}
+		if n.IPAMConfig != nil {
+			ipam.IPv4Address = n.IPAMConfig.IPv4Address
+			ipam.IPv6Address = n.IPAMConfig.IPv6Address
+			ipam.LinkLocalIPs = n.IPAMConfig.LinkLocalIPs
+		} else {
+			ipam = nil
+		}
+		endpoints[n.NetworkID] = &network.EndpointSettings{
+			NetworkID:           n.NetworkID,
+			EndpointID:          n.EndpointID,
+			Gateway:             n.Gateway,
+			IPAMConfig:          ipam,
+			IPAddress:           n.IPAddress,
+			IPPrefixLen:         n.IPPrefixLen,
+			IPv6Gateway:         n.IPv6Gateway,
+			GlobalIPv6Address:   n.GlobalIPv6Address,
+			GlobalIPv6PrefixLen: n.GlobalIPv6PrefixLen,
+			MacAddress:          n.MacAddress,
+			DriverOpts:          n.DriverOpts,
+		}
+	}
+	cfg.EndpointsConfig = endpoints
+	return &cfg, nil
 }
 
 var (
