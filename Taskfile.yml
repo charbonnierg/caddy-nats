@@ -40,7 +40,7 @@ tasks:
   build:darwin:
     desc: Build for darwin
     cmds:
-      - go build -o caddy ./cmd/caddy
+      - go build -o caddy ./cmd/standard
     env:
       GOOS: darwin
       GOARCH: amd64
@@ -48,7 +48,7 @@ tasks:
   build:linux:
     desc: Build for linux
     cmds:
-      - go build -o caddy ./cmd/caddy
+      - go build -o caddy ./cmd/standard
       - sudo setcap cap_net_bind_service=+ep ./caddy
     env:
       CGO_ENABLED: 0
@@ -56,7 +56,7 @@ tasks:
   build:windows:
     desc: Build for windows
     cmds:
-      - go build -o caddy.exe ./cmd/caddy
+      - go build -o caddy.exe ./cmd/standard
     env:
       GOOS: windows
       GOARCH: amd64
