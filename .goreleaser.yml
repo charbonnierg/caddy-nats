@@ -1,6 +1,7 @@
 # .goreleaser.yml
 builds:
   - id: caddy
+    binary: caddy
     main: "./cmd/standard/main.go"
     goos:
       - darwin
@@ -28,6 +29,7 @@ builds:
     flags:
       - -trimpath
   - id: caddy-mini
+    binary: caddy-mini
     main: "./cmd/minimal/main.go"
     goos:
       - darwin

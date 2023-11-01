@@ -1,10 +1,13 @@
 {
+	# This line is required to tell our Web Server that authentication should happen BEFORE forwarding requests to handler
 	order oauth2_session before handle
-	debug
+	# This line is required to use a local certificate issuer rather than Let's Encrypt or ZeroSSL
 	cert_issuer internal
+	# This line is required to enable metrics our Web Server
 	servers {
 		metrics
 	}
+	# This block is required to have access to secrets stored in Azure Key Vault and to be able to use them in our configuration
 	secrets {
 		store az-kv-srv-01 azure_keyvault https://kv-srv-01.vault.azure.net
 		automate {
@@ -20,6 +23,7 @@
 			}
 		}
 	}
+	# This block is required to configure and start docker containers and networks when our Web Server starts
 	docker {
 		network mynetwork {
 			driver bridge
@@ -44,6 +48,7 @@
 			label com.quara-dev.service.env "dev"
 		}
 	}
+	# This block is required to configure and start NATS server when our Web Server starts
 	nats {
 		server {
 			debug
@@ -132,6 +137,8 @@
 			}
 		}
 	}
+	# This block is required to configure OAuth2 authentication and authorization endpoints
+	# An endpoint is a combination of a store and a provider. A store is used to save sessions and a provider is used to authenticate users.
 	oauth2 {
 		endpoint az {
 			store jetstream {
@@ -165,67 +172,60 @@
 			}
 		}
 	}
+	# This block is required to configure and start OpenTelemetry Collector when our Web Server starts
 	otelcol {
+		extension basicauth/client {
+			username {secret.quara-grafana-stack-id@az-kv-srv-01}
+			password {secret.quara-grafana-stack-token@az-kv-srv-01}
+		}
+		receiver prometheus {
+			scrape_interval 10s
+			scrape_timeout 1s
+			# Scrap caddy and otel-collector metrics
+			scrape_config caddy-beyond localhost:2019
+			scrape_config otel-collector localhost:2020
+			# Scrap additional metrics
+			# ...
+		}
+		receiver otlp {
+			grpc 127.0.0.1:4317
+			http 127.0.0.1:4318
+		}
+		exporter otlphttp {
+			endpoint https://otlp-gateway-prod-eu-west-3.grafana.net/otlp
+			authenticator basicauth/client
+		}
+		processor batch
+		processor attributes {
+			action insert {
+				key beyond.server
+				value srv-01
+			}
+		}
 		service {
-			extensions health_check pprof zpages
-			pipelines {
-				traces {
-					receivers otlp
-					processors batch
-					exporters debug
-				}
-				metrics {
-					receivers otlp
-					processors batch
-					exporters debug
-				}
-				logs {
-					receivers otlp
-					processors batch
-					exporters debug
-				}
+			metrics 127.0.0.1:2020
+			metrics_level detailed
+			extensions basicauth/client
+			trace_pipeline {
+				receivers otlp
+				processors batch attributes
+				exporters otlphttp
 			}
-			telemetry {
-				logs {
-					level debug
-					initial_fields {
-						service server-01
-					}
-				}
-				metrics {
-					level detailed
-					address 127.0.0.1:8888
-				}
+			metric_pipeline {
+				receivers otlp prometheus
+				processors batch attributes
+				exporters otlphttp
 			}
-		}
-		receivers {
-			otlp {
-				protocols {
-					grpc {
-						endpoint 127.0.0.1:4318
-					}
-					http {
-						endpoint 127.0.0.1:4317
-					}
-				}
+			log_pipeline {
+				receivers otlp
+				processors batch attributes
+				exporters otlphttp
 			}
-		}
-		processors {
-			batch
-		}
-		exporters {
-			debug
-		}
-		extensions {
-			health_check {
-				endpoint 127.0.0.1:4315
-			}
-			pprof
-			zpages
 		}
 	}
 }
 
+# Each website is defined by a block like this one
 local.quara-dev.com {
 	log
 	oauth2_session {
@@ -234,6 +234,17 @@ local.quara-dev.com {
 	respond "hello world"
 }
 
+# This is another website
+admin.local.quara-dev.com {
+	log
+	oauth2_session {
+		endpoint az
+	}
+	root * ./www/index.html
+	file_server
+}
+
+# Yet another website, which serves web server and NATS metrics
 metrics.local.quara-dev.com {
 	log
 	oauth2_session {

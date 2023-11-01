@@ -62,14 +62,17 @@ func ParseStringArray(d *caddyfile.Dispenser, dest *[]string, allowEmpty bool) e
 	return nil
 }
 
-func ExpectString(d *caddyfile.Dispenser, expected string) error {
+func ExpectString(d *caddyfile.Dispenser, expected ...string) error {
 	if !d.NextArg() {
 		return d.Errf("expected %s", expected)
 	}
-	if d.Val() != expected {
-		return d.Errf("expected %s", expected)
+	val := d.Val()
+	for _, expected := range expected {
+		if val == expected {
+			return nil
+		}
 	}
-	return nil
+	return d.Errf("expected %s, got %s", expected, val)
 }
 
 func ParseString(d *caddyfile.Dispenser, dest *string) error {
@@ -77,6 +80,36 @@ func ParseString(d *caddyfile.Dispenser, dest *string) error {
 		return d.Err("expected a string value")
 	}
 	*dest = d.Val()
+	return nil
+}
+
+func ParseStringMap(d *caddyfile.Dispenser, dest *map[string]string) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		key := d.Val()
+		if !d.NextArg() {
+			return d.Err("expected a string value")
+		}
+		value := d.Val()
+		if _, ok := (*dest)[key]; ok {
+			return d.Err("duplicate key")
+		}
+		(*dest)[key] = value
+	}
+	return nil
+}
+
+func ParseStringArrayMap(d *caddyfile.Dispenser, dest *map[string][]string) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		key := d.Val()
+		values := []string{}
+		if err := ParseStringArray(d, &values, false); err != nil {
+			return err
+		}
+		if _, ok := (*dest)[key]; ok {
+			return d.Err("duplicate key")
+		}
+		(*dest)[key] = values
+	}
 	return nil
 }
 
@@ -104,6 +137,18 @@ func ParseInt(d *caddyfile.Dispenser, dest *int) error {
 	return nil
 }
 
+func ParseUInt(d *caddyfile.Dispenser, dest *uint) error {
+	value := 0
+	if err := ParseInt(d, &value); err != nil {
+		return err
+	}
+	if value < 0 {
+		return d.Errf("uint value must be greater than 0")
+	}
+	*dest = uint(value)
+	return nil
+}
+
 func ParseIntArray(d *caddyfile.Dispenser, dest *[]int) error {
 	values := []string{}
 	if err := ParseStringArray(d, &values, false); err != nil {
@@ -118,6 +163,19 @@ func ParseIntArray(d *caddyfile.Dispenser, dest *[]int) error {
 		ports[idx] = port
 	}
 	*dest = append(*dest, ports...)
+	return nil
+}
+
+func ParseUInt32(d *caddyfile.Dispenser, dest *uint32) error {
+	var value int
+	if err := ParseInt(d, &value); err != nil {
+		return err
+	}
+	uint32value, err := parseutils.UInt32(value)
+	if err != nil {
+		return d.Errf("invalid integer value: %s", d.Val())
+	}
+	*dest = uint32value
 	return nil
 }
 
@@ -158,6 +216,19 @@ func ParseByteSize(d *caddyfile.Dispenser, dest *int) error {
 	return nil
 }
 
+func ParseByteSizeMiB(d *caddyfile.Dispenser, dest *uint64) error {
+	size, err := parseutils.ParseBytes(d.Val())
+	if err != nil {
+		return d.Errf("invalid byte size value: %s", d.Val())
+	}
+	value := uint64(size / 1024 / 1024)
+	if size != 0 && value == 0 {
+		value = 1
+	}
+	*dest = value
+	return nil
+}
+
 func ParseByteSizeI32(d *caddyfile.Dispenser, dest *int32) error {
 	if !d.NextArg() {
 		return d.Err("expected a byte size value")
@@ -183,6 +254,18 @@ func ParseByteSizeI64(d *caddyfile.Dispenser, dest *int64) error {
 		return d.Errf("invalid byte size value: %s", d.Val())
 	}
 	*dest = int64(val)
+	return nil
+}
+
+func ParseFloat64(d *caddyfile.Dispenser, dest *float64) error {
+	if !d.NextArg() {
+		return d.Err("expected a float value")
+	}
+	val, err := strconv.ParseFloat(d.Val(), 64)
+	if err != nil {
+		return d.Errf("invalid float value: %s", d.Val())
+	}
+	*dest = val
 	return nil
 }
 

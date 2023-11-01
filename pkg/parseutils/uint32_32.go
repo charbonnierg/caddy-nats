@@ -1,4 +1,4 @@
-//go:build arm && 386
+//go:build arm || 386
 
 package parseutils
 

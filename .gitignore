@@ -4,6 +4,7 @@
 /sandbox-jetstream
 /nats-server
 /nsc
+/www
 /OTHER_BAD_GENERIC.creds
 /qnats
 /resolver.conf
