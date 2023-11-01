@@ -39,6 +39,15 @@ type ConnectionPolicy struct {
 	HandlerRaw  json.RawMessage              `json:"handler" caddy:"namespace=nats.auth_callout inline_key=module"`
 }
 
+func (pol *ConnectionPolicy) SetAccount(account string) error {
+	if pol.handler != nil {
+		if err := pol.handler.SetAccount(account); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (pol *ConnectionPolicy) Match(request *jwt.AuthorizationRequestClaims) bool {
 	var matched = false
 	for _, m := range pol.matchers {

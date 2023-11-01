@@ -75,6 +75,11 @@ func (s *AuthService) Provision(app nats.App) error {
 	if s.ClientRaw != nil {
 		client := *s.ClientRaw
 		s.client = client
+	} else {
+		s.ClientRaw = &natsutils.Client{
+			Name:     "auth_service",
+			Internal: true,
+		}
 	}
 	if s.client.Name == "" {
 		s.client.Name = "auth_service"

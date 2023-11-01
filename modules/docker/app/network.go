@@ -8,32 +8,32 @@ import (
 
 // IPAM represents IP Address Management
 type IPAM struct {
-	Driver  string
-	Options map[string]string // Per network IPAM driver options
-	Config  []*IPAMConfig
+	Driver  string            `json:"driver,omitempty"`
+	Options map[string]string `json:"options,omitempty"` // Per network IPAM driver options
+	Config  []*IPAMConfig     `json:"config,omitempty"`  // List of IPAM configuration options, specified as a map: {"Subnet": <CIDR>, "IPRange": <CIDR>, "Gateway": <IP address>, "AuxiliaryAddresses": <map[string]<IP address>>}
 }
 
 // IPAMConfig represents IPAM configurations
 type IPAMConfig struct {
-	Subnet     string            `json:",omitempty"`
-	IPRange    string            `json:",omitempty"`
-	Gateway    string            `json:",omitempty"`
-	AuxAddress map[string]string `json:"AuxiliaryAddresses,omitempty"`
+	Subnet     string            `json:"subnet,omitempty"`
+	IPRange    string            `json:"ip_range,omitempty"`
+	Gateway    string            `json:"gateway,omitempty"`
+	AuxAddress map[string]string `json:"aux_addresses,omitempty"`
 }
 
 // Network represents a docker network
 type Network struct {
-	CheckDuplicate bool
-	Driver         string
-	Scope          string
-	EnableIPv6     bool
-	IPAM           *IPAM
-	Internal       bool
-	Attachable     bool
-	Ingress        bool
-	ConfigOnly     bool
-	Options        map[string]string
-	Labels         map[string]string
+	CheckDuplicate bool              `json:"check_duplicate,omitempty"`
+	Driver         string            `json:"driver,omitempty"`
+	Scope          string            `json:"scope,omitempty"`
+	EnableIPv6     bool              `json:"enable_ipv6,omitempty"`
+	IPAM           *IPAM             `json:"ipam,omitempty"`
+	Internal       bool              `json:"internal,omitempty"`
+	Attachable     bool              `json:"attachable,omitempty"`
+	Ingress        bool              `json:"ingress,omitempty"`
+	ConfigOnly     bool              `json:"config_only,omitempty"`
+	Options        map[string]string `json:"options,omitempty"`
+	Labels         map[string]string `json:"labels,omitempty"`
 }
 
 func (n *Network) ipamConfig() (*network.IPAM, error) {

@@ -38,26 +38,16 @@
       },
       "networks": {
         "mynetwork": {
-          "CheckDuplicate": false,
-          "Driver": "bridge",
-          "Scope": "",
-          "EnableIPv6": false,
-          "IPAM": {
-            "Driver": "default",
-            "Options": null,
-            "Config": [
+          "driver": "bridge",
+          "ipam": {
+            "driver": "default",
+            "config": [
               {
-                "Subnet": "172.200.200.0/24",
-                "Gateway": "172.200.200.1"
+                "subnet": "172.200.200.0/24",
+                "gateway": "172.200.200.1"
               }
             ]
-          },
-          "Internal": false,
-          "Attachable": false,
-          "Ingress": false,
-          "ConfigOnly": false,
-          "Options": null,
-          "Labels": null
+          }
         }
       }
     },
@@ -84,7 +74,7 @@
                       "handle": [
                         {
                           "endpoint": {
-                            "name": "az"
+                            "name": "az-oidc-endpoint"
                           },
                           "handler": "oauth2_session"
                         },
@@ -118,7 +108,7 @@
                         },
                         {
                           "endpoint": {
-                            "name": "az"
+                            "name": "az-oidc-endpoint"
                           },
                           "handler": "oauth2_session"
                         },
@@ -151,7 +141,7 @@
                       "handle": [
                         {
                           "endpoint": {
-                            "name": "az"
+                            "name": "az-oidc-endpoint"
                           },
                           "handler": "oauth2_session"
                         },
@@ -180,10 +170,6 @@
     },
     "nats": {
       "auth_service": {
-        "client": {
-          "internal": true,
-          "name": "auth-service"
-        },
         "policies": [
           {
             "match": [
@@ -205,6 +191,23 @@
             "match": [
               {
                 "client_info": {
+                  "host": "127.0.0.1",
+                  "type": "nats"
+                },
+                "connect_opts": {
+                  "token": "APP"
+                }
+              }
+            ],
+            "handler": {
+              "account": "APP",
+              "module": "allow"
+            }
+          },
+          {
+            "match": [
+              {
+                "client_info": {
                   "type": "websocket"
                 },
                 "connect_opts": {
@@ -214,20 +217,24 @@
             ],
             "handler": {
               "account": "APP",
-              "endpoint": "az",
+              "endpoint": "az-oidc-endpoint",
               "module": "oauth2",
               "template": {
                 "pub": {
                   "allow": [
-                    "{oidc.session.email}.>",
-                    "test.>"
+                    ">"
                   ]
                 },
                 "resp": {
                   "max": 0,
                   "ttl": 0
                 },
-                "sub": {}
+                "sub": {
+                  "allow": [
+                    "_INBOX.{oidc.session.email}.>",
+                    "{oidc.session.email}.>"
+                  ]
+                }
               }
             }
           },
@@ -270,6 +277,10 @@
       },
       "server": {
         "name": "srv-01",
+        "tags": {
+          "region": "eu-west-3"
+        },
+        "host": "127.0.0.1",
         "port": 4222,
         "debug": true,
         "http_port": 8222,
@@ -332,6 +343,7 @@
           }
         ],
         "websocket": {
+          "host": "0.0.0.0",
           "port": 10443,
           "advertise": "nats.local.quara-dev.com:10443",
           "tls": {
@@ -340,20 +352,35 @@
             ]
           }
         },
+        "mqtt": {
+          "host": "0.0.0.0",
+          "port": 8883,
+          "tls": {
+            "subjects": [
+              "mqtt.local.quara-dev.com"
+            ]
+          }
+        },
         "jetstream": {
+          "unique_tag": "region",
           "max_memory": 1000000000,
           "max_file": 10000000000
         },
         "metrics": {
+          "healthz": true,
           "connz": true,
-          "connz_detailed": true
+          "connz_detailed": true,
+          "subz": true,
+          "routez": true,
+          "gatewayz": true,
+          "leafz": true
         }
       }
     },
     "oauth2": {
       "endpoints": [
         {
-          "name": "az",
+          "name": "az-oidc-endpoint",
           "options": {
             "email_domains": [
               "*"

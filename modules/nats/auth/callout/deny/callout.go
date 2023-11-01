@@ -23,6 +23,10 @@ type DenyAuthCallout struct {
 	Message string `json:"message,omitempty"`
 }
 
+func (c *DenyAuthCallout) SetAccount(account string) error {
+	return nil
+}
+
 func (DenyAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "nats.auth_callout.deny",

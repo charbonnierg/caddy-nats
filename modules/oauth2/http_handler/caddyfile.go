@@ -8,11 +8,13 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/quara-dev/beyond/modules/oauth2/endpoint"
+	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
 // ParsePublishHandler parses the nats_publish directive. Syntax:
 //
-//	oauth2_session {
+//	authorize_with {
 //
 // }
 func ParseOauth2ProxyDirective(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
@@ -22,17 +24,25 @@ func ParseOauth2ProxyDirective(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHand
 }
 
 func (p *OAuth2Session) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	for d.Next() {
-		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			if p.EndpointRaw == nil {
-				p.EndpointRaw = &endpoint.Endpoint{}
-			}
-			if !d.Args(&p.EndpointRaw.NameRaw) {
-				return d.Err("expected endpoint name")
-			}
-			if err := p.EndpointRaw.UnmarshalCaddyfile(d); err != nil {
-				return err
-			}
+	if err := caddyutils.ExpectString(d, "authorize_with"); err != nil {
+		return err
+	}
+	if d.CountRemainingArgs() > 0 {
+		if err := caddyutils.ExpectString(d, "oauth2"); err != nil {
+			return err
+		}
+		p.EndpointRaw = fnutils.DefaultIfNil(p.EndpointRaw, &endpoint.Endpoint{})
+		if err := caddyutils.ParseString(d, &p.EndpointRaw.NameRaw); err != nil {
+			return err
+		}
+	}
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		p.EndpointRaw = fnutils.DefaultIfNil(p.EndpointRaw, &endpoint.Endpoint{})
+		if err := caddyutils.ParseString(d, &p.EndpointRaw.NameRaw); err != nil {
+			return err
+		}
+		if err := p.EndpointRaw.UnmarshalCaddyfile(d); err != nil {
+			return err
 		}
 	}
 	return nil

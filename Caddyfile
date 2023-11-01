@@ -1,6 +1,6 @@
 {
 	# This line is required to tell our Web Server that authentication should happen BEFORE forwarding requests to handler
-	order oauth2_session before handle
+	order authorize_with before handle
 	# This line is required to use a local certificate issuer rather than Let's Encrypt or ZeroSSL
 	cert_issuer internal
 	# This line is required to enable metrics our Web Server
@@ -50,97 +50,98 @@
 	}
 	# This block is required to configure and start NATS server when our Web Server starts
 	nats {
-		server {
-			debug
-			name srv-01
-			port 4222
-			http_port 8222
-			system_account SYS
-			accounts {
-				OAUTH2 {
-					jetstream
-				}
-				APP {
-					map_subject "canary.req.>" {
-						to "req.>" weight 50
-						to "beta.req.>" weight 50
-					}
-					map_subject "pub.>" to "pub.srv-01.>"
-				}
-				SYS {
-					export_service "$SYS.REQ.SERVER.PING" to MONITORING
-				}
-				MONITORING {
-					import_service "$SYS.REQ.SERVER.PING" from SYS
-				}
-			}
-			jetstream {
-				max_disk 10GB
-				max_memory 1GB
-			}
-			websocket {
-				port 10443
-				advertise nats.local.quara-dev.com:10443
-				tls nats.local.quara-dev.com
-			}
-			metrics {
-				connz
-				connz_detailed
-			}
-		}
-		auth_service {
-			client in_process {
-				name auth-service
-			}
-			default deny
-			policy {
+		debug
+		metrics all
+		default_auth_callout deny
+		account OAUTH2 {
+			jetstream on
+			auth_policy {
 				match {
-					type in_process
+					connection_type in_process
 					client_name oauth2-az-endpoint
 				}
-				callout allow {
-					account OAUTH2
-				}
+				callout allow
 			}
-			policy {
+		}
+		account APP {
+			map_subject "canary.req.>" {
+				to "req.>" weight 50
+				to "beta.req.>" weight 50
+			}
+			map_subject "pub.>" to "pub.srv-01.>"
+			auth_policy {
 				match {
-					type websocket
-					username APP
+					connection_type nats
+					client_host 127.0.0.1
+					client_token APP
+				}
+				callout allow
+			}
+			auth_policy {
+				match {
+					connection_type websocket
+					client_username APP
 				}
 				callout oauth2 {
-					endpoint az
-					account APP
+					endpoint az-oidc-endpoint
 					template {
-						allow_pub "{oidc.session.email}.>"
-						allow_pub "test.>"
+						allow_sub "_INBOX.{oidc.session.email}.>"
+						allow_sub "{oidc.session.email}.>"
+						allow_pub ">"
 						allow_resp
 					}
 				}
 			}
-			policy {
+		}
+		account SYS {
+			export_service "$SYS.REQ.SERVER.PING" to MONITORING
+			auth_policy {
 				match {
-					token SYS
-					host 127.0.0.1
+					client_token SYS
+					client_host 127.0.0.1
 				}
-				callout allow {
-					account SYS
-				}
+				callout allow
 			}
-			policy {
+		}
+		account MONITORING {
+			import_service "$SYS.REQ.SERVER.PING" from SYS
+			auth_policy {
 				match {
-					token monitoring
-					host 127.0.0.1
+					client_token monitoring
+					client_host 127.0.0.1
 				}
-				callout allow {
-					account MONITORING
-				}
+				callout allow
 			}
+		}
+		jetstream {
+			unique_tag region
+			max_disk 10GB
+			max_memory 1GB
+		}
+		server {
+			name srv-01
+			tags region:eu-west-3
+			host 127.0.0.1
+			port 4222
+			http_port 8222
+			system_account SYS
+		}
+		websocket_server {
+			host 0.0.0.0
+			port 10443
+			advertise nats.local.quara-dev.com:10443
+			tls nats.local.quara-dev.com
+		}
+		mqtt_server {
+			host 0.0.0.0
+			port 8883
+			tls mqtt.local.quara-dev.com
 		}
 	}
 	# This block is required to configure OAuth2 authentication and authorization endpoints
 	# An endpoint is a combination of a store and a provider. A store is used to save sessions and a provider is used to authenticate users.
 	oauth2 {
-		endpoint az {
+		az-oidc-endpoint {
 			store jetstream {
 				name OAUTH2-SESSIONS
 				client in_process {
@@ -228,18 +229,14 @@
 # Each website is defined by a block like this one
 local.quara-dev.com {
 	log
-	oauth2_session {
-		endpoint az
-	}
+	authorize_with oauth2 az-oidc-endpoint
 	respond "hello world"
 }
 
 # This is another website
 admin.local.quara-dev.com {
 	log
-	oauth2_session {
-		endpoint az
-	}
+	authorize_with oauth2 az-oidc-endpoint
 	root * ./www/index.html
 	file_server
 }
@@ -247,8 +244,6 @@ admin.local.quara-dev.com {
 # Yet another website, which serves web server and NATS metrics
 metrics.local.quara-dev.com {
 	log
-	oauth2_session {
-		endpoint az
-	}
+	authorize_with oauth2 az-oidc-endpoint
 	metrics
 }

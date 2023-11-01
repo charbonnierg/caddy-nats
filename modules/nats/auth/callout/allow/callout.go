@@ -24,6 +24,11 @@ type AllowAuthCallout struct {
 	Template *template.Template `json:"template,omitempty"`
 }
 
+func (c *AllowAuthCallout) SetAccount(account string) error {
+	c.Account = account
+	return nil
+}
+
 func (AllowAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "nats.auth_callout.allow",

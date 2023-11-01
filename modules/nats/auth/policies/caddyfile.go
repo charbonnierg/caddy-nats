@@ -5,9 +5,10 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/quara-dev/beyond/modules/nats"
 )
 
-func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func (p *ConnectionPolicy) UnmarshalCaddyfileWithAccountName(d *caddyfile.Dispenser, account string) error {
 	var connectOpts *ConnectOptsMatcher
 	var clientInfo *ClientInfoMatcher
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
@@ -15,7 +16,7 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		case "match":
 			for nesting := d.Nesting(); d.NextBlock(nesting); {
 				switch d.Val() {
-				case "token":
+				case "token", "client_token":
 					if connectOpts == nil {
 						connectOpts = new(ConnectOptsMatcher)
 					}
@@ -23,7 +24,7 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Err("expected token")
 					}
 					connectOpts.Token = d.Val()
-				case "username":
+				case "username", "client_username":
 					if connectOpts == nil {
 						connectOpts = new(ConnectOptsMatcher)
 					}
@@ -31,7 +32,7 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Err("expected username")
 					}
 					connectOpts.User = d.Val()
-				case "password":
+				case "password", "client_password":
 					if connectOpts == nil {
 						connectOpts = new(ConnectOptsMatcher)
 					}
@@ -60,7 +61,7 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					default:
 						clientInfo.Type = d.Val()
 					}
-				case "kind":
+				case "kind", "connection_kind":
 					if clientInfo == nil {
 						clientInfo = new(ClientInfoMatcher)
 					}
@@ -68,7 +69,7 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Err("expected kind")
 					}
 					clientInfo.Kind = d.Val()
-				case "host":
+				case "host", "client_host":
 					if clientInfo == nil {
 						clientInfo = new(ClientInfoMatcher)
 					}
@@ -88,6 +89,15 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			mod, err := caddyfile.UnmarshalModule(d, "nats.auth_callout."+typ)
 			if err != nil {
 				return d.Errf("failed to unmarshal module '%s': %v", typ, err)
+			}
+			callout, ok := mod.(nats.AuthCallout)
+			if !ok {
+				return d.Errf("module '%s' is not an auth callout", typ)
+			}
+			if account != "" {
+				if err := callout.SetAccount(account); err != nil {
+					return err
+				}
 			}
 			p.HandlerRaw = caddyconfig.JSONModuleObject(mod, "module", typ, nil)
 		default:
@@ -111,4 +121,8 @@ func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		p.MatchersRaw[0]["client_info"] = caddyconfig.JSON(clientInfo, nil)
 	}
 	return nil
+}
+
+func (p *ConnectionPolicy) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	return p.UnmarshalCaddyfileWithAccountName(d, "")
 }

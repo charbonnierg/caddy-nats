@@ -17,7 +17,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(OAuth2Session{})
-	httpcaddyfile.RegisterHandlerDirective("oauth2_session", ParseOauth2ProxyDirective)
+	httpcaddyfile.RegisterHandlerDirective("authorize_with", ParseOauth2ProxyDirective)
 }
 
 // OAuth2Session is a Caddy module that represents an oauth2 middleware endpoint.

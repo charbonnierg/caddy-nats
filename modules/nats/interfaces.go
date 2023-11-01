@@ -39,6 +39,7 @@ type AuthRequest interface {
 
 type AuthCallout interface {
 	Provision(app App) error
+	SetAccount(account string) error
 	Handle(claims AuthRequest) (*jwt.UserClaims, error)
 }
 

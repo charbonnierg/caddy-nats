@@ -35,6 +35,11 @@ type OAuth2ProxyAuthCallout struct {
 	Template *template.Template `json:"template,omitempty"`
 }
 
+func (c *OAuth2ProxyAuthCallout) SetAccount(account string) error {
+	c.Account = account
+	return nil
+}
+
 func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "nats.auth_callout.oauth2",

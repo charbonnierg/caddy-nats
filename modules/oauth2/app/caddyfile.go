@@ -10,6 +10,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/quara-dev/beyond/modules/oauth2/endpoint"
+	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
 func parseGlobalOption(d *caddyfile.Dispenser, existingVal interface{}) (interface{}, error) {
@@ -36,13 +37,8 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
-			case "endpoint":
-				if a.EndpointsRaw == nil {
-					a.EndpointsRaw = []*endpoint.Endpoint{}
-				}
-				if !d.NextArg() {
-					return d.Err("expected endpoint name")
-				}
+			default:
+				a.EndpointsRaw = fnutils.DefaultIfEmpty(a.EndpointsRaw, []*endpoint.Endpoint{})
 				name := d.Val()
 				ep := &endpoint.Endpoint{NameRaw: name}
 				err := ep.UnmarshalCaddyfile(d)

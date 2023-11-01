@@ -310,8 +310,8 @@ func ParseKeyValuePairs(d *caddyfile.Dispenser, dest *map[string]string, sep str
 	if len(allValues) == 0 {
 		return errors.New("expected at least one key value pair")
 	}
-	if dest == nil {
-		*dest = map[string]string{}
+	if *dest == nil {
+		*dest = make(map[string]string)
 	}
 	for _, tag := range allValues {
 		if len(tag) == 0 {
