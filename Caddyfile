@@ -1,10 +1,11 @@
 {
-	# Configure default logging for all components
+	# Configure default logging for all components using human-friendly format (console)
 	log default {
 		output stderr
 		format console
 		level INFO
 	}
+	# Configure a file as an additional logging output using JSON format
 	log file {
 		output file ./caddy.log
 		format json
@@ -29,6 +30,7 @@
 	# Those secrets can be used in our configuration using the syntax {secret.<secret_name>@<store_name>}
 	secrets {
 		store az-kv-srv-01 azure_keyvault https://kv-srv-01.vault.azure.net
+
 		# Alternatively, it's possible to automate secret fetching using the following syntax
 		# This will fetch the secret every hour, and pass it to a "file" handler which will
 		# write the secret to a file and execute a command when the secret changes
@@ -81,17 +83,17 @@
 	# Each python process may be started in a virtual environment and may have a custom entrypoint
 	# Alternatively, it's possible to specify a default virtual environment for all processes.
 	python {
-        virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
+		virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
 		app demo1 {
 			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app1
-            forward_stdout
-            forward_stderr
+			forward_stdout
+			forward_stderr
 		}
-        app demo2  {
+		app demo2 {
 			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app2
-            forward_stdout
-            forward_stderr
-        }
+			forward_stdout
+			forward_stderr
+		}
 	}
 	# This block is required to configure and start NATS server when our Web Server starts
 	broker {

@@ -1,7 +1,37 @@
 {
+  "logging": {
+    "logs": {
+      "default": {
+        "writer": {
+          "output": "stderr"
+        },
+        "encoder": {
+          "format": "console"
+        },
+        "level": "INFO"
+      },
+      "file": {
+        "writer": {
+          "filename": "./caddy.log",
+          "output": "file"
+        },
+        "encoder": {
+          "format": "json"
+        },
+        "level": "INFO"
+      }
+    }
+  },
   "apps": {
     "docker": {
       "containers": {
+        "other": {
+          "restart": {
+            "policy": "on-failure"
+          },
+          "security": null,
+          "image": "docker.io/library/alpine:latest"
+        },
         "test": {
           "restart": {
             "policy": "always"
@@ -55,7 +85,7 @@
       "servers": {
         "srv0": {
           "listen": [
-            ":443"
+            ":11443"
           ],
           "routes": [
             {
@@ -157,11 +187,17 @@
               "terminal": true
             }
           ],
+          "tls_connection_policies": [
+            {}
+          ],
+          "automatic_https": {
+            "disable": true
+          },
           "logs": {
             "logger_names": {
-              "admin.local.quara-dev.com": "",
-              "local.quara-dev.com": "",
-              "metrics.local.quara-dev.com": ""
+              "admin.local.quara-dev.com:11443": "",
+              "local.quara-dev.com:11443": "",
+              "metrics.local.quara-dev.com:11443": ""
             }
           },
           "metrics": {}
@@ -345,10 +381,10 @@
         "websocket": {
           "host": "0.0.0.0",
           "port": 10443,
-          "advertise": "nats.local.quara-dev.com:10443",
+          "advertise": "ws.local.quara-dev.com:10443",
           "tls": {
             "subjects": [
-              "nats.local.quara-dev.com"
+              "ws.local.quara-dev.com"
             ]
           }
         },
@@ -446,6 +482,7 @@
     "otelcol": {
       "service": {
         "extensions": [
+          "zpages",
           "basicauth/client"
         ],
         "pipelines": {
@@ -464,7 +501,8 @@
           "metrics": {
             "receivers": [
               "otlp",
-              "prometheus"
+              "prometheus",
+              "hostmetrics"
             ],
             "processors": [
               "batch",
@@ -476,7 +514,8 @@
           },
           "logs": {
             "receivers": [
-              "otlp"
+              "otlp",
+              "filelog"
             ],
             "processors": [
               "batch",
@@ -490,12 +529,30 @@
         "telemetry": {
           "logs": {},
           "metrics": {
-            "level": "detailed",
             "address": "127.0.0.1:2020"
           }
         }
       },
       "receivers": {
+        "filelog": {
+          "include": [
+            "*.log"
+          ],
+          "resource": {
+            "environment_name": "dev",
+            "server_name": "srv-01",
+            "service_name": "caddy-beyond"
+          }
+        },
+        "hostmetrics": {
+          "root_path": "/",
+          "collection_interval": 10000000000,
+          "initial_delay": 5000000000,
+          "timeout": 0,
+          "scrapers": {
+            "cpu": {}
+          }
+        },
         "otlp": {
           "protocols": {
             "grpc": {
@@ -542,7 +599,7 @@
           "actions": [
             {
               "action": "insert",
-              "key": "beyond.server",
+              "key": "server_name",
               "value": "srv-01"
             }
           ]
@@ -563,8 +620,33 @@
             "username": "{secret.quara-grafana-stack-id@az-kv-srv-01}",
             "password": "{secret.quara-grafana-stack-token@az-kv-srv-01}"
           }
-        }
+        },
+        "zpages": {}
       }
+    },
+    "python": {
+      "processes": [
+        {
+          "name": "demo1",
+          "command": "python3",
+          "args": [
+            "/home/charbonnierg/github/quara-dev/beyond/sandbox/app1"
+          ],
+          "virtualenv": "/home/charbonnierg/github/quara-dev/beyond/sandbox/.venv",
+          "forward_stdout": true,
+          "forward_stderr": true
+        },
+        {
+          "name": "demo2",
+          "command": "python3",
+          "args": [
+            "/home/charbonnierg/github/quara-dev/beyond/sandbox/app2"
+          ],
+          "virtualenv": "/home/charbonnierg/github/quara-dev/beyond/sandbox/.venv",
+          "forward_stdout": true,
+          "forward_stderr": true
+        }
+      ]
     },
     "secrets": {
       "stores": {
