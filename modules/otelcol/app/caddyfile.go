@@ -37,10 +37,9 @@ func parseGlobalOption(d *caddyfile.Dispenser, existingVal interface{}) (interfa
 }
 
 func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	if err := caddyutils.ExpectString(d, "otelcol"); err != nil {
+	if err := caddyutils.ExpectString(d, "otelcol", "telemetry"); err != nil {
 		return err
 	}
-
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "service":

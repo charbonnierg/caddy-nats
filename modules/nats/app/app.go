@@ -25,6 +25,7 @@ import (
 func init() {
 	caddy.RegisterModule(new(App))
 	httpcaddyfile.RegisterGlobalOption("nats", parseGlobalOption)
+	httpcaddyfile.RegisterGlobalOption("broker", parseGlobalOption)
 }
 
 // App is the nats app module.

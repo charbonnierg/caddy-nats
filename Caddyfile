@@ -1,6 +1,17 @@
 {
+	log default {
+		output stdout
+		format console
+		level INFO
+	}
+	log file {
+		output file ./caddy.log
+		format json
+		level INFO
+	}
 	# This line is required to tell our Web Server that authentication should happen BEFORE forwarding requests to handler
 	order authorize_with before handle
+	auto_https off
 	# This line is required to use a local certificate issuer rather than Let's Encrypt or ZeroSSL
 	cert_issuer internal
 	# This line is required to enable metrics our Web Server
@@ -49,7 +60,7 @@
 		}
 	}
 	# This block is required to configure and start NATS server when our Web Server starts
-	nats {
+	broker {
 		debug
 		metrics all
 		default_auth_callout deny
@@ -118,7 +129,7 @@
 			max_disk 10GB
 			max_memory 1GB
 		}
-		server {
+		nats_server {
 			name srv-01
 			tags region:eu-west-3
 			host 127.0.0.1
@@ -129,8 +140,8 @@
 		websocket_server {
 			host 0.0.0.0
 			port 10443
-			advertise nats.local.quara-dev.com:10443
-			tls nats.local.quara-dev.com
+			advertise ws.local.quara-dev.com:10443
+			tls ws.local.quara-dev.com
 		}
 		mqtt_server {
 			host 0.0.0.0
@@ -174,10 +185,17 @@
 		}
 	}
 	# This block is required to configure and start OpenTelemetry Collector when our Web Server starts
-	otelcol {
+	telemetry {
+		extension zpages
 		extension basicauth/client {
 			username {secret.quara-grafana-stack-id@az-kv-srv-01}
 			password {secret.quara-grafana-stack-token@az-kv-srv-01}
+		}
+		receiver hostmetrics {
+			collection_interval 10s
+			initial_delay 5s
+			root_path /
+			scrap cpu
 		}
 		receiver prometheus {
 			scrape_interval 10s
@@ -192,6 +210,14 @@
 			grpc 127.0.0.1:4317
 			http 127.0.0.1:4318
 		}
+		receiver filelog {
+			include "*.log"
+			resource {
+				environment_name dev
+				service_name caddy-beyond
+				server_name srv-01
+			}
+		}
 		exporter otlphttp {
 			endpoint https://otlp-gateway-prod-eu-west-3.grafana.net/otlp
 			authenticator basicauth/client
@@ -199,26 +225,25 @@
 		processor batch
 		processor attributes {
 			action insert {
-				key beyond.server
+				key server_name
 				value srv-01
 			}
 		}
 		service {
 			metrics 127.0.0.1:2020
-			metrics_level detailed
-			extensions basicauth/client
+			extensions zpages basicauth/client
 			trace_pipeline {
 				receivers otlp
 				processors batch attributes
 				exporters otlphttp
 			}
 			metric_pipeline {
-				receivers otlp prometheus
+				receivers otlp prometheus hostmetrics
 				processors batch attributes
 				exporters otlphttp
 			}
 			log_pipeline {
-				receivers otlp
+				receivers otlp filelog
 				processors batch attributes
 				exporters otlphttp
 			}
@@ -227,14 +252,14 @@
 }
 
 # Each website is defined by a block like this one
-local.quara-dev.com {
+local.quara-dev.com:11443 {
 	log
 	authorize_with oauth2 az-oidc-endpoint
 	respond "hello world"
 }
 
 # This is another website
-admin.local.quara-dev.com {
+admin.local.quara-dev.com:11443 {
 	log
 	authorize_with oauth2 az-oidc-endpoint
 	root * ./www/index.html
@@ -242,7 +267,7 @@ admin.local.quara-dev.com {
 }
 
 # Yet another website, which serves web server and NATS metrics
-metrics.local.quara-dev.com {
+metrics.local.quara-dev.com:11443 {
 	log
 	authorize_with oauth2 az-oidc-endpoint
 	metrics

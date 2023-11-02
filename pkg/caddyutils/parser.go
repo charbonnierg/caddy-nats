@@ -84,6 +84,9 @@ func ParseString(d *caddyfile.Dispenser, dest *string) error {
 }
 
 func ParseStringMap(d *caddyfile.Dispenser, dest *map[string]string) error {
+	if *dest == nil {
+		*dest = make(map[string]string)
+	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		key := d.Val()
 		if !d.NextArg() {

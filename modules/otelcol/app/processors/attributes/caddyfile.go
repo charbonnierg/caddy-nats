@@ -4,10 +4,16 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/pkg/caddyutils"
 	"github.com/quara-dev/beyond/pkg/fnutils"
+	"go.opentelemetry.io/collector/component"
 )
 
 func (r *AttributeProcessor) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	if err := caddyutils.ExpectString(d, "attributes"); err != nil {
+	var name string
+	if err := caddyutils.ParseString(d, &name); err != nil {
+		return err
+	}
+	var id component.ID
+	if err := id.UnmarshalText([]byte(name)); err != nil {
 		return err
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {

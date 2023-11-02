@@ -28,6 +28,8 @@ import (
 	_ "github.com/quara-dev/beyond/modules/otelcol/app/extensions/zpages"
 	_ "github.com/quara-dev/beyond/modules/otelcol/app/processors/attributes"
 	_ "github.com/quara-dev/beyond/modules/otelcol/app/processors/batch"
+	_ "github.com/quara-dev/beyond/modules/otelcol/app/receivers/filelog"
+	_ "github.com/quara-dev/beyond/modules/otelcol/app/receivers/hostmetrics"
 	_ "github.com/quara-dev/beyond/modules/otelcol/app/receivers/otlp"
 	_ "github.com/quara-dev/beyond/modules/otelcol/app/receivers/prometheus"
 )
@@ -35,6 +37,7 @@ import (
 func init() {
 	caddy.RegisterModule(new(App))
 	httpcaddyfile.RegisterGlobalOption("otelcol", parseGlobalOption)
+	httpcaddyfile.RegisterGlobalOption("telemetry", parseGlobalOption)
 }
 
 var (
