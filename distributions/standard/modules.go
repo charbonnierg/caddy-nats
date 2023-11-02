@@ -25,6 +25,8 @@ import (
 
 	// Telemetry modules
 	_ "github.com/quara-dev/beyond/modules/otelcol/app"
+	// Python modules
+	_ "github.com/quara-dev/beyond/modules/python/app"
 	// Secrets modules
 	_ "github.com/quara-dev/beyond/modules/secrets/app"
 	_ "github.com/quara-dev/beyond/modules/secrets/automation/handlers"

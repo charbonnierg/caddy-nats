@@ -1,5 +1,11 @@
 /nsc-store
 /dist
+**/__pycache__
+**/*.pyc
+**/*.egg-info
+**/.venv
+**/caddy.log
+**/test*.txt
 /sandbox-jwt
 /sandbox-jetstream
 /nats-server

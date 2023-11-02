@@ -1,6 +1,7 @@
 {
+	# Configure default logging for all components
 	log default {
-		output stdout
+		output stderr
 		format console
 		level INFO
 	}
@@ -10,17 +11,29 @@
 		level INFO
 	}
 	# This line is required to tell our Web Server that authentication should happen BEFORE forwarding requests to handler
+	# I'd like to remove it, but for now it is required
 	order authorize_with before handle
+	# This disables binding to port 80 (HTTP) automatically and redirecting to port 443 (HTTPS)
+	# It does not disable HTTPS, it just disables the automatic redirection, and in this specific
+	# case, it disables binding to port 80 because this port is not used anywhere else in config.
 	auto_https off
 	# This line is required to use a local certificate issuer rather than Let's Encrypt or ZeroSSL
+	# Valid values are: letsencrypt, zerossl, internal
 	cert_issuer internal
-	# This line is required to enable metrics our Web Server
+	# This enables Prometheus metrics for HTTP servers
+	# I'd like to have this enabled by default, but for now it is required
 	servers {
 		metrics
 	}
-	# This block is required to have access to secrets stored in Azure Key Vault and to be able to use them in our configuration
+	# This declares Azure Key Vault instances (secret stores) where secrets can be fetched
+	# Those secrets can be used in our configuration using the syntax {secret.<secret_name>@<store_name>}
 	secrets {
 		store az-kv-srv-01 azure_keyvault https://kv-srv-01.vault.azure.net
+		# Alternatively, it's possible to automate secret fetching using the following syntax
+		# This will fetch the secret every hour, and pass it to a "file" handler which will
+		# write the secret to a file and execute a command when the secret changes
+		# This is useful to automatically update secrets in a systemd environment or a 
+		# docker environment for example
 		automate {
 			source some-secret@az-kv-srv-01
 			interval 1h
@@ -34,7 +47,8 @@
 			}
 		}
 	}
-	# This block is required to configure and start docker containers and networks when our Web Server starts
+	# Start docker containers alongside the application
+	# Networes are always created before starting containers
 	docker {
 		network mynetwork {
 			driver bridge
@@ -58,6 +72,26 @@
 			label com.quara-dev.service.version "1.0.0"
 			label com.quara-dev.service.env "dev"
 		}
+		container other {
+			image docker.io/library/alpine:latest
+			restart on-failure
+		}
+	}
+	# Start python processes alongside the application
+	# Each python process may be started in a virtual environment and may have a custom entrypoint
+	# Alternatively, it's possible to specify a default virtual environment for all processes.
+	python {
+        virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
+		app demo1 {
+			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app1
+            forward_stdout
+            forward_stderr
+		}
+        app demo2  {
+			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app2
+            forward_stdout
+            forward_stderr
+        }
 	}
 	# This block is required to configure and start NATS server when our Web Server starts
 	broker {
@@ -149,8 +183,9 @@
 			tls mqtt.local.quara-dev.com
 		}
 	}
-	# This block is required to configure OAuth2 authentication and authorization endpoints
-	# An endpoint is a combination of a store and a provider. A store is used to save sessions and a provider is used to authenticate users.
+	# Enable oauth2 authentication/authorization by creating an oauth2 endpoint.
+	# An endpoint is configured with various options, including a store where oauth2 sessions are stored
+	# and an identity provider (oidc provider) which is used to authenticate users.
 	oauth2 {
 		az-oidc-endpoint {
 			store jetstream {
@@ -184,7 +219,9 @@
 			}
 		}
 	}
-	# This block is required to configure and start OpenTelemetry Collector when our Web Server starts
+	# Enable and configure an embedded OpenTelemetry Collector
+	# A collector must have at least one receiver and one exporter used together
+	# in one pipeline. Processors can be used to modify telemetry data before exporting it.
 	telemetry {
 		extension zpages
 		extension basicauth/client {

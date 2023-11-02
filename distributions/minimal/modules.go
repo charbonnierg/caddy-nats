@@ -22,6 +22,9 @@ import (
 	_ "github.com/quara-dev/beyond/modules/oauth2/http_handler"
 	_ "github.com/quara-dev/beyond/modules/oauth2/stores/jetstream"
 
+	// Python modules
+	_ "github.com/quara-dev/beyond/modules/python/app"
+
 	// Secrets modules
 	_ "github.com/quara-dev/beyond/modules/secrets/app"
 	_ "github.com/quara-dev/beyond/modules/secrets/automation/handlers"
