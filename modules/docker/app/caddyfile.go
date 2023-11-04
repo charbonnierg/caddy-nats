@@ -6,7 +6,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
@@ -63,7 +63,7 @@ func parseClientOption(d *caddyfile.Dispenser, opts *ClientOptions) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "host":
-			if err := caddyutils.ParseString(d, &opts.Host); err != nil {
+			if err := parser.ParseString(d, &opts.Host); err != nil {
 				return err
 			}
 		case "tls":
@@ -71,15 +71,15 @@ func parseClientOption(d *caddyfile.Dispenser, opts *ClientOptions) error {
 			for nesting := d.Nesting(); d.NextBlock(nesting); {
 				switch d.Val() {
 				case "ca_file":
-					if err := caddyutils.ParseString(d, &opts.Tls.CAFile); err != nil {
+					if err := parser.ParseString(d, &opts.Tls.CAFile); err != nil {
 						return err
 					}
 				case "cert_file":
-					if err := caddyutils.ParseString(d, &opts.Tls.CertFile); err != nil {
+					if err := parser.ParseString(d, &opts.Tls.CertFile); err != nil {
 						return err
 					}
 				case "key_file":
-					if err := caddyutils.ParseString(d, &opts.Tls.KeyFile); err != nil {
+					if err := parser.ParseString(d, &opts.Tls.KeyFile); err != nil {
 						return err
 					}
 				default:
@@ -96,7 +96,7 @@ func parseClientOption(d *caddyfile.Dispenser, opts *ClientOptions) error {
 func parseNetworkOption(d *caddyfile.Dispenser, networks map[string]*Network) error {
 	n := new(Network)
 	name := ""
-	if err := caddyutils.ParseString(d, &name); err != nil {
+	if err := parser.ParseString(d, &name); err != nil {
 		return err
 	}
 	if name == "" {
@@ -109,55 +109,58 @@ func parseNetworkOption(d *caddyfile.Dispenser, networks map[string]*Network) er
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "driver":
-			if err := caddyutils.ParseString(d, &n.Driver); err != nil {
+			if err := parser.ParseString(d, &n.Driver); err != nil {
 				return err
 			}
 		case "scope":
-			if err := caddyutils.ParseString(d, &n.Scope); err != nil {
+			if err := parser.ParseString(d, &n.Scope); err != nil {
 				return err
 			}
 		case "enable_ipv6":
-			if err := caddyutils.ParseBool(d, &n.EnableIPv6); err != nil {
+			if err := parser.ParseBool(d, &n.EnableIPv6); err != nil {
 				return err
 			}
 		case "internal":
-			if err := caddyutils.ParseBool(d, &n.Internal); err != nil {
+			if err := parser.ParseBool(d, &n.Internal); err != nil {
 				return err
 			}
 		case "attachable":
-			if err := caddyutils.ParseBool(d, &n.Attachable); err != nil {
+			if err := parser.ParseBool(d, &n.Attachable); err != nil {
 				return err
 			}
 		case "ingress":
-			if err := caddyutils.ParseBool(d, &n.Ingress); err != nil {
+			if err := parser.ParseBool(d, &n.Ingress); err != nil {
 				return err
 			}
 		case "config_only":
-			if err := caddyutils.ParseBool(d, &n.ConfigOnly); err != nil {
+			if err := parser.ParseBool(d, &n.ConfigOnly); err != nil {
 				return err
 			}
 		case "check_duplicate":
-			if err := caddyutils.ParseBool(d, &n.CheckDuplicate); err != nil {
+			if err := parser.ParseBool(d, &n.CheckDuplicate); err != nil {
 				return err
 			}
 		case "driver_opts":
 			n.Options = fnutils.DefaultIfEmptyMap(n.Options, make(map[string]string))
-			if err := caddyutils.ParseKeyValuePairs(d, &n.Options, "="); err != nil {
+			if err := parser.ParseStringMap(d, &n.Options, parser.Inline(parser.Separator("=")), parser.AllowEmpty()); err != nil {
+				return err
+			}
+			if err := parser.ParseStringMap(d, &n.Options, parser.AllowEmpty()); err != nil {
 				return err
 			}
 		case "label":
 			n.Labels = fnutils.DefaultIfEmptyMap(n.Labels, make(map[string]string))
 			var key, value string
-			if err := caddyutils.ParseString(d, &key); err != nil {
+			if err := parser.ParseString(d, &key); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseString(d, &value); err != nil {
+			if err := parser.ParseString(d, &value); err != nil {
 				return err
 			}
 			n.Labels[key] = value
 		case "ipam_driver":
 			n.IPAM = fnutils.DefaultIfNil(n.IPAM, new(IPAM))
-			if err := caddyutils.ParseString(d, &n.IPAM.Driver); err != nil {
+			if err := parser.ParseString(d, &n.IPAM.Driver); err != nil {
 				return err
 			}
 		case "ipam":
@@ -170,22 +173,22 @@ func parseNetworkOption(d *caddyfile.Dispenser, networks map[string]*Network) er
 			for nesting := d.Nesting(); d.NextBlock(nesting); {
 				switch d.Val() {
 				case "subnet":
-					if err := caddyutils.ParseString(d, &cfg.Subnet); err != nil {
+					if err := parser.ParseString(d, &cfg.Subnet); err != nil {
 						return err
 					}
 				case "gateway":
-					if err := caddyutils.ParseString(d, &cfg.Gateway); err != nil {
+					if err := parser.ParseString(d, &cfg.Gateway); err != nil {
 						return err
 					}
 				case "ip_range":
-					if err := caddyutils.ParseString(d, &cfg.IPRange); err != nil {
+					if err := parser.ParseString(d, &cfg.IPRange); err != nil {
 						return err
 					}
 				default:
 					n.IPAM.Options = fnutils.DefaultIfEmptyMap(n.IPAM.Options, make(map[string]string))
 					key := d.Val()
 					var value string
-					if err := caddyutils.ParseString(d, &value); err != nil {
+					if err := parser.ParseString(d, &value); err != nil {
 						return err
 					}
 					n.IPAM.Options[key] = value
@@ -203,7 +206,7 @@ func parseNetworkOption(d *caddyfile.Dispenser, networks map[string]*Network) er
 func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Container) error {
 	c := new(Container)
 	name := ""
-	if err := caddyutils.ParseString(d, &name); err != nil {
+	if err := parser.ParseString(d, &name); err != nil {
 		return err
 	}
 	if name == "" {
@@ -216,30 +219,31 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "image":
-			if err := caddyutils.ParseString(d, &c.Image); err != nil {
+			if err := parser.ParseString(d, &c.Image); err != nil {
 				return err
 			}
 		case "hostname":
-			if err := caddyutils.ParseString(d, &c.Hostname); err != nil {
+			if err := parser.ParseString(d, &c.Hostname); err != nil {
 				return err
 			}
 		case "domain":
-			if err := caddyutils.ParseString(d, &c.Domainname); err != nil {
+			if err := parser.ParseString(d, &c.Domainname); err != nil {
 				return err
 			}
 		case "expose":
-			c.ExposedPorts = fnutils.DefaultIfEmpty(c.ExposedPorts, []int{})
-			if err := caddyutils.ParseIntArray(d, &c.ExposedPorts); err != nil {
-				return err
+			for d.CountRemainingArgs() > 0 {
+				if err := parser.ParseNetworkPortRange(d, &c.ExposedPorts); err != nil {
+					return err
+				}
 			}
 		case "volume", "volumes":
 			c.Volumes = fnutils.DefaultIfEmpty(c.Volumes, []string{})
-			if err := caddyutils.ParseStringArray(d, &c.Volumes, false); err != nil {
+			if err := parser.ParseStringArray(d, &c.Volumes); err != nil {
 				return err
 			}
 		case "volume_from", "volumes_from":
 			c.VolumesFrom = fnutils.DefaultIfEmpty(c.VolumesFrom, []string{})
-			if err := caddyutils.ParseStringArray(d, &c.VolumesFrom, false); err != nil {
+			if err := parser.ParseStringArray(d, &c.VolumesFrom); err != nil {
 				return err
 			}
 		case "readonly_mount":
@@ -248,13 +252,13 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 				Type:     "bind",
 				ReadOnly: true,
 			}
-			if err := caddyutils.ParseString(d, &mount.Source); err != nil {
+			if err := parser.ParseString(d, &mount.Source); err != nil {
 				return err
 			}
-			if err := caddyutils.ExpectString(d, "to"); err != nil {
+			if err := parser.ExpectString(d, parser.Match("to")); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseString(d, &mount.Target); err != nil {
+			if err := parser.ParseString(d, &mount.Target); err != nil {
 				return err
 			}
 			c.Mounts = append(c.Mounts, mount)
@@ -264,36 +268,36 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 				Type: "bind",
 			}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ParseString(d, &mount.Source); err != nil {
+				if err := parser.ParseString(d, &mount.Source); err != nil {
 					return err
 				}
-				if err := caddyutils.ExpectString(d, "to"); err != nil {
+				if err := parser.ExpectString(d, parser.Match("to")); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseString(d, &mount.Target); err != nil {
+				if err := parser.ParseString(d, &mount.Target); err != nil {
 					return err
 				}
 			} else {
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
 					switch d.Val() {
 					case "type":
-						if err := caddyutils.ParseString(d, &mount.Type); err != nil {
+						if err := parser.ParseString(d, &mount.Type); err != nil {
 							return err
 						}
 					case "source":
-						if err := caddyutils.ParseString(d, &mount.Source); err != nil {
+						if err := parser.ParseString(d, &mount.Source); err != nil {
 							return err
 						}
 					case "target":
-						if err := caddyutils.ParseString(d, &mount.Target); err != nil {
+						if err := parser.ParseString(d, &mount.Target); err != nil {
 							return err
 						}
 					case "read_only":
-						if err := caddyutils.ParseBool(d, &mount.ReadOnly); err != nil {
+						if err := parser.ParseBool(d, &mount.ReadOnly); err != nil {
 							return err
 						}
 					case "consistency":
-						if err := caddyutils.ParseString(d, &mount.Consistency); err != nil {
+						if err := parser.ParseString(d, &mount.Consistency); err != nil {
 							return err
 						}
 					default:
@@ -303,17 +307,17 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 			}
 			c.Mounts = append(c.Mounts, mount)
 		case "cmd", "command":
-			if err := caddyutils.ParseStringArray(d, &c.Cmd, false); err != nil {
+			if err := parser.ParseStringArray(d, &c.Cmd); err != nil {
 				return err
 			}
 		case "env", "environment":
 			c.Env = fnutils.DefaultIfEmptyMap(c.Env, make(map[string]string))
 			if d.CountRemainingArgs() > 0 {
 				var key, value string
-				if err := caddyutils.ParseString(d, &key); err != nil {
+				if err := parser.ParseString(d, &key); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseString(d, &value); err != nil {
+				if err := parser.ParseString(d, &value); err != nil {
 					return err
 				}
 				c.Env[key] = value
@@ -321,14 +325,14 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
 					key := d.Val()
 					var value string
-					if err := caddyutils.ParseString(d, &value); err != nil {
+					if err := parser.ParseString(d, &value); err != nil {
 						return err
 					}
 					c.Env[key] = value
 				}
 			}
 		case "entrypoint":
-			if err := caddyutils.ParseStringArray(d, &c.Entrypoint, false); err != nil {
+			if err := parser.ParseStringArray(d, &c.Entrypoint); err != nil {
 				return err
 			}
 		case "healthcheck":
@@ -336,23 +340,23 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 			for nesting := d.Nesting(); d.NextBlock(nesting); {
 				switch d.Val() {
 				case "test":
-					if err := caddyutils.ParseStringArray(d, &c.Healthcheck.Test, false); err != nil {
+					if err := parser.ParseStringArray(d, &c.Healthcheck.Test); err != nil {
 						return err
 					}
 				case "interval":
-					if err := caddyutils.ParseDuration(d, &c.Healthcheck.Interval); err != nil {
+					if err := parser.ParseDuration(d, &c.Healthcheck.Interval); err != nil {
 						return err
 					}
 				case "timeout":
-					if err := caddyutils.ParseDuration(d, &c.Healthcheck.Timeout); err != nil {
+					if err := parser.ParseDuration(d, &c.Healthcheck.Timeout); err != nil {
 						return err
 					}
 				case "start_period":
-					if err := caddyutils.ParseDuration(d, &c.Healthcheck.StartPeriod); err != nil {
+					if err := parser.ParseDuration(d, &c.Healthcheck.StartPeriod); err != nil {
 						return err
 					}
 				case "retries":
-					if err := caddyutils.ParseInt(d, &c.Healthcheck.Retries); err != nil {
+					if err := parser.ParseInt(d, &c.Healthcheck.Retries); err != nil {
 						return err
 					}
 				default:
@@ -362,25 +366,25 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 		case "label":
 			c.Labels = fnutils.DefaultIfEmptyMap(c.Labels, make(map[string]string))
 			var key, value string
-			if err := caddyutils.ParseString(d, &key); err != nil {
+			if err := parser.ParseString(d, &key); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseString(d, &value); err != nil {
+			if err := parser.ParseString(d, &value); err != nil {
 				return err
 			}
 			c.Labels[key] = value
 		case "user":
-			if err := caddyutils.ParseString(d, &c.User); err != nil {
+			if err := parser.ParseString(d, &c.User); err != nil {
 				return err
 			}
 		case "restart":
 			policy := RestartPolicy{}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ParseString(d, &policy.Name); err != nil {
+				if err := parser.ParseString(d, &policy.Name); err != nil {
 					return err
 				}
 				if d.CountRemainingArgs() > 0 {
-					if err := caddyutils.ParseInt(d, &policy.Max); err != nil {
+					if err := parser.ParseInt(d, &policy.Max); err != nil {
 						return err
 					}
 				}
@@ -388,11 +392,11 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
 					switch d.Val() {
 					case "name":
-						if err := caddyutils.ParseString(d, &c.RestartPolicy.Name); err != nil {
+						if err := parser.ParseString(d, &c.RestartPolicy.Name); err != nil {
 							return err
 						}
 					case "max":
-						if err := caddyutils.ParseInt(d, &c.RestartPolicy.Max); err != nil {
+						if err := parser.ParseInt(d, &c.RestartPolicy.Max); err != nil {
 							return err
 						}
 					default:
@@ -402,72 +406,72 @@ func parseContainerOption(d *caddyfile.Dispenser, containers map[string]*Contain
 			}
 			c.RestartPolicy = &policy
 		case "stop_signal":
-			if err := caddyutils.ParseString(d, &c.StopSignal); err != nil {
+			if err := parser.ParseString(d, &c.StopSignal); err != nil {
 				return err
 			}
 		case "stop_timeout":
-			if err := caddyutils.ParseSecondsDuration(d, c.StopTimeout); err != nil {
+			if err := parser.ParseSecondDuration(d, c.StopTimeout); err != nil {
 				return err
 			}
 		case "network":
 			c.Networks = fnutils.DefaultIfEmpty(c.Networks, []*NetworkConfig{})
 			network := NetworkConfig{}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ParseString(d, &network.NetworkID); err != nil {
+				if err := parser.ParseString(d, &network.NetworkID); err != nil {
 					return err
 				}
 			} else {
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
 					switch d.Val() {
 					case "name":
-						if err := caddyutils.ParseString(d, &network.NetworkID); err != nil {
+						if err := parser.ParseString(d, &network.NetworkID); err != nil {
 							return err
 						}
 					case "endpoint":
-						if err := caddyutils.ParseString(d, &network.EndpointID); err != nil {
+						if err := parser.ParseString(d, &network.EndpointID); err != nil {
 							return err
 						}
 					case "gateway":
-						if err := caddyutils.ParseString(d, &network.Gateway); err != nil {
+						if err := parser.ParseString(d, &network.Gateway); err != nil {
 							return err
 						}
 					case "ip_address":
-						if err := caddyutils.ParseString(d, &network.IPAddress); err != nil {
+						if err := parser.ParseString(d, &network.IPAddress); err != nil {
 							return err
 						}
 					case "ip_prefix_length":
-						if err := caddyutils.ParseInt(d, &network.IPPrefixLen); err != nil {
+						if err := parser.ParseInt(d, &network.IPPrefixLen); err != nil {
 							return err
 						}
 					case "ipv6_gateway":
-						if err := caddyutils.ParseString(d, &network.IPv6Gateway); err != nil {
+						if err := parser.ParseString(d, &network.IPv6Gateway); err != nil {
 							return err
 						}
 					case "ipv6_address":
-						if err := caddyutils.ParseString(d, &network.GlobalIPv6Address); err != nil {
+						if err := parser.ParseString(d, &network.GlobalIPv6Address); err != nil {
 							return err
 						}
 					case "ipv6_prefix_length":
-						if err := caddyutils.ParseInt(d, &network.GlobalIPv6PrefixLen); err != nil {
+						if err := parser.ParseInt(d, &network.GlobalIPv6PrefixLen); err != nil {
 							return err
 						}
 					case "mac_address":
-						if err := caddyutils.ParseString(d, &network.MacAddress); err != nil {
+						if err := parser.ParseString(d, &network.MacAddress); err != nil {
 							return err
 						}
 					case "link":
 						network.Links = fnutils.DefaultIfEmpty(network.Links, []string{})
-						if err := caddyutils.ParseStringArray(d, &network.Links, false); err != nil {
+						if err := parser.ParseStringArray(d, &network.Links); err != nil {
 							return err
 						}
 					case "alias":
 						network.Aliases = fnutils.DefaultIfEmpty(network.Aliases, []string{})
-						if err := caddyutils.ParseStringArray(d, &network.Aliases, false); err != nil {
+						if err := parser.ParseStringArray(d, &network.Aliases); err != nil {
 							return err
 						}
 					case "driver_opts":
 						network.DriverOpts = fnutils.DefaultIfEmptyMap(network.DriverOpts, make(map[string]string))
-						if err := caddyutils.ParseKeyValuePairs(d, &network.DriverOpts, "="); err != nil {
+						if err := parser.ParseStringMap(d, &network.DriverOpts, parser.Inline(parser.Separator("="))); err != nil {
 							return err
 						}
 					default:

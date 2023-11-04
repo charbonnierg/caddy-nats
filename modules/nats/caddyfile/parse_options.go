@@ -8,7 +8,7 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/quara-dev/beyond/modules/nats/auth"
 	"github.com/quara-dev/beyond/modules/nats/auth/policies"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 	"github.com/quara-dev/beyond/pkg/parseutils"
@@ -21,43 +21,43 @@ func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "no_tls":
-			if err := caddyutils.ParseBool(d, &o.NoTLS); err != nil {
+			if err := parser.ParseBool(d, &o.NoTLS); err != nil {
 				return err
 			}
 		case "name", "server_name":
-			if err := caddyutils.ParseString(d, &o.ServerName); err != nil {
+			if err := parser.ParseString(d, &o.ServerName); err != nil {
 				return err
 			}
 		case "tags", "server_tags":
 			// o.ServerTags = fnutils.DefaultIfEmptyMap(o.ServerTags, map[string]string{})
-			if err := caddyutils.ParseKeyValuePairs(d, &o.ServerTags, ":"); err != nil {
+			if err := parser.ParseStringMap(d, &o.ServerTags, parser.Inline(parser.Separator(":"))); err != nil {
 				return err
 			}
 		case "host", "server_host":
-			if err := caddyutils.ParseString(d, &o.Host); err != nil {
+			if err := parser.ParseString(d, &o.Host); err != nil {
 				return err
 			}
 		case "port", "server_port":
-			if err := caddyutils.ParsePort(d, &o.Port); err != nil {
+			if err := parser.ParseNetworkPort(d, &o.Port); err != nil {
 				return err
 			}
 		case "advertise", "client_advertise":
-			if err := caddyutils.ParseString(d, &o.Advertise); err != nil {
+			if err := parser.ParseString(d, &o.Advertise); err != nil {
 				return err
 			}
 		case "debug", "enable_debug":
-			if err := caddyutils.ParseBool(d, &o.Debug); err != nil {
+			if err := parser.ParseBool(d, &o.Debug); err != nil {
 				return err
 			}
 		case "trace", "enable_trace":
-			if err := caddyutils.ParseBool(d, &o.Trace); err != nil {
+			if err := parser.ParseBool(d, &o.Trace); err != nil {
 				return err
 			}
 			if o.Trace {
 				o.Debug = true
 			}
 		case "trace_verbose", "enable_trace_verbose":
-			if err := caddyutils.ParseBool(d, &o.TraceVerbose); err != nil {
+			if err := parser.ParseBool(d, &o.TraceVerbose); err != nil {
 				return err
 			}
 			if o.TraceVerbose {
@@ -65,67 +65,67 @@ func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 				o.Trace = true
 			}
 		case "http_port", "monitoring_port":
-			if err := caddyutils.ParsePort(d, &o.HTTPPort); err != nil {
+			if err := parser.ParseNetworkPort(d, &o.HTTPPort); err != nil {
 				return err
 			}
 		case "http_host", "monitoring_host":
-			if err := caddyutils.ParseString(d, &o.HTTPHost); err != nil {
+			if err := parser.ParseString(d, &o.HTTPHost); err != nil {
 				return err
 			}
 		case "https_port", "monitoring_tls_port":
-			if err := caddyutils.ParsePort(d, &o.HTTPSPort); err != nil {
+			if err := parser.ParseNetworkPort(d, &o.HTTPSPort); err != nil {
 				return err
 			}
 		case "http_base_path", "monitoring_base_path":
-			if err := caddyutils.ParseString(d, &o.HTTPBasePath); err != nil {
+			if err := parser.ParseString(d, &o.HTTPBasePath); err != nil {
 				return err
 			}
 		case "no_log", "disable_logging":
-			if err := caddyutils.ParseBool(d, &o.NoLog); err != nil {
+			if err := parser.ParseBool(d, &o.NoLog); err != nil {
 				return err
 			}
 		case "no_sublist_cache", "disable_sublist_cache":
-			if err := caddyutils.ParseBool(d, &o.NoSublistCache); err != nil {
+			if err := parser.ParseBool(d, &o.NoSublistCache); err != nil {
 				return err
 			}
 		case "max_conn", "max_connections":
-			if err := caddyutils.ParseInt(d, &o.MaxConn); err != nil {
+			if err := parser.ParseInt(d, &o.MaxConn); err != nil {
 				return err
 			}
 		case "max_payload":
-			if err := caddyutils.ParseByteSizeI32(d, &o.MaxPayload); err != nil {
+			if err := parser.ParseInt32ByteSize(d, &o.MaxPayload); err != nil {
 				return err
 			}
 		case "max_pending":
-			if err := caddyutils.ParseByteSizeI64(d, &o.MaxPending); err != nil {
+			if err := parser.ParseInt64ByteSize(d, &o.MaxPending); err != nil {
 				return err
 			}
 		case "max_subs", "max_subscriptions":
-			if err := caddyutils.ParseInt(d, &o.MaxSubs); err != nil {
+			if err := parser.ParseInt(d, &o.MaxSubs); err != nil {
 				return err
 			}
 		case "max_control_line":
-			if err := caddyutils.ParseByteSizeI32(d, &o.MaxControlLine); err != nil {
+			if err := parser.ParseInt32ByteSize(d, &o.MaxControlLine); err != nil {
 				return err
 			}
 		case "ping_interval":
-			if err := caddyutils.ParseDuration(d, &o.PingInterval); err != nil {
+			if err := parser.ParseDuration(d, &o.PingInterval); err != nil {
 				return err
 			}
 		case "max_pings_out", "ping_max":
-			if err := caddyutils.ParseInt(d, &o.MaxPingsOut); err != nil {
+			if err := parser.ParseInt(d, &o.MaxPingsOut); err != nil {
 				return err
 			}
 		case "write_deadline":
-			if err := caddyutils.ParseDuration(d, &o.WriteDeadline); err != nil {
+			if err := parser.ParseDuration(d, &o.WriteDeadline); err != nil {
 				return err
 			}
 		case "no_auth_user":
-			if err := caddyutils.ParseString(d, &o.NoAuthUser); err != nil {
+			if err := parser.ParseString(d, &o.NoAuthUser); err != nil {
 				return err
 			}
 		case "system_account":
-			if err := caddyutils.ParseString(d, &o.SystemAccount); err != nil {
+			if err := parser.ParseString(d, &o.SystemAccount); err != nil {
 				return err
 			}
 		case "tls":
@@ -140,17 +140,17 @@ func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 			}
 		case "jetstream_max_disk", "jetstream_max_file":
 			o.JetStream = fnutils.DefaultIfNil(o.JetStream, &embedded.JetStream{})
-			if err := caddyutils.ParseByteSizeI64(d, &o.JetStream.MaxFile); err != nil {
+			if err := parser.ParseInt64ByteSize(d, &o.JetStream.MaxFile); err != nil {
 				return err
 			}
 		case "jetstream_max_memory", "jetstream_max_mem":
 			o.JetStream = fnutils.DefaultIfNil(o.JetStream, &embedded.JetStream{})
-			if err := caddyutils.ParseByteSizeI64(d, &o.JetStream.MaxMemory); err != nil {
+			if err := parser.ParseInt64ByteSize(d, &o.JetStream.MaxMemory); err != nil {
 				return err
 			}
 		case "jetstream_domain":
 			o.JetStream = fnutils.DefaultIfNil(o.JetStream, &embedded.JetStream{})
-			if err := caddyutils.ParseString(d, &o.JetStream.Domain); err != nil {
+			if err := parser.ParseString(d, &o.JetStream.Domain); err != nil {
 				return err
 			}
 		case "mqtt":
@@ -170,7 +170,7 @@ func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 			}
 		case "operators", "operator":
 			o.Operators = fnutils.DefaultIfEmpty(o.Operators, []string{})
-			if err := caddyutils.ParseStringArray(d, &o.Operators, false); err != nil {
+			if err := parser.ParseStringArray(d, &o.Operators); err != nil {
 				return err
 			}
 		case "accounts":
@@ -221,15 +221,15 @@ func parseSubjectMapping(d *caddyfile.Dispenser, account *embedded.Account) erro
 		return d.Err("internal error: mappings is nil. Please open a bug report.")
 	}
 	mapping := embedded.SubjectMapping{MapDest: []*server.MapDest{}}
-	if err := caddyutils.ParseString(d, &mapping.Subject); err != nil {
+	if err := parser.ParseString(d, &mapping.Subject); err != nil {
 		return err
 	}
 	if d.CountRemainingArgs() > 0 {
-		if err := caddyutils.ExpectString(d, "to"); err != nil {
+		if err := parser.ExpectString(d, parser.Match("to")); err != nil {
 			return err
 		}
 		dest := server.MapDest{Weight: 100}
-		if err := caddyutils.ParseString(d, &dest.Subject); err != nil {
+		if err := parser.ParseString(d, &dest.Subject); err != nil {
 			return err
 		}
 		mapping.MapDest = append(mapping.MapDest, &dest)
@@ -241,14 +241,14 @@ func parseSubjectMapping(d *caddyfile.Dispenser, account *embedded.Account) erro
 				return d.Errf("unrecognized subject mapping subdirective: %s", d.Val())
 			}
 			dest := server.MapDest{}
-			if err := caddyutils.ParseString(d, &dest.Subject); err != nil {
+			if err := parser.ParseString(d, &dest.Subject); err != nil {
 				return err
 			}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ExpectString(d, "weight"); err != nil {
+				if err := parser.ExpectString(d, parser.Match("weight")); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseUInt8(d, &dest.Weight); err != nil {
+				if err := parser.ParseUint8(d, &dest.Weight); err != nil {
 					return err
 				}
 			} else {
@@ -283,7 +283,7 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, acc *emb
 				return err
 			}
 		case "jetstream":
-			if err := caddyutils.ParseBool(d, &acc.JetStream); err != nil {
+			if err := parser.ParseBool(d, &acc.JetStream); err != nil {
 				return err
 			}
 		case "map_subject":
@@ -299,14 +299,14 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, acc *emb
 				acc.Services.Export = []embedded.ServiceExport{}
 			}
 			export := embedded.ServiceExport{}
-			if err := caddyutils.ParseString(d, &export.Subject); err != nil {
+			if err := parser.ParseString(d, &export.Subject); err != nil {
 				return err
 			}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ExpectString(d, "to"); err != nil {
+				if err := parser.ExpectString(d, parser.Match("to")); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseStringArray(d, &export.To, false); err != nil {
+				if err := parser.ParseStringArray(d, &export.To); err != nil {
 					return err
 				}
 			}
@@ -319,22 +319,22 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, acc *emb
 				acc.Services.Import = []embedded.ServiceImport{}
 			}
 			import_ := embedded.ServiceImport{}
-			if err := caddyutils.ParseString(d, &import_.Subject); err != nil {
+			if err := parser.ParseString(d, &import_.Subject); err != nil {
 				return err
 			}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ExpectString(d, "from"); err != nil {
+				if err := parser.ExpectString(d, parser.Match("from")); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseString(d, &import_.Account); err != nil {
+				if err := parser.ParseString(d, &import_.Account); err != nil {
 					return err
 				}
 			}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ExpectString(d, "to"); err != nil {
+				if err := parser.ExpectString(d, parser.Match("to")); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseString(d, &import_.To); err != nil {
+				if err := parser.ParseString(d, &import_.To); err != nil {
 					return err
 				}
 			}
@@ -347,14 +347,14 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, acc *emb
 				acc.Streams.Export = []embedded.StreamExport{}
 			}
 			export := embedded.StreamExport{}
-			if err := caddyutils.ParseString(d, &export.Subject); err != nil {
+			if err := parser.ParseString(d, &export.Subject); err != nil {
 				return err
 			}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ExpectString(d, "to"); err != nil {
+				if err := parser.ExpectString(d, parser.Match("to")); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseStringArray(d, &export.To, false); err != nil {
+				if err := parser.ParseStringArray(d, &export.To); err != nil {
 					return err
 				}
 			}
@@ -367,22 +367,22 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, acc *emb
 				acc.Streams.Import = []embedded.StreamImport{}
 			}
 			import_ := embedded.StreamImport{}
-			if err := caddyutils.ParseString(d, &import_.Subject); err != nil {
+			if err := parser.ParseString(d, &import_.Subject); err != nil {
 				return err
 			}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ExpectString(d, "from"); err != nil {
+				if err := parser.ExpectString(d, parser.Match("from")); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseString(d, &import_.Account); err != nil {
+				if err := parser.ParseString(d, &import_.Account); err != nil {
 					return err
 				}
 			}
 			if d.CountRemainingArgs() > 0 {
-				if err := caddyutils.ExpectString(d, "to"); err != nil {
+				if err := parser.ExpectString(d, parser.Match("to")); err != nil {
 					return err
 				}
-				if err := caddyutils.ParseString(d, &import_.To); err != nil {
+				if err := parser.ParseString(d, &import_.To); err != nil {
 					return err
 				}
 			}
@@ -423,7 +423,7 @@ func parseAuthUsers(d *caddyfile.Dispenser, auth *embedded.AuthorizationMap) err
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "password":
-				if err := caddyutils.ParseString(d, &user.Password); err != nil {
+				if err := parser.ParseString(d, &user.Password); err != nil {
 					return err
 				}
 			default:
@@ -454,23 +454,23 @@ func ParseJetStream(d *caddyfile.Dispenser, jsopts *embedded.JetStream) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "domain":
-				if err := caddyutils.ParseString(d, &jsopts.Domain); err != nil {
+				if err := parser.ParseString(d, &jsopts.Domain); err != nil {
 					return err
 				}
 			case "store", "store_dir", "store_directory":
-				if err := caddyutils.ParseString(d, &jsopts.StoreDir); err != nil {
+				if err := parser.ParseString(d, &jsopts.StoreDir); err != nil {
 					return err
 				}
 			case "max_memory":
-				if err := caddyutils.ParseByteSizeI64(d, &jsopts.MaxMemory); err != nil {
+				if err := parser.ParseInt64ByteSize(d, &jsopts.MaxMemory); err != nil {
 					return err
 				}
 			case "max_file", "max_disk":
-				if err := caddyutils.ParseByteSizeI64(d, &jsopts.MaxFile); err != nil {
+				if err := parser.ParseInt64ByteSize(d, &jsopts.MaxFile); err != nil {
 					return err
 				}
 			case "unique_tag":
-				if err := caddyutils.ParseString(d, &jsopts.UniqueTag); err != nil {
+				if err := parser.ParseString(d, &jsopts.UniqueTag); err != nil {
 					return err
 				}
 			default:
@@ -502,35 +502,35 @@ func ParseMqtt(d *caddyfile.Dispenser, mqttopts *embedded.MQTT) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "no_tls":
-				if err := caddyutils.ParseBool(d, &mqttopts.NoTLS); err != nil {
+				if err := parser.ParseBool(d, &mqttopts.NoTLS); err != nil {
 					return err
 				}
 			case "host":
-				if err := caddyutils.ParseString(d, &mqttopts.Host); err != nil {
+				if err := parser.ParseString(d, &mqttopts.Host); err != nil {
 					return err
 				}
 			case "port":
-				if err := caddyutils.ParsePort(d, &mqttopts.Port); err != nil {
+				if err := parser.ParseNetworkPort(d, &mqttopts.Port); err != nil {
 					return err
 				}
 			case "jetstream_domain":
-				if err := caddyutils.ParseString(d, &mqttopts.JSDomain); err != nil {
+				if err := parser.ParseString(d, &mqttopts.JSDomain); err != nil {
 					return err
 				}
 			case "stream_replicas":
-				if err := caddyutils.ParseInt(d, &mqttopts.StreamReplicas); err != nil {
+				if err := parser.ParseInt(d, &mqttopts.StreamReplicas); err != nil {
 					return err
 				}
 			case "user", "username":
-				if err := caddyutils.ParseString(d, &mqttopts.Username); err != nil {
+				if err := parser.ParseString(d, &mqttopts.Username); err != nil {
 					return err
 				}
 			case "password":
-				if err := caddyutils.ParseString(d, &mqttopts.Password); err != nil {
+				if err := parser.ParseString(d, &mqttopts.Password); err != nil {
 					return err
 				}
 			case "no_auth_user":
-				if err := caddyutils.ParseString(d, &mqttopts.NoAuthUser); err != nil {
+				if err := parser.ParseString(d, &mqttopts.NoAuthUser); err != nil {
 					return err
 				}
 			case "tls":
@@ -565,47 +565,47 @@ func ParseWebsocket(d *caddyfile.Dispenser, wsopts *embedded.Websocket) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "no_tls":
-				if err := caddyutils.ParseBool(d, &wsopts.NoTLS); err != nil {
+				if err := parser.ParseBool(d, &wsopts.NoTLS); err != nil {
 					return err
 				}
 			case "host":
-				if err := caddyutils.ParseString(d, &wsopts.Host); err != nil {
+				if err := parser.ParseString(d, &wsopts.Host); err != nil {
 					return err
 				}
 			case "port":
-				if err := caddyutils.ParsePort(d, &wsopts.Port); err != nil {
+				if err := parser.ParseNetworkPort(d, &wsopts.Port); err != nil {
 					return err
 				}
 			case "advertise", "client_advertise":
-				if err := caddyutils.ParseString(d, &wsopts.Advertise); err != nil {
+				if err := parser.ParseString(d, &wsopts.Advertise); err != nil {
 					return err
 				}
 			case "user", "username":
-				if err := caddyutils.ParseString(d, &wsopts.Username); err != nil {
+				if err := parser.ParseString(d, &wsopts.Username); err != nil {
 					return err
 				}
 			case "password":
-				if err := caddyutils.ParseString(d, &wsopts.Password); err != nil {
+				if err := parser.ParseString(d, &wsopts.Password); err != nil {
 					return err
 				}
 			case "no_auth_user":
-				if err := caddyutils.ParseString(d, &wsopts.NoAuthUser); err != nil {
+				if err := parser.ParseString(d, &wsopts.NoAuthUser); err != nil {
 					return err
 				}
 			case "compression", "enable_compression":
-				if err := caddyutils.ParseBool(d, &wsopts.Compression); err != nil {
+				if err := parser.ParseBool(d, &wsopts.Compression); err != nil {
 					return err
 				}
 			case "same_origin", "require_same_origin":
-				if err := caddyutils.ParseBool(d, &wsopts.SameOrigin); err != nil {
+				if err := parser.ParseBool(d, &wsopts.SameOrigin); err != nil {
 					return err
 				}
 			case "allowed_origins":
-				if err := caddyutils.ParseStringArray(d, &wsopts.AllowedOrigins, false); err != nil {
+				if err := parser.ParseStringArray(d, &wsopts.AllowedOrigins); err != nil {
 					return err
 				}
 			case "jwt_cookie":
-				if err := caddyutils.ParseString(d, &wsopts.JWTCookie); err != nil {
+				if err := parser.ParseString(d, &wsopts.JWTCookie); err != nil {
 					return err
 				}
 			case "tls":
@@ -642,19 +642,19 @@ func ParseLeafnodes(d *caddyfile.Dispenser, leafopts *embedded.Leafnode) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "host":
-				if err := caddyutils.ParseString(d, &leafopts.Host); err != nil {
+				if err := parser.ParseString(d, &leafopts.Host); err != nil {
 					return err
 				}
 			case "port":
-				if err := caddyutils.ParsePort(d, &leafopts.Port); err != nil {
+				if err := parser.ParseNetworkPort(d, &leafopts.Port); err != nil {
 					return err
 				}
 			case "advertise":
-				if err := caddyutils.ParseString(d, &leafopts.Advertise); err != nil {
+				if err := parser.ParseString(d, &leafopts.Advertise); err != nil {
 					return err
 				}
 			case "no_tls":
-				if err := caddyutils.ParseBool(d, &leafopts.NoTLS); err != nil {
+				if err := parser.ParseBool(d, &leafopts.NoTLS); err != nil {
 					return err
 				}
 			case "tls":
@@ -682,42 +682,42 @@ func parseRemoteLeafnodes(d *caddyfile.Dispenser, remotes *[]embedded.Remote) er
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "url":
-				if err := caddyutils.ParseString(d, &remote.Url); err != nil {
+				if err := parser.ParseString(d, &remote.Url); err != nil {
 					return err
 				}
 			case "urls":
-				if err := caddyutils.ParseStringArray(d, &remote.Urls, false); err != nil {
+				if err := parser.ParseStringArray(d, &remote.Urls); err != nil {
 					return err
 				}
 			case "hub":
-				if err := caddyutils.ParseBool(d, &remote.Hub); err != nil {
+				if err := parser.ParseBool(d, &remote.Hub); err != nil {
 					return err
 				}
 			case "deny_import":
-				if err := caddyutils.ParseStringArray(d, &remote.DenyImports, false); err != nil {
+				if err := parser.ParseStringArray(d, &remote.DenyImports); err != nil {
 					return err
 				}
 			case "deny_export":
-				if err := caddyutils.ParseStringArray(d, &remote.DenyExports, false); err != nil {
+				if err := parser.ParseStringArray(d, &remote.DenyExports); err != nil {
 					return err
 				}
 			case "account":
-				if err := caddyutils.ParseString(d, &remote.Account); err != nil {
+				if err := parser.ParseString(d, &remote.Account); err != nil {
 					return err
 				}
 			case "credentials":
-				if err := caddyutils.ParseString(d, &remote.Credentials); err != nil {
+				if err := parser.ParseString(d, &remote.Credentials); err != nil {
 					return err
 				}
 			case "websocket":
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
 					switch d.Val() {
 					case "compression":
-						if err := caddyutils.ParseBool(d, &remote.Websocket.Compression); err != nil {
+						if err := parser.ParseBool(d, &remote.Websocket.Compression); err != nil {
 							return err
 						}
 					case "no_masking":
-						if err := caddyutils.ParseBool(d, &remote.Websocket.NoMasking); err != nil {
+						if err := parser.ParseBool(d, &remote.Websocket.NoMasking); err != nil {
 							return err
 						}
 					default:
@@ -752,19 +752,19 @@ func parseCacheResolver(d *caddyfile.Dispenser, resolveropts *embedded.CacheAcco
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "path":
-				if err := caddyutils.ParseString(d, &resolveropts.Path); err != nil {
+				if err := parser.ParseString(d, &resolveropts.Path); err != nil {
 					return err
 				}
 			case "limit":
-				if err := caddyutils.ParseInt(d, &resolveropts.Limit); err != nil {
+				if err := parser.ParseInt(d, &resolveropts.Limit); err != nil {
 					return err
 				}
 			case "ttl":
-				if err := caddyutils.ParseDuration(d, &resolveropts.TTL); err != nil {
+				if err := parser.ParseDuration(d, &resolveropts.TTL); err != nil {
 					return err
 				}
 			case "preload":
-				if err := caddyutils.ParseStringArray(d, &resolveropts.Preload, false); err != nil {
+				if err := parser.ParseStringArray(d, &resolveropts.Preload); err != nil {
 					return err
 				}
 			default:
@@ -794,27 +794,27 @@ func parseFullResolver(d *caddyfile.Dispenser, resolveropts *embedded.FullAccoun
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "path":
-				if err := caddyutils.ParseString(d, &resolveropts.Path); err != nil {
+				if err := parser.ParseString(d, &resolveropts.Path); err != nil {
 					return err
 				}
 			case "limit":
-				if err := caddyutils.ParseInt64(d, &resolveropts.Limit); err != nil {
+				if err := parser.ParseInt64(d, &resolveropts.Limit); err != nil {
 					return err
 				}
 			case "sync", "sync_interval":
-				if err := caddyutils.ParseDuration(d, &resolveropts.SyncInterval); err != nil {
+				if err := parser.ParseDuration(d, &resolveropts.SyncInterval); err != nil {
 					return err
 				}
 			case "allow_delete":
-				if err := caddyutils.ParseBool(d, &resolveropts.AllowDelete); err != nil {
+				if err := parser.ParseBool(d, &resolveropts.AllowDelete); err != nil {
 					return err
 				}
 			case "hard_delete":
-				if err := caddyutils.ParseBool(d, &resolveropts.HardDelete); err != nil {
+				if err := parser.ParseBool(d, &resolveropts.HardDelete); err != nil {
 					return err
 				}
 			case "preload":
-				if err := caddyutils.ParseStringArray(d, &resolveropts.Preload, false); err != nil {
+				if err := parser.ParseStringArray(d, &resolveropts.Preload); err != nil {
 					return err
 				}
 			default:
@@ -837,11 +837,11 @@ func parseMemoryResolver(d *caddyfile.Dispenser, resolveropts *embedded.MemoryAc
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "limit":
-			if err := caddyutils.ParseInt(d, &resolveropts.Limit); err != nil {
+			if err := parser.ParseInt(d, &resolveropts.Limit); err != nil {
 				return err
 			}
 		case "preload":
-			if err := caddyutils.ParseStringArray(d, &resolveropts.Preload, false); err != nil {
+			if err := parser.ParseStringArray(d, &resolveropts.Preload); err != nil {
 				return err
 			}
 		default:
@@ -856,67 +856,67 @@ func parseTLS(d *caddyfile.Dispenser, tlsOpts *embedded.TLSMap) error {
 	if tlsOpts == nil {
 		return d.Err("internal error: tlsOpts is nil. Please open a bug report.")
 	}
-	caddyutils.ParseStringArray(d, &tlsOpts.Subjects, false)
+	parser.ParseStringArray(d, &tlsOpts.Subjects, parser.AllowEmpty())
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "subjects":
-			if err := caddyutils.ParseStringArray(d, &tlsOpts.Subjects, false); err != nil {
+			if err := parser.ParseStringArray(d, &tlsOpts.Subjects); err != nil {
 				return err
 			}
 		case "allow_non_tls":
-			if err := caddyutils.ParseBool(d, &tlsOpts.AllowNonTLS); err != nil {
+			if err := parser.ParseBool(d, &tlsOpts.AllowNonTLS); err != nil {
 				return err
 			}
 		case "cert_file":
-			if err := caddyutils.ParseString(d, &tlsOpts.CertFile); err != nil {
+			if err := parser.ParseString(d, &tlsOpts.CertFile); err != nil {
 				return err
 			}
 		case "cert_match":
-			if err := caddyutils.ParseString(d, &tlsOpts.CertMatch); err != nil {
+			if err := parser.ParseString(d, &tlsOpts.CertMatch); err != nil {
 				return err
 			}
 		case "cert_match_by":
-			if err := caddyutils.ParseString(d, &tlsOpts.CertMatchBy); err != nil {
+			if err := parser.ParseString(d, &tlsOpts.CertMatchBy); err != nil {
 				return err
 			}
 		case "key_file":
-			if err := caddyutils.ParseString(d, &tlsOpts.KeyFile); err != nil {
+			if err := parser.ParseString(d, &tlsOpts.KeyFile); err != nil {
 				return err
 			}
 		case "ca_file":
-			if err := caddyutils.ParseString(d, &tlsOpts.CaFile); err != nil {
+			if err := parser.ParseString(d, &tlsOpts.CaFile); err != nil {
 				return err
 			}
 		case "verify":
-			if err := caddyutils.ParseBool(d, &tlsOpts.Verify); err != nil {
+			if err := parser.ParseBool(d, &tlsOpts.Verify); err != nil {
 				return err
 			}
 		case "insecure":
-			if err := caddyutils.ParseBool(d, &tlsOpts.Insecure); err != nil {
+			if err := parser.ParseBool(d, &tlsOpts.Insecure); err != nil {
 				return err
 			}
 		case "map":
-			if err := caddyutils.ParseBool(d, &tlsOpts.Map); err != nil {
+			if err := parser.ParseBool(d, &tlsOpts.Map); err != nil {
 				return err
 			}
 		case "check_known_urls":
-			if err := caddyutils.ParseBool(d, &tlsOpts.CheckKnownURLs); err != nil {
+			if err := parser.ParseBool(d, &tlsOpts.CheckKnownURLs); err != nil {
 				return err
 			}
 		case "rate_limit":
-			if err := caddyutils.ParseInt64(d, &tlsOpts.RateLimit); err != nil {
+			if err := parser.ParseInt64(d, &tlsOpts.RateLimit); err != nil {
 				return err
 			}
 		case "ciphers":
-			if err := caddyutils.ParseStringArray(d, &tlsOpts.Ciphers, false); err != nil {
+			if err := parser.ParseStringArray(d, &tlsOpts.Ciphers); err != nil {
 				return err
 			}
 		case "curve_preferences":
-			if err := caddyutils.ParseStringArray(d, &tlsOpts.CurvePreferences, false); err != nil {
+			if err := parser.ParseStringArray(d, &tlsOpts.CurvePreferences); err != nil {
 				return err
 			}
 		case "pinned_certs":
-			if err := caddyutils.ParseStringArray(d, &tlsOpts.PinnedCerts, false); err != nil {
+			if err := parser.ParseStringArray(d, &tlsOpts.PinnedCerts); err != nil {
 				return err
 			}
 		}
@@ -975,39 +975,39 @@ func parseMetricInlineOption(d *caddyfile.Dispenser, metricopts *embedded.Metric
 func parseMetricOption(d *caddyfile.Dispenser, metricopts *embedded.Metrics) error {
 	switch d.Val() {
 	case "server_label":
-		if err := caddyutils.ParseString(d, &metricopts.ServerLabel); err != nil {
+		if err := parser.ParseString(d, &metricopts.ServerLabel); err != nil {
 			return err
 		}
 	case "server_url":
-		if err := caddyutils.ParseString(d, &metricopts.ServerUrl); err != nil {
+		if err := parser.ParseString(d, &metricopts.ServerUrl); err != nil {
 			return err
 		}
 	case "healthz":
-		if err := caddyutils.ParseBool(d, &metricopts.Healthz); err != nil {
+		if err := parser.ParseBool(d, &metricopts.Healthz); err != nil {
 			return err
 		}
 	case "connz":
-		if err := caddyutils.ParseBool(d, &metricopts.Connz); err != nil {
+		if err := parser.ParseBool(d, &metricopts.Connz); err != nil {
 			return err
 		}
 	case "connz_detailed":
-		if err := caddyutils.ParseBool(d, &metricopts.ConnzDetailed); err != nil {
+		if err := parser.ParseBool(d, &metricopts.ConnzDetailed); err != nil {
 			return err
 		}
 	case "subz":
-		if err := caddyutils.ParseBool(d, &metricopts.Subz); err != nil {
+		if err := parser.ParseBool(d, &metricopts.Subz); err != nil {
 			return err
 		}
 	case "routez":
-		if err := caddyutils.ParseBool(d, &metricopts.Routez); err != nil {
+		if err := parser.ParseBool(d, &metricopts.Routez); err != nil {
 			return err
 		}
 	case "gatewayz":
-		if err := caddyutils.ParseBool(d, &metricopts.Gatewayz); err != nil {
+		if err := parser.ParseBool(d, &metricopts.Gatewayz); err != nil {
 			return err
 		}
 	case "leafz":
-		if err := caddyutils.ParseBool(d, &metricopts.Leafz); err != nil {
+		if err := parser.ParseBool(d, &metricopts.Leafz); err != nil {
 			return err
 		}
 	default:

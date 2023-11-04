@@ -2,27 +2,27 @@ package hostmetrics
 
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
 func (r *HostMetricsReceiver) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	if err := caddyutils.ExpectString(d, "hostmetrics"); err != nil {
+	if err := parser.ExpectString(d, parser.Match("hostmetrics")); err != nil {
 		return err
 	}
 	r.Scrapers = fnutils.DefaultIfNil(r.Scrapers, &Scrapers{})
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "collection_interval":
-			if err := caddyutils.ParseDuration(d, &r.CollectionInterval); err != nil {
+			if err := parser.ParseDuration(d, &r.CollectionInterval); err != nil {
 				return err
 			}
 		case "initial_delay":
-			if err := caddyutils.ParseDuration(d, &r.InitialDelay); err != nil {
+			if err := parser.ParseDuration(d, &r.InitialDelay); err != nil {
 				return err
 			}
 		case "root_path":
-			if err := caddyutils.ParseString(d, &r.RootPath); err != nil {
+			if err := parser.ParseString(d, &r.RootPath); err != nil {
 				return err
 			}
 		case "scrap":
@@ -119,50 +119,50 @@ func (r *HostMetricsReceiver) unmarshalDiskScrapper(d *caddyfile.Dispenser, s *D
 		switch d.Val() {
 		case "include_device", "include_devices":
 			s.IncludeDevices = &DeviceFilter{}
-			if err := caddyutils.ParseString(d, &s.IncludeDevices.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.IncludeDevices.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.IncludeDevices.DeviceNames, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.IncludeDevices.DeviceNames); err != nil {
 				return err
 			}
 		case "exclude_device", "exclude_devices":
 			s.ExcludeDevices = &DeviceFilter{}
-			if err := caddyutils.ParseString(d, &s.ExcludeDevices.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.ExcludeDevices.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.ExcludeDevices.DeviceNames, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.ExcludeDevices.DeviceNames); err != nil {
 				return err
 			}
 		case "include_fs_type", "include_fs_types":
 			s.IncludeFSTypes = &FSTypeFilter{}
-			if err := caddyutils.ParseString(d, &s.IncludeFSTypes.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.IncludeFSTypes.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.IncludeFSTypes.FSTypes, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.IncludeFSTypes.FSTypes); err != nil {
 				return err
 			}
 		case "exclude_fs_type", "exclude_fs_types":
 			s.ExcludeFSTypes = &FSTypeFilter{}
-			if err := caddyutils.ParseString(d, &s.ExcludeFSTypes.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.ExcludeFSTypes.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.ExcludeFSTypes.FSTypes, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.ExcludeFSTypes.FSTypes); err != nil {
 				return err
 			}
 		case "include_mount_point", "include_mount_points":
 			s.IncludeMountPoints = &MountPointFilter{}
-			if err := caddyutils.ParseString(d, &s.IncludeMountPoints.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.IncludeMountPoints.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.IncludeMountPoints.MountPoints, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.IncludeMountPoints.MountPoints); err != nil {
 				return err
 			}
 		case "exclude_mount_point", "exclude_mount_points":
 			s.ExcludeMountPoints = &MountPointFilter{}
-			if err := caddyutils.ParseString(d, &s.ExcludeMountPoints.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.ExcludeMountPoints.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.ExcludeMountPoints.MountPoints, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.ExcludeMountPoints.MountPoints); err != nil {
 				return err
 			}
 		default:
@@ -178,7 +178,7 @@ func (r *HostMetricsReceiver) unmarshalLoadScrapper(d *caddyfile.Dispenser, s *L
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "cpu_average":
-			if err := caddyutils.ParseBool(d, &s.CpuAverage); err != nil {
+			if err := parser.ParseBool(d, &s.CpuAverage); err != nil {
 				return err
 			}
 		default:
@@ -219,18 +219,18 @@ func (r *HostMetricsReceiver) unmarshalNetworkScrapper(d *caddyfile.Dispenser, s
 		switch d.Val() {
 		case "include":
 			s.IncludeInterfaces = &NetworkInterfaceFilter{}
-			if err := caddyutils.ParseString(d, &s.IncludeInterfaces.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.IncludeInterfaces.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.IncludeInterfaces.Interfaces, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.IncludeInterfaces.Interfaces); err != nil {
 				return err
 			}
 		case "exclude":
 			s.ExcludeInterfaces = &NetworkInterfaceFilter{}
-			if err := caddyutils.ParseString(d, &s.ExcludeInterfaces.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.ExcludeInterfaces.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.ExcludeInterfaces.Interfaces, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.ExcludeInterfaces.Interfaces); err != nil {
 				return err
 			}
 		default:
@@ -271,38 +271,38 @@ func (r *HostMetricsReceiver) unmarshalProcessScrapper(d *caddyfile.Dispenser, s
 		switch d.Val() {
 		case "include":
 			s.IncludeProcesses = &ProcessNameFilter{}
-			if err := caddyutils.ParseString(d, &s.IncludeProcesses.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.IncludeProcesses.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.IncludeProcesses.Names, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.IncludeProcesses.Names); err != nil {
 				return err
 			}
 		case "exclude":
 			s.ExcludeProcesses = &ProcessNameFilter{}
-			if err := caddyutils.ParseString(d, &s.ExcludeProcesses.MatchType); err != nil {
+			if err := parser.ParseString(d, &s.ExcludeProcesses.MatchType); err != nil {
 				return err
 			}
-			if err := caddyutils.ParseStringArray(d, &s.ExcludeProcesses.Names, false); err != nil {
+			if err := parser.ParseStringArray(d, &s.ExcludeProcesses.Names); err != nil {
 				return err
 			}
 		case "mute_process_name_error":
-			if err := caddyutils.ParseBool(d, &s.MuteProcessNameError); err != nil {
+			if err := parser.ParseBool(d, &s.MuteProcessNameError); err != nil {
 				return err
 			}
 		case "mute_process_exe_error":
-			if err := caddyutils.ParseBool(d, &s.MuteProcessExeError); err != nil {
+			if err := parser.ParseBool(d, &s.MuteProcessExeError); err != nil {
 				return err
 			}
 		case "mute_process_io_error":
-			if err := caddyutils.ParseBool(d, &s.MuteProcessIOErrror); err != nil {
+			if err := parser.ParseBool(d, &s.MuteProcessIOErrror); err != nil {
 				return err
 			}
 		case "mute_process_user_error":
-			if err := caddyutils.ParseBool(d, &s.MuteProcessUserError); err != nil {
+			if err := parser.ParseBool(d, &s.MuteProcessUserError); err != nil {
 				return err
 			}
 		case "scrap_process_delay":
-			if err := caddyutils.ParseDuration(d, &s.ScrapeProcessDelay); err != nil {
+			if err := parser.ParseDuration(d, &s.ScrapeProcessDelay); err != nil {
 				return err
 			}
 		default:
@@ -323,7 +323,7 @@ func parseMetricsEnabled(d *caddyfile.Dispenser, metrics *map[string]Metric) err
 		default:
 			name := d.Val()
 			metric := Metric{}
-			if err := caddyutils.ParseBool(d, &metric.Enabled); err != nil {
+			if err := parser.ParseBool(d, &metric.Enabled); err != nil {
 				return err
 			}
 			(*metrics)[name] = metric

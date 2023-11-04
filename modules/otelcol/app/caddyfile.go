@@ -11,7 +11,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/quara-dev/beyond/modules/otelcol/app/config"
 	"github.com/quara-dev/beyond/modules/otelcol/app/service"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 	"go.opentelemetry.io/collector/component"
 )
@@ -37,7 +37,7 @@ func parseGlobalOption(d *caddyfile.Dispenser, existingVal interface{}) (interfa
 }
 
 func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	if err := caddyutils.ExpectString(d, "otelcol", "telemetry"); err != nil {
+	if err := parser.ExpectString(d, parser.Match("otelcol", "telemetry")); err != nil {
 		return err
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
@@ -51,7 +51,7 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "extension":
 			name := ""
-			if err := caddyutils.ParseString(d, &name); err != nil {
+			if err := parser.ParseString(d, &name); err != nil {
 				return err
 			}
 			id := component.ID{}
@@ -78,7 +78,7 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "receiver":
 			name := ""
-			if err := caddyutils.ParseString(d, &name); err != nil {
+			if err := parser.ParseString(d, &name); err != nil {
 				return err
 			}
 			id := component.ID{}
@@ -105,7 +105,7 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "processor":
 			name := ""
-			if err := caddyutils.ParseString(d, &name); err != nil {
+			if err := parser.ParseString(d, &name); err != nil {
 				return err
 			}
 			id := component.ID{}
@@ -132,7 +132,7 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "exporter":
 			name := ""
-			if err := caddyutils.ParseString(d, &name); err != nil {
+			if err := parser.ParseString(d, &name); err != nil {
 				return err
 			}
 			id := component.ID{}

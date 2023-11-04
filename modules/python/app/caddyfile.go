@@ -6,7 +6,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
@@ -31,7 +31,7 @@ func parseGlobalOption(d *caddyfile.Dispenser, existingVal interface{}) (interfa
 }
 
 func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	if err := caddyutils.ExpectString(d, "python"); err != nil {
+	if err := parser.ExpectString(d, parser.Match("python")); err != nil {
 		return err
 	}
 	a.Processes = fnutils.DefaultIfEmpty(a.Processes, []*PythonProcess{})
@@ -39,46 +39,46 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "virtualenv":
-			if err := caddyutils.ParseString(d, &defaultVenv); err != nil {
+			if err := parser.ParseString(d, &defaultVenv); err != nil {
 				return err
 			}
 		case "process", "app":
 			process := &PythonProcess{VirtualEnv: defaultVenv}
-			if err := caddyutils.ParseString(d, &process.Name); err != nil {
+			if err := parser.ParseString(d, &process.Name); err != nil {
 				return err
 			}
 			for nesting := d.Nesting(); d.NextBlock(nesting); {
 				switch d.Val() {
 				case "entrypoint":
 					process.Command = "python3"
-					if err := caddyutils.ParseStringArray(d, &process.Args, true); err != nil {
+					if err := parser.ParseStringArray(d, &process.Args, parser.AllowEmpty()); err != nil {
 						return err
 					}
 				case "command":
-					if err := caddyutils.ParseString(d, &process.Command); err != nil {
+					if err := parser.ParseString(d, &process.Command); err != nil {
 						return err
 					}
-					if err := caddyutils.ParseStringArray(d, &process.Args, true); err != nil {
+					if err := parser.ParseStringArray(d, &process.Args, parser.AllowEmpty()); err != nil {
 						return err
 					}
 				case "virtualenv":
-					if err := caddyutils.ParseString(d, &process.VirtualEnv); err != nil {
+					if err := parser.ParseString(d, &process.VirtualEnv); err != nil {
 						return err
 					}
 				case "working_dir":
-					if err := caddyutils.ParseString(d, &process.WorkingDir); err != nil {
+					if err := parser.ParseString(d, &process.WorkingDir); err != nil {
 						return err
 					}
 				case "environment":
-					if err := caddyutils.ParseStringMap(d, &process.Environment); err != nil {
+					if err := parser.ParseStringMap(d, &process.Environment); err != nil {
 						return err
 					}
 				case "forward_stderr":
-					if err := caddyutils.ParseBool(d, &process.ForwardStderr); err != nil {
+					if err := parser.ParseBool(d, &process.ForwardStderr); err != nil {
 						return err
 					}
 				case "forward_stdout":
-					if err := caddyutils.ParseBool(d, &process.ForwardStdout); err != nil {
+					if err := parser.ParseBool(d, &process.ForwardStdout); err != nil {
 						return err
 					}
 				default:

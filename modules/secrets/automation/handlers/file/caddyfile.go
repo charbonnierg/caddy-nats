@@ -5,7 +5,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 )
 
 func (h *FileHandler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -15,7 +15,7 @@ func (h *FileHandler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			h.File = d.Val()
 			switch d.CountRemainingArgs() {
 			case 1:
-				if err := caddyutils.ParsePermissions(d, &h.FilePerm); err != nil {
+				if err := parser.ParsePermissions(d, &h.FilePerm); err != nil {
 					return err
 				}
 			default:
@@ -25,23 +25,23 @@ func (h *FileHandler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			for nesting := d.Nesting(); d.NextBlock(nesting); {
 				switch d.Val() {
 				case "path":
-					if err := caddyutils.ParseString(d, &h.File); err != nil {
+					if err := parser.ParseString(d, &h.File); err != nil {
 						return err
 					}
 				case "no_create":
-					if err := caddyutils.ParseBool(d, &h.NoCreate); err != nil {
+					if err := parser.ParseBool(d, &h.NoCreate); err != nil {
 						return err
 					}
 				case "no_create_parent":
-					if err := caddyutils.ParseBool(d, &h.NoCreateParent); err != nil {
+					if err := parser.ParseBool(d, &h.NoCreateParent); err != nil {
 						return err
 					}
 				case "chmod", "file_perm":
-					if err := caddyutils.ParsePermissions(d, &h.FilePerm); err != nil {
+					if err := parser.ParsePermissions(d, &h.FilePerm); err != nil {
 						return err
 					}
 				case "parent_chmod", "parent_perm":
-					if err := caddyutils.ParsePermissions(d, &h.ParentPerm); err != nil {
+					if err := parser.ParsePermissions(d, &h.ParentPerm); err != nil {
 						return err
 					}
 				case "notify":

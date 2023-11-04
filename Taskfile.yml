@@ -81,3 +81,17 @@ tasks:
     desc: Run tests
     cmds:
       - go test -v ./...
+
+  cover:
+    desc: Run tests with coverage
+    cmds:
+      - mkdir -p coverage/
+      - go test -v -coverprofile=./coverage/coverage.out {{.CLI_ARGS}}
+      - go tool cover -html=./coverage/coverage.out -o ./coverage/coverage.html
+
+  coverhtml:
+    desc: Run tests with coverage and open in browser
+    deps:
+      - cover
+    cmds:
+      - python3 -m http.server --directory ./coverage/ 8080

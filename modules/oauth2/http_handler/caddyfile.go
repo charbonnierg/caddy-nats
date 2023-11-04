@@ -8,7 +8,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/quara-dev/beyond/modules/oauth2/endpoint"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
@@ -24,21 +24,21 @@ func ParseOauth2ProxyDirective(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHand
 }
 
 func (p *OAuth2Session) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	if err := caddyutils.ExpectString(d, "authorize_with"); err != nil {
+	if err := parser.ExpectString(d, parser.Match("authorize_with")); err != nil {
 		return err
 	}
 	if d.CountRemainingArgs() > 0 {
-		if err := caddyutils.ExpectString(d, "oauth2"); err != nil {
+		if err := parser.ExpectString(d, parser.Match("oauth2")); err != nil {
 			return err
 		}
 		p.EndpointRaw = fnutils.DefaultIfNil(p.EndpointRaw, &endpoint.Endpoint{})
-		if err := caddyutils.ParseString(d, &p.EndpointRaw.NameRaw); err != nil {
+		if err := parser.ParseString(d, &p.EndpointRaw.NameRaw); err != nil {
 			return err
 		}
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		p.EndpointRaw = fnutils.DefaultIfNil(p.EndpointRaw, &endpoint.Endpoint{})
-		if err := caddyutils.ParseString(d, &p.EndpointRaw.NameRaw); err != nil {
+		if err := parser.ParseString(d, &p.EndpointRaw.NameRaw); err != nil {
 			return err
 		}
 		if err := p.EndpointRaw.UnmarshalCaddyfile(d); err != nil {

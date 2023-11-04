@@ -6,7 +6,9 @@ package datatypes
 // NewSet creates a new set
 func NewSet[T comparable](value ...T) Set[T] {
 	s := Set[T]{}
-	s.Add(value...)
+	if len(value) > 0 {
+		s.Add(value[0], value[1:]...)
+	}
 	return s
 }
 
@@ -20,8 +22,9 @@ type StringSet = Set[string]
 type ByteSet = Set[byte]
 
 // Add adds one or several subjects to the set
-func (s Set[T]) Add(value ...T) {
-	for _, sub := range value {
+func (s Set[T]) Add(value T, values ...T) {
+	s[value] = struct{}{}
+	for _, sub := range values {
 		s[sub] = struct{}{}
 	}
 }

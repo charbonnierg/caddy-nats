@@ -2,14 +2,14 @@ package attributes
 
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 	"go.opentelemetry.io/collector/component"
 )
 
 func (r *AttributeProcessor) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	var name string
-	if err := caddyutils.ParseString(d, &name); err != nil {
+	if err := parser.ParseString(d, &name); err != nil {
 		return err
 	}
 	var id component.ID
@@ -24,30 +24,27 @@ func (r *AttributeProcessor) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			for nesting := d.Nesting(); d.NextBlock(nesting); {
 				switch d.Val() {
 				case "match_type":
-					if err := caddyutils.ParseString(d, &filter.MatchType); err != nil {
+					if err := parser.ParseString(d, &filter.MatchType); err != nil {
 						return err
 					}
 				case "service", "services":
-					filter.Services = fnutils.DefaultIfEmpty(filter.Services, []string{})
-					if err := caddyutils.ParseStringArray(d, &filter.Services, false); err != nil {
+					if err := parser.ParseStringArray(d, &filter.Services); err != nil {
 						return err
 					}
 				case "span_kind", "span_kinds":
-					filter.SpanKinds = fnutils.DefaultIfEmpty(filter.SpanKinds, []string{})
-					if err := caddyutils.ParseStringArray(d, &filter.SpanKinds, false); err != nil {
+					if err := parser.ParseStringArray(d, &filter.SpanKinds); err != nil {
 						return err
 					}
 				case "span_name", "span_names":
-					filter.SpanNames = fnutils.DefaultIfEmpty(filter.SpanNames, []string{})
-					if err := caddyutils.ParseStringArray(d, &filter.SpanNames, false); err != nil {
+					if err := parser.ParseStringArray(d, &filter.SpanNames); err != nil {
 						return err
 					}
 				case "log_bodies", "log_body":
-					if err := caddyutils.ParseStringArray(d, &filter.LogBodies, false); err != nil {
+					if err := parser.ParseStringArray(d, &filter.LogBodies); err != nil {
 						return err
 					}
 				case "log_severity_text", "log_severity_texts":
-					if err := caddyutils.ParseStringArray(d, &filter.LogSeverityTexts, false); err != nil {
+					if err := parser.ParseStringArray(d, &filter.LogSeverityTexts); err != nil {
 						return err
 					}
 				case "log_severity_number", "log_severity_numbers":
@@ -55,11 +52,11 @@ func (r *AttributeProcessor) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					for nesting := d.Nesting(); d.NextBlock(nesting); {
 						switch d.Val() {
 						case "min":
-							if err := caddyutils.ParseInt(d, &filter.LogSeverityNumber.Min); err != nil {
+							if err := parser.ParseInt(d, &filter.LogSeverityNumber.Min); err != nil {
 								return err
 							}
 						case "match_undefined":
-							if err := caddyutils.ParseBool(d, &filter.LogSeverityNumber.MatchUndefined); err != nil {
+							if err := parser.ParseBool(d, &filter.LogSeverityNumber.MatchUndefined); err != nil {
 								return err
 							}
 						default:
@@ -67,18 +64,17 @@ func (r *AttributeProcessor) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						}
 					}
 				case "metric_name", "metric_names":
-					filter.MetricNames = fnutils.DefaultIfEmpty(filter.MetricNames, []string{})
-					if err := caddyutils.ParseStringArray(d, &filter.MetricNames, false); err != nil {
+					if err := parser.ParseStringArray(d, &filter.MetricNames); err != nil {
 						return err
 					}
 				case "resource":
 					filter.Resources = fnutils.DefaultIfEmpty(filter.Resources, []AttributeQuery{})
 					var key string
 					var value string
-					if err := caddyutils.ParseString(d, &key); err != nil {
+					if err := parser.ParseString(d, &key); err != nil {
 						return err
 					}
-					if err := caddyutils.ParseString(d, &value); err != nil {
+					if err := parser.ParseString(d, &value); err != nil {
 						return err
 					}
 					filter.Resources = append(filter.Resources, AttributeQuery{Key: key, Value: value})
@@ -86,10 +82,10 @@ func (r *AttributeProcessor) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					filter.Libraries = fnutils.DefaultIfEmpty(filter.Libraries, []LibraryQuery{})
 					var name string
 					var version string
-					if err := caddyutils.ParseString(d, &name); err != nil {
+					if err := parser.ParseString(d, &name); err != nil {
 						return err
 					}
-					if err := caddyutils.ParseString(d, &version); err != nil {
+					if err := parser.ParseString(d, &version); err != nil {
 						return err
 					}
 					filter.Libraries = append(filter.Libraries, LibraryQuery{Name: name, Version: version})
@@ -102,7 +98,7 @@ func (r *AttributeProcessor) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		case "action":
 			actionName := ""
-			if err := caddyutils.ParseString(d, &actionName); err != nil {
+			if err := parser.ParseString(d, &actionName); err != nil {
 				return err
 			}
 			switch actionName {
@@ -112,27 +108,27 @@ func (r *AttributeProcessor) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
 					switch d.Val() {
 					case "key":
-						if err := caddyutils.ParseString(d, &action.Key); err != nil {
+						if err := parser.ParseString(d, &action.Key); err != nil {
 							return err
 						}
 					case "from_attribute":
-						if err := caddyutils.ParseString(d, &action.FromAttribute); err != nil {
+						if err := parser.ParseString(d, &action.FromAttribute); err != nil {
 							return err
 						}
 					case "from_context":
-						if err := caddyutils.ParseString(d, &action.FromContext); err != nil {
+						if err := parser.ParseString(d, &action.FromContext); err != nil {
 							return err
 						}
 					case "pattern":
-						if err := caddyutils.ParseString(d, &action.Pattern); err != nil {
+						if err := parser.ParseString(d, &action.Pattern); err != nil {
 							return err
 						}
 					case "converted_type":
-						if err := caddyutils.ParseString(d, &action.ConvertedType); err != nil {
+						if err := parser.ParseString(d, &action.ConvertedType); err != nil {
 							return err
 						}
 					case "value":
-						if err := caddyutils.ParseString(d, &action.Value); err != nil {
+						if err := parser.ParseString(d, &action.Value); err != nil {
 							return err
 						}
 					default:

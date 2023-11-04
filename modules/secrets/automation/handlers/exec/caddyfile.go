@@ -2,7 +2,7 @@ package exec
 
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 )
 
 func (h *ExecHandler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -12,7 +12,7 @@ func (h *ExecHandler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		}
 		if d.NextArg() {
 			h.Command = d.Val()
-			if err := caddyutils.ParseStringArray(d, &h.Args, true); err != nil {
+			if err := parser.ParseStringArray(d, &h.Args, parser.AllowEmpty()); err != nil {
 				return err
 			}
 		} else {
@@ -23,11 +23,11 @@ func (h *ExecHandler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.Err("expected a command")
 					}
 					h.Command = d.Val()
-					if err := caddyutils.ParseStringArray(d, &h.Args, true); err != nil {
+					if err := parser.ParseStringArray(d, &h.Args, parser.AllowEmpty()); err != nil {
 						return err
 					}
 				case "args":
-					if err := caddyutils.ParseStringArray(d, &h.Args, false); err != nil {
+					if err := parser.ParseStringArray(d, &h.Args); err != nil {
 						return err
 					}
 				default:

@@ -4,9 +4,8 @@
 package redis
 
 import (
-	"strconv"
-
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 )
 
 func (s *RedisStore) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -16,94 +15,52 @@ func (s *RedisStore) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "connection_url":
-			if !d.AllArgs(&s.ConnectionURL) {
-				return d.ArgErr()
+			if err := parser.ParseString(d, &s.ConnectionURL); err != nil {
+				return err
 			}
 		case "password":
-			if !d.AllArgs(&s.Password) {
-				return d.ArgErr()
+			if err := parser.ParseString(d, &s.Password); err != nil {
+				return err
 			}
 		case "use_sentinel":
-			val, err := parseBool(d)
-			if err != nil {
+			if err := parser.ParseBool(d, &s.UseSentinel); err != nil {
 				return err
 			}
-			s.UseSentinel = val
 		case "sentinel_password":
-			if !d.AllArgs(&s.SentinelPassword) {
-				return d.ArgErr()
+			if err := parser.ParseString(d, &s.SentinelPassword); err != nil {
+				return err
 			}
 		case "sentinel_master_name":
-			if !d.AllArgs(&s.SentinelMasterName) {
-				return d.ArgErr()
+			if err := parser.ParseString(d, &s.SentinelMasterName); err != nil {
+				return err
 			}
 		case "sentinel_connection_urls":
-			if s.SentinelConnectionURLs == nil {
-				s.SentinelConnectionURLs = []string{}
-			}
-			for d.NextArg() {
-				if val := d.Val(); val != "" {
-					s.SentinelConnectionURLs = append(s.SentinelConnectionURLs, val)
-				}
+			if err := parser.ParseStringArray(d, &s.SentinelConnectionURLs); err != nil {
+				return err
 			}
 		case "use_cluster":
-			val, err := parseBool(d)
-			if err != nil {
+			if err := parser.ParseBool(d, &s.UseCluster); err != nil {
 				return err
 			}
-			s.UseCluster = val
 		case "cluster_connection_urls":
-			if s.ClusterConnectionURLs == nil {
-				s.ClusterConnectionURLs = []string{}
-			}
-			for d.NextArg() {
-				if val := d.Val(); val != "" {
-					s.ClusterConnectionURLs = append(s.ClusterConnectionURLs, val)
-				}
+			if err := parser.ParseStringArray(d, &s.ClusterConnectionURLs); err != nil {
+				return err
 			}
 		case "ca_path":
-			if !d.AllArgs(&s.CAPath) {
-				return d.ArgErr()
+			if err := parser.ParseString(d, &s.CAPath); err != nil {
+				return err
 			}
 		case "insecure_skip_tls_verify":
-			val, err := parseBool(d)
-			if err != nil {
+			if err := parser.ParseBool(d, &s.InsecureSkipTLSVerify); err != nil {
 				return err
 			}
-			s.InsecureSkipTLSVerify = val
 		case "idle_timeout":
-			val, err := parseInt(d)
-			if err != nil {
+			if err := parser.ParseInt(d, &s.IdleTimeout); err != nil {
 				return err
 			}
-			s.IdleTimeout = val
 		default:
 			return d.Err("unrecognized subdirective: " + d.Val())
 		}
 	}
 	return nil
-}
-
-func parseInt(d *caddyfile.Dispenser) (int, error) {
-	raw := ""
-	if !d.AllArgs(&raw) {
-		return 0, d.ArgErr()
-	}
-	val, err := strconv.Atoi(raw)
-	if err != nil {
-		return 0, d.Errf("invalid integer value: %s", raw)
-	}
-	return val, nil
-}
-
-func parseBool(d *caddyfile.Dispenser) (bool, error) {
-	if !d.NextArg() {
-		return true, nil
-	}
-	raw := d.Val()
-	val, err := strconv.ParseBool(raw)
-	if err != nil {
-		return false, d.Errf("invalid boolean value: %s", raw)
-	}
-	return val, nil
 }

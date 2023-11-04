@@ -23,8 +23,11 @@ func GetSubjectsForPolicices(policies caddytls.ConnectionPolicies) []string {
 			continue
 		}
 		json.Unmarshal(v, &subs)
+		if len(subs) == 0 {
+			continue
+		}
 		// Add all subjects to the set
-		subjects.Add(subs...)
+		subjects.Add(subs[0], subs[1:]...)
 	}
 	return subjects.Slice()
 }

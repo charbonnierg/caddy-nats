@@ -8,8 +8,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
-	"github.com/quara-dev/beyond/pkg/fnutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 )
 
 func (a *Automation) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -17,12 +16,11 @@ func (a *Automation) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "source":
-			a.SourcesRaw = fnutils.DefaultIfEmpty(a.SourcesRaw, []string{})
-			if err := caddyutils.ParseStringArray(d, &a.SourcesRaw, false); err != nil {
+			if err := parser.ParseStringArray(d, &a.SourcesRaw); err != nil {
 				return err
 			}
 		case "template":
-			if err := caddyutils.ParseString(d, &a.TemplateRaw); err != nil {
+			if err := parser.ParseString(d, &a.TemplateRaw); err != nil {
 				return err
 			}
 		case "interval":

@@ -7,7 +7,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/modules/nats/auth"
 	natscaddyfile "github.com/quara-dev/beyond/modules/nats/caddyfile"
-	"github.com/quara-dev/beyond/pkg/caddyutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 )
@@ -21,7 +21,7 @@ type Config struct {
 func (a *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	// Make sure auth service exists in case auth policy are defined
 	// within account blocks.
-	if err := caddyutils.ExpectString(d, "nats", "broker"); err != nil {
+	if err := parser.ExpectString(d, parser.Match("nats", "broker")); err != nil {
 		return err
 	}
 	a.AuthServiceRaw = fnutils.DefaultIfNil(a.AuthServiceRaw, &auth.AuthServiceConfig{})
@@ -29,12 +29,12 @@ func (a *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		switch d.Val() {
 		case "debug":
 			a.ServerRaw = fnutils.DefaultIfNil(a.ServerRaw, embedded.NewOptions())
-			if err := caddyutils.ParseBool(d, &a.ServerRaw.Debug); err != nil {
+			if err := parser.ParseBool(d, &a.ServerRaw.Debug); err != nil {
 				return err
 			}
 		case "default_auth_callout":
 			var name string
-			if err := caddyutils.ParseString(d, &name); err != nil {
+			if err := parser.ParseString(d, &name); err != nil {
 				return err
 			}
 			mod, err := caddyfile.UnmarshalModule(d, "nats.auth_callout."+name)
@@ -57,7 +57,7 @@ func (a *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			acc := embedded.Account{}
 			a.ServerRaw = fnutils.DefaultIfNil(a.ServerRaw, embedded.NewOptions())
 			a.ServerRaw.Accounts = fnutils.DefaultIfEmpty(a.ServerRaw.Accounts, []*embedded.Account{})
-			if err := caddyutils.ParseString(d, &acc.Name); err != nil {
+			if err := parser.ParseString(d, &acc.Name); err != nil {
 				return err
 			}
 			if err := natscaddyfile.ParseAccount(d, a.AuthServiceRaw, &acc); err != nil {
@@ -100,7 +100,7 @@ func (a *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return err
 			}
 		case "ready_timeout":
-			if err := caddyutils.ParseDuration(d, &a.ReadyTimeout); err != nil {
+			if err := parser.ParseDuration(d, &a.ReadyTimeout); err != nil {
 				return err
 			}
 		default:
