@@ -40,6 +40,7 @@ type App struct {
 	tlsApp             *caddytls.TLS
 	logger             *zap.Logger
 	runner             *embedded.Runner
+	connectors         []nats.Connector
 	connectionPolicies []caddytls.ConnectionPolicies
 	subjects           []string
 	options            *embedded.Options
@@ -65,6 +66,7 @@ func (a *App) Provision(ctx caddy.Context) error {
 	a.ctx = ctx
 	a.logger = ctx.Logger()
 	a.logger.Info("Provisioning NATS server")
+	a.connectors = []nats.Connector{}
 	// Provision auth service
 	// This may require the Oauth2 app to be registered.
 	// But the Oauth2 module itself may depend on the NATS module.
@@ -104,6 +106,23 @@ func (a *App) Provision(ctx caddy.Context) error {
 		}
 		if err := a.authService.Provision(a); err != nil {
 			return err
+		}
+	}
+	// And provision the connectors
+	if a.ConnectorsRaw != nil {
+		unm, err := ctx.LoadModule(a, "ConnectorsRaw")
+		if err != nil {
+			return err
+		}
+		for _, v := range unm.([]interface{}) {
+			connector, ok := v.(nats.Connector)
+			if !ok {
+				return errors.New("invalid connector type")
+			}
+			if err := connector.Provision(a); err != nil {
+				return err
+			}
+			a.connectors = append(a.connectors, connector)
 		}
 	}
 	// Replace secrets replacer variables
@@ -153,6 +172,12 @@ func (a *App) Start() error {
 			return err
 		}
 	}
+	// Start connectors
+	for _, connector := range a.connectors {
+		if err := connector.Start(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -192,6 +217,12 @@ func (a *App) startAuthService() error {
 // It stops the nats server and the auth service if defined.
 // It is required to implement the beyond.App interface.
 func (a *App) Stop() error {
+	// Stop connectors
+	for _, connector := range a.connectors {
+		if err := connector.Stop(); err != nil {
+			a.logger.Error("Failed to stop connector", zap.Error(err))
+		}
+	}
 	// Stop auth service
 	if a.authService != nil {
 		if client := a.authService.Client(); client != nil {

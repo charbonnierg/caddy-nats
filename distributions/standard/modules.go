@@ -16,6 +16,8 @@ import (
 	_ "github.com/quara-dev/beyond/modules/nats/app"
 	_ "github.com/quara-dev/beyond/modules/nats/auth/callout"
 	_ "github.com/quara-dev/beyond/modules/nats/auth/policies"
+	_ "github.com/quara-dev/beyond/modules/nats/connectors/mongo_input"
+	_ "github.com/quara-dev/beyond/modules/nats/connectors/mongo_output"
 
 	// OAuth2 modules
 	_ "github.com/quara-dev/beyond/modules/oauth2/app"
@@ -32,8 +34,4 @@ import (
 	_ "github.com/quara-dev/beyond/modules/secrets/automation/handlers"
 	_ "github.com/quara-dev/beyond/modules/secrets/automation/triggers"
 	_ "github.com/quara-dev/beyond/modules/secrets/stores"
-
-	// Connectors modules
-	_ "github.com/quara-dev/beyond/modules/connectors/connectorsapp"
-	_ "github.com/quara-dev/beyond/modules/connectors/mongo"
 )

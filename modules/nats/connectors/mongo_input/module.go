@@ -1,12 +1,12 @@
-package mongo
+package mongo_input
 
 import (
 	"context"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/damianiandrea/mongodb-nats-connector/pkg/connector"
-	"github.com/nats-io/nats.go"
-	"github.com/quara-dev/beyond/modules/connectors"
+	natsgo "github.com/nats-io/nats.go"
+	"github.com/quara-dev/beyond/modules/nats"
 	"go.uber.org/zap"
 )
 
@@ -37,7 +37,7 @@ type MongoInputConnector struct {
 // CaddyModule returns the Caddy module information.
 func (MongoInputConnector) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "connectors.input.mongo",
+		ID:  "nats.connectors.mongo_input",
 		New: func() caddy.Module { return new(MongoInputConnector) },
 	}
 }
@@ -51,20 +51,20 @@ func (c *MongoInputConnector) Stop() error {
 	return nil
 }
 
-func (c *MongoInputConnector) Provision(app connectors.ConnectorsApp) error {
-	ctx := app.Context()
-	logger := ctx.Logger()
+func (c *MongoInputConnector) Provision(app nats.App) error {
+	logger := app.Logger().Named("connectors.mongo_input")
 	opts := []connector.Option{
 		connector.WithLogger(logger),
 		connector.WithMongoUri(c.URI),
 		connector.WithMongoOptions(),
 		connector.WithNatsUrl(c.NatsURL),
 		connector.WithNatsOptions(
-			nats.MaxReconnects(-1),
-			nats.RetryOnFailedConnect(true),
+			natsgo.MaxReconnects(-1),
+			natsgo.RetryOnFailedConnect(true),
 		), // your NATS options
 		connector.WithContext(context.TODO()),
 		connector.WithServerAddr(":10900"),
+		connector.WithContext(app.Context()),
 	}
 	for _, coll := range c.Collections {
 		colOpts := []connector.CollectionOption{}
@@ -97,5 +97,5 @@ func (c *MongoInputConnector) Provision(app connectors.ConnectorsApp) error {
 }
 
 var (
-	_ connectors.InputConnector = (*MongoInputConnector)(nil)
+	_ nats.Connector = (*MongoInputConnector)(nil)
 )

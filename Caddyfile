@@ -82,19 +82,19 @@
 	# Start python processes alongside the application
 	# Each python process may be started in a virtual environment and may have a custom entrypoint
 	# Alternatively, it's possible to specify a default virtual environment for all processes.
-	python {
-		virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
-		app demo1 {
-			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app1
-			forward_stdout
-			forward_stderr
-		}
-		app demo2 {
-			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app2
-			forward_stdout
-			forward_stderr
-		}
-	}
+	# python {
+	# 	virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
+	# 	app demo1 {
+	# 		entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app1
+	# 		forward_stdout
+	# 		forward_stderr
+	# 	}
+	# 	app demo2 {
+	# 		entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app2
+	# 		forward_stdout
+	# 		forward_stderr
+	# 	}
+	# }
 	# This block is required to configure and start NATS server when our Web Server starts
 	broker {
 		debug
@@ -110,7 +110,53 @@
 				callout allow
 			}
 		}
+		account DATA {
+			jetstream
+			connector mongodb_receiver {
+				mongodb_uri mongodb://localhost:27017
+				source_database test {
+					collection test1
+					collection test2
+				}
+				destination_stream MONGOSTREAM {
+					max_age 14d
+					max_msgs 1000000
+					max_bytes 10GB
+				}
+			}
+			connector mongodb_writer {
+				uri mongodb://localhost:27017
+				source_stream MONGOSTREAM {
+					collection test1
+					collection test2
+				}
+				destination_database test2 {
+					replace_collection test2 test3
+				}
+			}
+			auth_policy {
+				match {
+					connection_type nats
+					client_host 127.0.0.1
+					client_token DATA
+				}
+				callout allow
+			}
+		}
 		account APP {
+			jetstream {
+				stream demo {
+					subject "demo.>"
+					max_age 10d
+					max_msgs 1000000
+					max_bytes 10GB
+				}
+				bucket kvdemo {
+					max_history 10
+					max_age 10d
+				}
+				object_store osdemo
+			}
 			map_subject "canary.req.>" {
 				to "req.>" weight 50
 				to "beta.req.>" weight 50
@@ -132,6 +178,8 @@
 				callout oauth2 {
 					endpoint az-oidc-endpoint
 					template {
+						read_bucket kvdemo
+						write_bucket kvdemo "{oidc.session.email}.>"
 						allow_sub "_INBOX.{oidc.session.email}.>"
 						allow_sub "{oidc.session.email}.>"
 						allow_pub ">"

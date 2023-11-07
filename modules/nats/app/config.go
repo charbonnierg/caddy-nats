@@ -1,6 +1,7 @@
 package natsapp
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -15,6 +16,7 @@ import (
 type Config struct {
 	AuthServiceRaw *auth.AuthServiceConfig `json:"auth_service,omitempty"`
 	ServerRaw      *embedded.Options       `json:"server,omitempty"`
+	ConnectorsRaw  []json.RawMessage       `json:"connectors,omitempty" caddy:"namespace=nats.connectors inline_key=module"`
 	ReadyTimeout   time.Duration           `json:"ready_timeout,omitempty"`
 }
 
@@ -103,6 +105,19 @@ func (a *Config) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := parser.ParseDuration(d, &a.ReadyTimeout); err != nil {
 				return err
 			}
+		case "connector":
+			var module string
+			if err := parser.ParseString(d, &module); err != nil {
+				return err
+			}
+			mod, err := caddyfile.UnmarshalModule(d, "nats.connectors."+module)
+			if err != nil {
+				return d.Errf("failed to unmarshal module '%s': %v", module, err)
+			}
+			if a.ConnectorsRaw == nil {
+				a.ConnectorsRaw = []json.RawMessage{}
+			}
+			a.ConnectorsRaw = append(a.ConnectorsRaw, caddyconfig.JSONModuleObject(mod, "module", module, nil))
 		default:
 			return d.Errf("unknown directive '%s'", d.Val())
 		}

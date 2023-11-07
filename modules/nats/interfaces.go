@@ -47,3 +47,13 @@ type Template interface {
 	caddyfile.Unmarshaler
 	Render(request AuthRequest, user *jwt.UserClaims)
 }
+
+// InputConnector is a Caddy module that serves as a connector
+// to a data source. It reads data from a data source and sends it
+// to a stream.
+type Connector interface {
+	caddy.Module
+	Provision(app App) error
+	Start() error
+	Stop() error
+}
