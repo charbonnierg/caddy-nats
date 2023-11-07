@@ -8,6 +8,8 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/quara-dev/beyond/modules/nats/auth"
 	"github.com/quara-dev/beyond/modules/nats/auth/policies"
+	"github.com/quara-dev/beyond/modules/nats/connectors"
+	"github.com/quara-dev/beyond/modules/nats/connectors/resources"
 	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
@@ -175,7 +177,7 @@ func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 			}
 		case "accounts":
 			o.Accounts = fnutils.DefaultIfEmpty(o.Accounts, []*embedded.Account{})
-			if err := ParseAccounts(d, nil, &o.Accounts); err != nil {
+			if err := ParseAccounts(d, nil, nil, &o.Accounts); err != nil {
 				return err
 			}
 		case "users":
@@ -275,13 +277,43 @@ func parseAuthPolicyForAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceCon
 	return nil
 }
 
-func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, acc *embedded.Account) error {
+func ParseConnector(d *caddyfile.Dispenser, connector *connectors.Connection) error {
+	return nil
+}
+
+func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, connections *connectors.Connections, acc *embedded.Account) error {
+	var connection *connectors.Connection
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "auth_policy":
 			if err := parseAuthPolicyForAccount(d, auth, acc); err != nil {
 				return err
 			}
+		case "stream":
+			acc.JetStream = true
+			if connection == nil {
+				connection = &connectors.Connection{}
+			}
+			if connection.Streams == nil {
+				connection.Streams = []*resources.Stream{}
+			}
+			stream := resources.Stream{}
+			if err := ParseStream(d, &stream); err != nil {
+				return err
+			}
+			connection.Streams = append(connection.Streams, &stream)
+		case "data_flow":
+			if connection == nil {
+				connection = &connectors.Connection{}
+			}
+			if connection.DataFlows == nil {
+				connection.DataFlows = []*connectors.Flow{}
+			}
+			flow := connectors.Flow{}
+			if err := ParseFlow(d, &flow); err != nil {
+				return err
+			}
+			connection.DataFlows = append(connection.DataFlows, &flow)
 		case "jetstream":
 			if err := parser.ParseBool(d, &acc.JetStream); err != nil {
 				return err
@@ -391,17 +423,21 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, acc *emb
 			return d.Errf("unrecognized account subdirective: %s", d.Val())
 		}
 	}
+	if connection != nil {
+		connection.Account = acc.Name
+		*connections = append(*connections, connection)
+	}
 	return nil
 }
 
 // ParseAccounts parses the "accounts" directive found in the Caddyfile "nats_server" option block.
-func ParseAccounts(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, accounts *[]*embedded.Account) error {
+func ParseAccounts(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, connections *connectors.Connections, accounts *[]*embedded.Account) error {
 	if accounts == nil {
 		return d.Err("internal error: accounts is nil. Please open a bug report.")
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		acc := embedded.Account{Name: d.Val()}
-		if err := ParseAccount(d, auth, &acc); err != nil {
+		if err := ParseAccount(d, auth, connections, &acc); err != nil {
 			return err
 		}
 		*accounts = append(*accounts, &acc)

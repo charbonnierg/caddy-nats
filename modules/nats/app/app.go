@@ -11,6 +11,8 @@ import (
 	"github.com/quara-dev/beyond"
 	"github.com/quara-dev/beyond/modules/nats"
 	"github.com/quara-dev/beyond/modules/nats/auth"
+	"github.com/quara-dev/beyond/modules/nats/auth/policies"
+	"github.com/quara-dev/beyond/modules/nats/connectors/resources"
 	"github.com/quara-dev/beyond/modules/secrets"
 	"github.com/quara-dev/beyond/pkg/natsutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
@@ -40,11 +42,10 @@ type App struct {
 	tlsApp             *caddytls.TLS
 	logger             *zap.Logger
 	runner             *embedded.Runner
-	connectors         []nats.Connector
 	connectionPolicies []caddytls.ConnectionPolicies
 	subjects           []string
 	options            *embedded.Options
-	authService        nats.AuthService
+	authService        *auth.AuthService
 }
 
 // CaddyModule returns the Caddy module information.
@@ -66,7 +67,6 @@ func (a *App) Provision(ctx caddy.Context) error {
 	a.ctx = ctx
 	a.logger = ctx.Logger()
 	a.logger.Info("Provisioning NATS server")
-	a.connectors = []nats.Connector{}
 	// Provision auth service
 	// This may require the Oauth2 app to be registered.
 	// But the Oauth2 module itself may depend on the NATS module.
@@ -99,30 +99,44 @@ func (a *App) Provision(ctx caddy.Context) error {
 		return errors.New("tls app invalid type")
 	}
 	a.tlsApp = tlsApp
-	// Now we can provision the auth service
+	// Create the auth service if any
 	if a.AuthServiceRaw != nil {
 		a.authService = &auth.AuthService{
 			AuthServiceConfig: *a.AuthServiceRaw,
 		}
-		if err := a.authService.Provision(a); err != nil {
-			return err
-		}
 	}
-	// And provision the connectors
-	if a.ConnectorsRaw != nil {
-		unm, err := ctx.LoadModule(a, "ConnectorsRaw")
-		if err != nil {
-			return err
-		}
-		for _, v := range unm.([]interface{}) {
-			connector, ok := v.(nats.Connector)
-			if !ok {
-				return errors.New("invalid connector type")
+	// provision connectors
+	if a.Connectors != nil {
+		for _, conn := range a.Connectors {
+			if conn.NatsClient == nil {
+				conn.NatsClient = &resources.NatsClient{}
 			}
-			if err := connector.Provision(a); err != nil {
+			if conn.NatsClient.Servers == nil {
+				conn.NatsClient.Internal = true
+			}
+			if conn.Account != "" {
+				// Need to provision on-the-fly credentials for this account
+				if a.authService == nil {
+					return fmt.Errorf("cannot provision account '%s' without auth service", conn.Account)
+				}
+				conn.Token = "test"
+				a.authService.Policies = append(a.authService.Policies, &policies.ConnectionPolicy{
+					HandlerRaw: json.RawMessage(`{"module": "allow", "account": "` + conn.Account + `"}`),
+					MatchersRaw: []map[string]json.RawMessage{
+						{"connect_opts": json.RawMessage(`{"token": "test"}`)},
+					},
+				})
+			}
+			resources.SetInternalConnProviderInCaddyContext(&a.ctx, a)
+			if err := conn.Provision(a.ctx); err != nil {
 				return err
 			}
-			a.connectors = append(a.connectors, connector)
+		}
+	}
+	// Now we can provision the auth service
+	if a.authService != nil {
+		if err := a.authService.Provision(a); err != nil {
+			return err
 		}
 	}
 	// Replace secrets replacer variables
@@ -173,8 +187,8 @@ func (a *App) Start() error {
 		}
 	}
 	// Start connectors
-	for _, connector := range a.connectors {
-		if err := connector.Start(); err != nil {
+	for _, connector := range a.Connectors {
+		if err := connector.Connect(); err != nil {
 			return err
 		}
 	}
@@ -218,8 +232,8 @@ func (a *App) startAuthService() error {
 // It is required to implement the beyond.App interface.
 func (a *App) Stop() error {
 	// Stop connectors
-	for _, connector := range a.connectors {
-		if err := connector.Stop(); err != nil {
+	for _, connector := range a.Connectors {
+		if err := connector.Close(); err != nil {
 			a.logger.Error("Failed to stop connector", zap.Error(err))
 		}
 	}

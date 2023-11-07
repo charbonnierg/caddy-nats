@@ -1,0 +1,32 @@
+{
+    nats {
+        jetstream
+		default_auth_callout deny
+		account DATA {
+			stream test {
+				subjects "test.>"
+			}
+			data_flow {
+				from mongodb_change_stream {
+					uri "mongodb://localhost:27017"
+					database test
+					collection test1
+				}
+				to stream {
+					name "MONGOSTREAM"
+					prefix "mongo"
+				}
+			}
+			data_flow {
+				from stream_consumer {
+					stream "MONGOSTREAM"
+					consumer_name "db-sync"
+				}
+				to mongodb_change_stream {
+					uri "mongodb://localhost:27017"
+					database test2
+				}
+			}
+        }
+    }
+}

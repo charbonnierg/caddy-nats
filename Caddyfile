@@ -111,27 +111,28 @@
 			}
 		}
 		account DATA {
-			jetstream
-			connector mongodb_receiver {
-				mongodb_uri mongodb://localhost:27017
-				source_database test {
+			stream test {
+				subjects "test.>"
+			}
+			data_flow {
+				from mongodb_change_stream {
+					uri "mongodb://localhost:27017"
+					database test
 					collection test1
-					collection test2
 				}
-				destination_stream MONGOSTREAM {
-					max_age 14d
-					max_msgs 1000000
-					max_bytes 10GB
+				to stream {
+					name "MONGOSTREAM"
+					prefix "mongo"
 				}
 			}
-			connector mongodb_writer {
-				uri mongodb://localhost:27017
-				source_stream MONGOSTREAM {
-					collection test1
-					collection test2
+			data_flow {
+				from stream_consumer {
+					stream "MONGOSTREAM"
+					consumer_name "db-sync"
 				}
-				destination_database test2 {
-					replace_collection test2 test3
+				to mongodb_change_stream {
+					uri "mongodb://localhost:27017"
+					database test2
 				}
 			}
 			auth_policy {
@@ -144,19 +145,7 @@
 			}
 		}
 		account APP {
-			jetstream {
-				stream demo {
-					subject "demo.>"
-					max_age 10d
-					max_msgs 1000000
-					max_bytes 10GB
-				}
-				bucket kvdemo {
-					max_history 10
-					max_age 10d
-				}
-				object_store osdemo
-			}
+			jetstream
 			map_subject "canary.req.>" {
 				to "req.>" weight 50
 				to "beta.req.>" weight 50
@@ -178,8 +167,8 @@
 				callout oauth2 {
 					endpoint az-oidc-endpoint
 					template {
-						read_bucket kvdemo
-						write_bucket kvdemo "{oidc.session.email}.>"
+						# read_bucket kvdemo
+						# write_bucket kvdemo "{oidc.session.email}.>"
 						allow_sub "_INBOX.{oidc.session.email}.>"
 						allow_sub "{oidc.session.email}.>"
 						allow_pub ">"
