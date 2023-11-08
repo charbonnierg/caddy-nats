@@ -3,8 +3,8 @@ package jetstream
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	natscaddyfile "github.com/quara-dev/beyond/modules/nats/caddyfile"
+	"github.com/quara-dev/beyond/modules/nats/client"
 	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
-	"github.com/quara-dev/beyond/pkg/natsutils"
 )
 
 func (s *JetStreamStore) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -20,8 +20,8 @@ func (s *JetStreamStore) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return err
 				}
 			case "client":
-				s.Client = &natsutils.Client{}
-				if err := natscaddyfile.ParseClient(d, s.Client); err != nil {
+				s.Connection = &client.Connection{}
+				if err := natscaddyfile.ParseConnection(d, s.Connection); err != nil {
 					return err
 				}
 			}

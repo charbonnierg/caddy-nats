@@ -17,6 +17,13 @@ func init() {
 	caddy.RegisterModule(AllowAuthCallout{})
 }
 
+func (AllowAuthCallout) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "nats.auth_callout.allow",
+		New: func() caddy.Module { return new(AllowAuthCallout) },
+	}
+}
+
 // A minimal auth callout handler that always denies access.
 type AllowAuthCallout struct {
 	logger   *zap.Logger
@@ -27,13 +34,6 @@ type AllowAuthCallout struct {
 func (c *AllowAuthCallout) SetAccount(account string) error {
 	c.Account = account
 	return nil
-}
-
-func (AllowAuthCallout) CaddyModule() caddy.ModuleInfo {
-	return caddy.ModuleInfo{
-		ID:  "nats.auth_callout.allow",
-		New: func() caddy.Module { return new(AllowAuthCallout) },
-	}
 }
 
 func (c *AllowAuthCallout) Provision(app nats.App) error {

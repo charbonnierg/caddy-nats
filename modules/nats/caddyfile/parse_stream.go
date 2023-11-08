@@ -3,11 +3,11 @@ package caddyfile
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/nats-io/nats.go"
-	"github.com/quara-dev/beyond/modules/nats/connectors/resources"
+	"github.com/quara-dev/beyond/modules/nats/client"
 	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 )
 
-func ParseStream(d *caddyfile.Dispenser, stream *resources.Stream) error {
+func ParseStream(d *caddyfile.Dispenser, stream *client.Stream) error {
 	if stream.StreamConfig == nil {
 		stream.StreamConfig = &nats.StreamConfig{}
 	}

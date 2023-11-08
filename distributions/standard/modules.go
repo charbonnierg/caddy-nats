@@ -15,10 +15,18 @@ import (
 	// NATS modules
 	_ "github.com/quara-dev/beyond/modules/nats/app"
 	_ "github.com/quara-dev/beyond/modules/nats/auth/callout"
-	_ "github.com/quara-dev/beyond/modules/nats/auth/policies"
-	_ "github.com/quara-dev/beyond/modules/nats/connectors"
-	_ "github.com/quara-dev/beyond/modules/nats/connectors/components/mongo"
-	_ "github.com/quara-dev/beyond/modules/nats/connectors/components/nats"
+	_ "github.com/quara-dev/beyond/modules/nats/auth/matchers"
+
+	// Connectors modules
+	_ "github.com/quara-dev/beyond/modules/nats/cmd"
+	_ "github.com/quara-dev/beyond/modules/nats/connectors/mongo/changestreamexporter"
+	_ "github.com/quara-dev/beyond/modules/nats/connectors/mongo/changestreamreceiver"
+	_ "github.com/quara-dev/beyond/modules/nats/connectors/mongo/queryservice"
+	_ "github.com/quara-dev/beyond/modules/nats/connectors/nats/consumerreceiver"
+	_ "github.com/quara-dev/beyond/modules/nats/connectors/nats/streamexporter"
+	_ "github.com/quara-dev/beyond/modules/nats/jetstream_fs"
+	_ "github.com/quara-dev/beyond/modules/nats/jetstream_publish"
+	_ "github.com/quara-dev/beyond/modules/nats/publish"
 
 	// OAuth2 modules
 	_ "github.com/quara-dev/beyond/modules/oauth2/app"

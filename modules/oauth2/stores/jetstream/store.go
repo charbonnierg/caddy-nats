@@ -12,9 +12,9 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/quara-dev/beyond/modules/nats"
+	"github.com/quara-dev/beyond/modules/nats/client"
 	"github.com/quara-dev/beyond/modules/oauth2"
 	"github.com/quara-dev/beyond/modules/oauth2/stores/jetstream/internal"
-	"github.com/quara-dev/beyond/pkg/natsutils"
 	"go.uber.org/zap"
 )
 
@@ -25,28 +25,28 @@ func init() {
 type JetStreamStore struct {
 	logger        *zap.Logger
 	sessionsstore sessionsapi.SessionStore
-	Name          string            `json:"name,omitempty"`
-	Client        *natsutils.Client `json:"client,omitempty"`
-	TTL           time.Duration     `json:"ttl,omitempty"`
+	Name          string             `json:"name,omitempty"`
+	Connection    *client.Connection `json:"connection,omitempty"`
+	TTL           time.Duration      `json:"ttl,omitempty"`
 }
 
 func (s *JetStreamStore) Provision(app oauth2.App, opts *options.Cookie) error {
 	s.logger = app.Logger().Named("oauth2-jetstream")
-	if s.Client == nil {
-		s.Client = &natsutils.Client{}
+	if s.Connection == nil {
+		s.Connection = &client.Connection{}
 	}
-	if s.Client.Internal {
-		unm, err := app.LoadBeyondApp("nats")
-		if err != nil {
-			return err
-		}
-		natsApp, ok := unm.(nats.App)
-		if !ok {
-			return errors.New("invalid nats app module")
-		}
-		s.Client.SetInternalProvider(natsApp)
+	unm, err := app.LoadBeyondApp("nats")
+	if err != nil {
+		return err
 	}
-	store, err := internal.NewStore(s.Name, s.Client, s.TTL, s.logger).SessionStore(opts)
+	natsApp, ok := unm.(nats.App)
+	if !ok {
+		return errors.New("invalid nats app module")
+	}
+	if err := s.Connection.Provision(natsApp); err != nil {
+		return err
+	}
+	store, err := internal.NewStore(s.Name, s.Connection, s.TTL, s.logger).SessionStore(opts)
 	if err != nil {
 		return fmt.Errorf("failed to create jetstream session store: %v", err)
 	}

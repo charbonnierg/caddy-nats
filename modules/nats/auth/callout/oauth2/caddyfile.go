@@ -8,6 +8,15 @@ import (
 	"github.com/quara-dev/beyond/modules/nats/auth/template"
 )
 
+// Syntax:
+//
+//	oauth2 {
+//	    account <account_name>
+//	    endpoint <endpoint_name>
+//	    template {
+//		     <template>
+//	    }
+//	}
 func (c *OAuth2ProxyAuthCallout) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {

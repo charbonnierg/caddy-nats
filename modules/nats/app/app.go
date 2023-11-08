@@ -4,17 +4,17 @@
 package natsapp
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/quara-dev/beyond"
 	"github.com/quara-dev/beyond/modules/nats"
 	"github.com/quara-dev/beyond/modules/nats/auth"
-	"github.com/quara-dev/beyond/modules/nats/auth/policies"
-	"github.com/quara-dev/beyond/modules/nats/connectors/resources"
+	"github.com/quara-dev/beyond/modules/nats/client"
 	"github.com/quara-dev/beyond/modules/secrets"
-	"github.com/quara-dev/beyond/pkg/natsutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 
 	"github.com/caddyserver/caddy/v2"
@@ -35,8 +35,13 @@ func init() {
 // It may define options for a nats server, in which case it will start a nats server.
 // It may also define an auth service, in which case it will start an auth service (as described in NATS ADR-26)
 type App struct {
-	Config
+	AuthService   *auth.AuthService  `json:"auth_service,omitempty"`
+	ServerOptions *embedded.Options  `json:"server,omitempty"`
+	Connectors    client.Connections `json:"connectors,omitempty"`
+	ReadyTimeout  time.Duration      `json:"ready_timeout,omitempty"`
+
 	ctx                caddy.Context
+	cancel             context.CancelFunc
 	beyond             *beyond.Beyond
 	secrets            secrets.App
 	tlsApp             *caddytls.TLS
@@ -44,8 +49,6 @@ type App struct {
 	runner             *embedded.Runner
 	connectionPolicies []caddytls.ConnectionPolicies
 	subjects           []string
-	options            *embedded.Options
-	authService        *auth.AuthService
 }
 
 // CaddyModule returns the Caddy module information.
@@ -64,7 +67,7 @@ func (App) CaddyModule() caddy.ModuleInfo {
 // It is required to implement the beyond.App interface.
 func (a *App) Provision(ctx caddy.Context) error {
 	var err error
-	a.ctx = ctx
+	a.ctx, a.cancel = caddy.NewContext(ctx)
 	a.logger = ctx.Logger()
 	a.logger.Info("Provisioning NATS server")
 	// Provision auth service
@@ -77,11 +80,6 @@ func (a *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 	a.beyond = b
-	// Create or load server options
-	if a.ServerRaw != nil {
-		options := *a.ServerRaw
-		a.options = &options
-	}
 	// Load secrets app module
 	unm, err := a.beyond.LoadApp(secrets.NS)
 	if err != nil {
@@ -99,63 +97,33 @@ func (a *App) Provision(ctx caddy.Context) error {
 		return errors.New("tls app invalid type")
 	}
 	a.tlsApp = tlsApp
-	// Create the auth service if any
-	if a.AuthServiceRaw != nil {
-		a.authService = &auth.AuthService{
-			AuthServiceConfig: *a.AuthServiceRaw,
-		}
-	}
 	// provision connectors
-	if a.Connectors != nil {
-		for _, conn := range a.Connectors {
-			if conn.NatsClient == nil {
-				conn.NatsClient = &resources.NatsClient{}
-			}
-			if conn.NatsClient.Servers == nil {
-				conn.NatsClient.Internal = true
-			}
-			if conn.Account != "" {
-				// Need to provision on-the-fly credentials for this account
-				if a.authService == nil {
-					return fmt.Errorf("cannot provision account '%s' without auth service", conn.Account)
-				}
-				conn.Token = "test"
-				a.authService.Policies = append(a.authService.Policies, &policies.ConnectionPolicy{
-					HandlerRaw: json.RawMessage(`{"module": "allow", "account": "` + conn.Account + `"}`),
-					MatchersRaw: []map[string]json.RawMessage{
-						{"connect_opts": json.RawMessage(`{"token": "test"}`)},
-					},
-				})
-			}
-			resources.SetInternalConnProviderInCaddyContext(&a.ctx, a)
-			if err := conn.Provision(a.ctx); err != nil {
-				return err
-			}
-		}
+	if err := a.Connectors.Provision(a); err != nil {
+		return err
 	}
 	// Now we can provision the auth service
-	if a.authService != nil {
-		if err := a.authService.Provision(a); err != nil {
+	if a.AuthService != nil {
+		if err := a.AuthService.Provision(a); err != nil {
 			return err
 		}
 	}
 	// Replace secrets replacer variables
 	replacer := caddy.NewReplacer()
 	a.secrets.AddSecretsReplacerVars(replacer)
-	name, err := replacer.ReplaceOrErr(a.options.ServerName, true, true)
+	name, err := replacer.ReplaceOrErr(a.ServerOptions.ServerName, true, true)
 	if err != nil {
 		return fmt.Errorf("invalid secret placeholder in server name: %v", err)
 	}
-	a.options.ServerName = name
-	a.logger.Warn("configuring nats server", zap.String("server_name", a.options.ServerName))
+	a.ServerOptions.ServerName = name
+	a.logger.Warn("configuring nats server", zap.String("server_name", a.ServerOptions.ServerName))
 	// Set the TLS config override of the standard NATS server to use ACME certificates
 	if err := a.setTLSConfigOverride(); err != nil {
 		return err
 	}
-	a.logger.Debug("NATS server options", zap.Any("options", a.options))
+	a.logger.Debug("NATS server options", zap.Any("options", a.ServerOptions))
 	// Create runner
 	a.runner, err = embedded.New().
-		WithOptions(a.options).
+		WithOptions(a.ServerOptions).
 		WithLogger(a.logger.Named("server")).
 		WithReadyTimeout(a.ReadyTimeout).
 		Build()
@@ -181,8 +149,8 @@ func (a *App) Start() error {
 		return err
 	}
 	// Start auth service
-	if a.authService != nil {
-		if err := a.startAuthService(); err != nil {
+	if a.AuthService != nil {
+		if err := a.AuthService.Connect(); err != nil {
 			return err
 		}
 	}
@@ -195,42 +163,11 @@ func (a *App) Start() error {
 	return nil
 }
 
-func (a *App) startAuthService() error {
-	if a.authService == nil {
-		return nil
-	}
-	// Gather auth service config and client
-	cfg := a.authService.Config()
-	client := a.authService.Client()
-	// Set internal provider if needed
-	if client.Internal {
-		client.SetInternalProvider(a)
-	}
-	// Set username and password if needed
-	u, p, err := a.GetAuthUserPass()
-	if err == nil {
-		client.Username = u
-		client.Password = p
-	}
-	// Create service
-	factory, err := natsutils.NewAuthServiceFactory(cfg)
-	if err != nil {
-		return err
-	}
-	// Add service to client
-	client = client.AddService(factory.NewService())
-	// Open connection
-	_, err = client.Connect()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // Stop stops the app.
 // It stops the nats server and the auth service if defined.
 // It is required to implement the beyond.App interface.
 func (a *App) Stop() error {
+	a.cancel()
 	// Stop connectors
 	for _, connector := range a.Connectors {
 		if err := connector.Close(); err != nil {
@@ -238,9 +175,9 @@ func (a *App) Stop() error {
 		}
 	}
 	// Stop auth service
-	if a.authService != nil {
-		if client := a.authService.Client(); client != nil {
-			client.Close()
+	if a.AuthService != nil {
+		if err := a.AuthService.Close(); err != nil {
+			a.logger.Error("Failed to stop auth service", zap.Error(err))
 		}
 	}
 	// Stop nats runner
@@ -258,10 +195,10 @@ func (a *App) Validate() error {
 }
 
 func (a *App) setStandardTLSConnectionPolicies() caddytls.ConnectionPolicies {
-	if a.options.TLS == nil || a.options.TLS.Subjects == nil {
+	if a.ServerOptions.TLS == nil || a.ServerOptions.TLS.Subjects == nil {
 		return nil
 	}
-	subjects := a.options.TLS.Subjects
+	subjects := a.ServerOptions.TLS.Subjects
 	matcher := caddyconfig.JSON(subjects, nil)
 	policy := caddytls.ConnectionPolicy{
 		MatchersRaw: map[string]json.RawMessage{
@@ -274,10 +211,10 @@ func (a *App) setStandardTLSConnectionPolicies() caddytls.ConnectionPolicies {
 }
 
 func (a *App) setWebsocketTLSConnectionPolicies() caddytls.ConnectionPolicies {
-	if a.options.Websocket == nil || a.options.Websocket.TLS == nil || a.options.Websocket.TLS.Subjects == nil {
+	if a.ServerOptions.Websocket == nil || a.ServerOptions.Websocket.TLS == nil || a.ServerOptions.Websocket.TLS.Subjects == nil {
 		return nil
 	}
-	subjects := a.options.Websocket.TLS.Subjects
+	subjects := a.ServerOptions.Websocket.TLS.Subjects
 	matcher := caddyconfig.JSON(subjects, nil)
 	policy := caddytls.ConnectionPolicy{
 		MatchersRaw: map[string]json.RawMessage{
@@ -290,10 +227,10 @@ func (a *App) setWebsocketTLSConnectionPolicies() caddytls.ConnectionPolicies {
 }
 
 func (a *App) setLeafnodeTLSConnectionPolicies() caddytls.ConnectionPolicies {
-	if a.options.Leafnode == nil || a.options.Leafnode.TLS == nil || a.options.Leafnode.TLS.Subjects == nil {
+	if a.ServerOptions.Leafnode == nil || a.ServerOptions.Leafnode.TLS == nil || a.ServerOptions.Leafnode.TLS.Subjects == nil {
 		return nil
 	}
-	subjects := a.options.Leafnode.TLS.Subjects
+	subjects := a.ServerOptions.Leafnode.TLS.Subjects
 	matcher := caddyconfig.JSON(subjects, nil)
 	policy := caddytls.ConnectionPolicy{
 		MatchersRaw: map[string]json.RawMessage{
@@ -325,15 +262,15 @@ func (a *App) setTLSConfigOverride() error {
 	// Now that we have the connection policies, we can set the TLS config override
 	if standardPolicies != nil {
 		a.logger.Debug("Setting TLS config override", zap.Any("policies", standardPolicies))
-		a.options.TLS.SetConfigOverride(standardPolicies.TLSConfig(a.ctx))
+		a.ServerOptions.TLS.SetConfigOverride(standardPolicies.TLSConfig(a.ctx))
 	}
 	if wsPolicies != nil {
 		a.logger.Debug("Setting Websocket TLS config override", zap.Any("policies", wsPolicies))
-		a.options.Websocket.TLS.SetConfigOverride(wsPolicies.TLSConfig(a.ctx))
+		a.ServerOptions.Websocket.TLS.SetConfigOverride(wsPolicies.TLSConfig(a.ctx))
 	}
 	if leafPolicies != nil {
 		a.logger.Debug("Setting Leafnode TLS config override", zap.Any("policies", leafPolicies))
-		a.options.Leafnode.TLS.SetConfigOverride(leafPolicies.TLSConfig(a.ctx))
+		a.ServerOptions.Leafnode.TLS.SetConfigOverride(leafPolicies.TLSConfig(a.ctx))
 	}
 	return nil
 }

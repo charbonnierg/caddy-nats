@@ -62,7 +62,7 @@ func (p *PythonProcess) Start() error {
 		if err := p.cmd.Wait(); err != nil {
 			p.logger.Error("python process exited", zap.String("name", p.Name), zap.Error(err))
 		}
-		p.logger.Warn("python process exited without error", zap.String("name", p.Name))
+		p.logger.Info("python process exited without error", zap.String("name", p.Name))
 	}()
 	return nil
 }

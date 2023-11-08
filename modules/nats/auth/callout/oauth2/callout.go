@@ -20,6 +20,13 @@ func init() {
 	caddy.RegisterModule(OAuth2ProxyAuthCallout{})
 }
 
+func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "nats.auth_callout.oauth2",
+		New: func() caddy.Module { return new(OAuth2ProxyAuthCallout) },
+	}
+}
+
 // OAuth2ProxyAuthCallout is a caddy module that implements the auth callout interface.
 // It is used to authenticate users using an oauth2 proxy.
 // It is configured in the "nats.auth_callout.oauth2" namespace.
@@ -38,13 +45,6 @@ type OAuth2ProxyAuthCallout struct {
 func (c *OAuth2ProxyAuthCallout) SetAccount(account string) error {
 	c.Account = account
 	return nil
-}
-
-func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
-	return caddy.ModuleInfo{
-		ID:  "nats.auth_callout.oauth2",
-		New: func() caddy.Module { return new(OAuth2ProxyAuthCallout) },
-	}
 }
 
 // Provision sets up the auth callout handler.

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"github.com/quara-dev/beyond/pkg/natsutils"
+	"github.com/quara-dev/beyond/modules/nats/client"
 	"go.uber.org/zap"
 )
 
@@ -20,22 +20,22 @@ type KeyValueStore struct {
 	natskv nats.KeyValue
 	name   string
 	ttl    time.Duration
-	client *natsutils.Client
+	client *client.Connection
 }
 
 func (s *KeyValueStore) lazy() (nats.KeyValue, error) {
 	if s.natskv == nil {
 		s.logger.Info("connecting to jetstream")
-		conn, err := s.client.Connect()
+		js, err := s.client.JetStream()
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to jetstream: %v", err)
 		}
-		kv, err := conn.JetStream().KeyValue(s.name)
+		kv, err := js.KeyValue(s.name)
 		if err != nil {
 			if err == nats.ErrBucketNotFound {
 				s.logger.Info("creating jetstream key-value store")
 				// Let's create the key value store
-				kv, err = conn.JetStream().CreateKeyValue(&nats.KeyValueConfig{
+				kv, err = js.CreateKeyValue(&nats.KeyValueConfig{
 					Bucket:      s.name,
 					Description: "oauth2-proxy session store",
 					TTL:         time.Duration(s.ttl),

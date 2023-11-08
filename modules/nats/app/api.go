@@ -4,12 +4,14 @@
 package natsapp
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/quara-dev/beyond"
+	"github.com/quara-dev/beyond/modules/nats/auth/policies"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 	"go.uber.org/zap"
 )
@@ -20,8 +22,8 @@ func (a *App) Context() caddy.Context { return a.ctx }
 // Logger will return the logger for the NATS app.
 func (a *App) Logger() *zap.Logger { return a.logger }
 
-// Options will return the NATS server options for the NATS app.
-func (a *App) Options() *embedded.Options { return a.options }
+// GetOptions will return the NATS server options for the NATS app.
+func (a *App) GetOptions() *embedded.Options { return a.ServerOptions }
 
 // GetServer will return the NATS server embedded in the NATS app.
 func (a *App) GetServer() (*server.Server, error) {
@@ -53,37 +55,18 @@ func (a *App) LoadBeyondApp(id string) (beyond.App, error) {
 	return a.beyond.LoadApp(id)
 }
 
-// GetAuthUserPass will return the user and password to use for the auth service
-// according to server configuration.
-func (a *App) GetAuthUserPass() (string, string, error) {
-	// The goal is to "guess" the user and password to use for the auth callout
-	if a.options.Authorization != nil {
-		auth := a.options.Authorization
-		accs := a.options.Accounts
-		config := auth.AuthCallout
-		if config != nil && config.AuthUsers != nil {
-			if auth.Users != nil {
-				for _, user := range auth.Users {
-					for _, authUser := range config.AuthUsers {
-						if user.User == authUser {
-							return user.User, user.Password, nil
-						}
-					}
-				}
-			} else {
-				for _, acc := range accs {
-					if acc.Name == config.Account {
-						for _, user := range acc.Users {
-							for _, authUser := range config.AuthUsers {
-								if user.User == authUser {
-									return user.User, user.Password, nil
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+// AddNewTokenBasedAuthPolicy will add a new token based auth policy to the NATS server.
+func (a *App) AddNewTokenBasedAuthPolicy(account string) (string, error) {
+	// Need to provision on-the-fly credentials for this account
+	if a.AuthService == nil {
+		return "", fmt.Errorf("cannot provision token based auth policy for account '%s' without auth service", account)
 	}
-	return "", "", fmt.Errorf("user not found")
+	token := account + "-token"
+	a.AuthService.Policies = append(a.AuthService.Policies, &policies.ConnectionPolicy{
+		HandlerRaw: json.RawMessage(`{"module": "allow", "account": "` + account + `"}`),
+		MatchersRaw: []json.RawMessage{
+			json.RawMessage(`{"type": "connect_opts", "token": "` + token + `"}`),
+		},
+	})
+	return token, nil
 }

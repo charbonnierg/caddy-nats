@@ -1,34 +1,44 @@
 package auth
 
 import (
-	"encoding/json"
-
+	"github.com/caddyserver/caddy/v2/caddyconfig"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/modules/nats/auth/policies"
-	"github.com/quara-dev/beyond/pkg/natsutils"
+	"github.com/quara-dev/beyond/modules/nats/client"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
+	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
-// AuthServiceConfig is the configuration for the auth callout service.
-type AuthServiceConfig struct {
-	ClientRaw         *natsutils.Client           `json:"client,omitempty"`
-	InternalAccount   string                      `json:"internal_account,omitempty"`
-	InternalUser      string                      `json:"internal_user,omitempty"`
-	AuthAccount       string                      `json:"auth_account,omitempty"`
-	AuthSigningKey    string                      `json:"auth_signing_key,omitempty"`
-	SubjectRaw        string                      `json:"subject,omitempty"`
-	Policies          policies.ConnectionPolicies `json:"policies,omitempty"`
-	DefaultHandlerRaw json.RawMessage             `json:"handler,omitempty" caddy:"namespace=nats.auth_callout inline_key=module"`
-}
-
-func (a *AuthServiceConfig) Zero() bool {
-	if a == nil {
-		return true
+// UnmarshalCaddyfile sets up the auth config from Caddyfile tokens.
+func (a *AuthService) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		switch d.Val() {
+		case "internal_account":
+			a.Connection = fnutils.DefaultIfNil(a.Connection, &client.Connection{})
+			if err := parser.ParseString(d, &a.Connection.Account); err != nil {
+				return err
+			}
+		case "client", "connection":
+			return d.Err("client block is not supported in auth service")
+		case "default":
+			if !d.NextArg() {
+				return d.Err("expected default handler")
+			}
+			typ := d.Val()
+			mod, err := caddyfile.UnmarshalModule(d, "nats.auth_callout."+typ)
+			if err != nil {
+				return d.Errf("failed to unmarshal module '%s': %v", typ, err)
+			}
+			a.DefaultHandlerRaw = caddyconfig.JSONModuleObject(mod, "module", typ, nil)
+		case "policy":
+			pol := policies.ConnectionPolicy{}
+			if err := pol.UnmarshalCaddyfile(d); err != nil {
+				return err
+			}
+			a.Policies = append(a.Policies, &pol)
+		default:
+			return d.Errf("unknown directive '%s'", d.Val())
+		}
 	}
-	return a.ClientRaw == nil &&
-		a.InternalAccount == "" &&
-		a.InternalUser == "" &&
-		a.AuthAccount == "" &&
-		a.AuthSigningKey == "" &&
-		a.SubjectRaw == "" &&
-		a.Policies == nil &&
-		a.DefaultHandlerRaw == nil
+	return nil
 }

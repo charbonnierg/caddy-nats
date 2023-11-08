@@ -3,11 +3,11 @@ package caddyfile
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/quara-dev/beyond/modules/nats/connectors"
+	"github.com/quara-dev/beyond/modules/nats/client"
 	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 )
 
-func ParseFlow(d *caddyfile.Dispenser, flow *connectors.Flow) error {
+func ParseFlow(d *caddyfile.Dispenser, flow *client.Flow) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "from":

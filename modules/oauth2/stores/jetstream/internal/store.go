@@ -10,11 +10,11 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
-	"github.com/quara-dev/beyond/pkg/natsutils"
+	"github.com/quara-dev/beyond/modules/nats/client"
 	"go.uber.org/zap"
 )
 
-func NewStore(name string, client *natsutils.Client, ttl time.Duration, logger *zap.Logger) *Store {
+func NewStore(name string, client *client.Connection, ttl time.Duration, logger *zap.Logger) *Store {
 	return &Store{kvstore: KeyValueStore{name: name, client: client, ttl: ttl, logger: logger.Named("kv")}, logger: logger}
 }
 

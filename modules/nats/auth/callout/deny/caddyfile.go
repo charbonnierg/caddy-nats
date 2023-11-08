@@ -5,6 +5,11 @@ package deny
 
 import "github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 
+// Syntax:
+//
+//	deny {
+//	    message <message>
+//	}
 func (c *DenyAuthCallout) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {

@@ -13,7 +13,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns v1.1.0
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
 	github.com/caddyserver/caddy/v2 v2.7.5
-	github.com/damianiandrea/mongodb-nats-connector v0.0.0-20230930202719-75470b87f61e
 	github.com/docker/docker v24.0.6+incompatible
 	github.com/docker/go-connections v0.4.1-0.20210727194412-58542c764a11
 	github.com/docker/go-units v0.5.0
@@ -86,6 +85,7 @@ require (
 	github.com/prometheus/common v0.44.0
 	github.com/prometheus/prometheus v0.47.1
 	github.com/stretchr/testify v1.8.4
+	go.mongodb.org/mongo-driver v1.12.0
 	go.opentelemetry.io/collector/component v0.87.0
 	go.opentelemetry.io/collector/confmap v0.87.0
 	go.opentelemetry.io/collector/connector v0.87.0
@@ -377,7 +377,6 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
-	go.mongodb.org/mongo-driver v1.12.0 // indirect
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/collector v0.87.0 // indirect

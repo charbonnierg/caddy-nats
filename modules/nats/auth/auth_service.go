@@ -5,37 +5,48 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/nats-io/jwt/v2"
+	"github.com/nats-io/nats.go/micro"
 	"github.com/nats-io/nkeys"
 	"github.com/quara-dev/beyond/modules/nats"
-	"github.com/quara-dev/beyond/pkg/natsutils"
+	"github.com/quara-dev/beyond/modules/nats/auth/policies"
+	"github.com/quara-dev/beyond/modules/nats/client"
+	"github.com/quara-dev/beyond/pkg/fnutils"
 	runner "github.com/quara-dev/beyond/pkg/natsutils/embedded"
 	"go.uber.org/zap"
 )
 
+var (
+	DEFAULT_AUTH_CALLOUT_SUBJECT = "$SYS.REQ.USER.AUTH"
+	DEFAULT_AUTH_CALLOUT_ACCOUNT = "AUTH"
+)
+
 // AuthService is the auth callout service based on policies.
 type AuthService struct {
-	AuthServiceConfig
+	Name              string                      `json:"name,omitempty"`
+	Connection        *client.Connection          `json:"connection,omitempty"`
+	AuthPublicKey     string                      `json:"auth_public_key,omitempty"`
+	AuthSigningKey    string                      `json:"auth_signing_key,omitempty"`
+	SigningKeyStore   json.RawMessage             `json:"signing_key_store,omitempty" caddy:"namespace=secrets.stores inline_key=module"`
+	Subject           string                      `json:"subject,omitempty"`
+	Policies          policies.ConnectionPolicies `json:"policies,omitempty"`
+	DefaultHandlerRaw json.RawMessage             `json:"handler,omitempty" caddy:"namespace=nats.auth_callout inline_key=module"`
+	QueueGroup        string                      `json:"queue_group,omitempty"`
+	Description       string                      `json:"description,omitempty"`
+	Version           string                      `json:"version,omitempty"`
+	Metadata          map[string]string           `json:"metadata,omitempty"`
+
 	logger         *zap.Logger
 	app            nats.App
 	ctx            caddy.Context
 	defaultHandler nats.AuthCallout
-	cfg            *natsutils.AuthServiceConfig
-	client         natsutils.Client
-}
-
-// Client returns the NATS client used by the auth service.
-func (s *AuthService) Client() *natsutils.Client {
-	return &s.client
-}
-
-// Config returns the auth callout service configuration.
-func (s *AuthService) Config() *natsutils.AuthServiceConfig {
-	return s.cfg
+	keystore       nats.Keystore
+	service        micro.Service
 }
 
 // Handle is the auth callout handler
@@ -72,29 +83,23 @@ func (s *AuthService) Provision(app nats.App) error {
 	s.ctx = app.Context()
 	s.logger = app.Logger().Named("auth_service")
 	// Validate configuration
-	if s.ClientRaw != nil {
-		client := *s.ClientRaw
-		s.client = client
-	} else {
-		s.ClientRaw = &natsutils.Client{
-			Name:     "auth_service",
-			Internal: true,
-		}
+	if s.Connection == nil {
+		s.Connection = &client.Connection{}
 	}
-	if s.client.Name == "" {
-		s.client.Name = "auth_service"
+	if s.Connection.Name == "" {
+		s.Connection.Name = "auth_callout"
 	}
-	if s.AuthSigningKey != "" && s.InternalAccount != "" {
-		return errors.New("auth signing key and internal account are mutually exclusive")
+	if s.Connection.Account == "" {
+		s.Connection.Account = DEFAULT_AUTH_CALLOUT_ACCOUNT
 	}
-	if s.AuthSigningKey == "" && s.InternalAccount == "" {
-		s.InternalAccount = natsutils.DEFAULT_AUTH_CALLOUT_ACCOUNT
+	if s.AuthPublicKey != "" && s.AuthSigningKey != "" {
+		return errors.New("auth signing key and auth public key are mutually exclusive")
 	}
-	// Provision subjec to which auth requests will be sent
-	cfg := natsutils.NewAuthServiceConfig(s.Handle)
-	cfg.Logger = s.logger.Named("auth_callout")
-	if s.SubjectRaw != "" {
-		cfg.Subject = s.SubjectRaw
+	if s.AuthPublicKey != "" && s.SigningKeyStore == nil {
+		return errors.New("auth public key is set but no keystore is defined")
+	}
+	if err := s.Connection.Provision(app); err != nil {
+		return err
 	}
 	// Generate an NATS server account if needed
 	// This account will be used to authenticate the auth callout
@@ -103,12 +108,9 @@ func (s *AuthService) Provision(app nats.App) error {
 	if err := s.setupInternalAuthAccount(); err != nil {
 		return err
 	}
-	// At this point, either a signing key was provided in configuration
-	// or an internal account was created and the signing key is set
-	if s.AuthSigningKey == "" {
-		return errors.New("internal error: auth signing key is not set but should be")
+	if s.AuthSigningKey == "" && s.SigningKeyStore == nil {
+		return errors.New("auth signing key or keystore must be set")
 	}
-	cfg.SigningKey = s.AuthSigningKey
 	// Provision default handler
 	if s.DefaultHandlerRaw != nil {
 		unm, err := s.ctx.LoadModule(s, "DefaultHandlerRaw")
@@ -128,8 +130,82 @@ func (s *AuthService) Provision(app nats.App) error {
 	if err := s.Policies.Provision(app); err != nil {
 		return err
 	}
-	s.cfg = cfg
+	// s.cfg = cfg
 	return nil
+}
+
+// Connect
+func (s *AuthService) Connect() error {
+	var pk = s.AuthPublicKey
+	var sk nkeys.KeyPair
+	if s.AuthSigningKey != "" {
+		signingKey, err := nkeys.FromSeed([]byte(s.AuthSigningKey))
+		if err != nil {
+			return errors.New("failed to decode auth issuer signing key")
+		}
+		publicKey, err := signingKey.PublicKey()
+		if err != nil {
+			return errors.New("failed to get auth issuer public key")
+		}
+		sk = signingKey
+		pk = publicKey
+	}
+	subject := fnutils.DefaultIfEmptyString(s.Subject, DEFAULT_AUTH_CALLOUT_SUBJECT)
+	s.logger.Info("auth callout service connected", zap.String("subject", subject))
+	u, p, err := s.getAuthUserPass()
+	if err == nil {
+		s.Connection.Username = u
+		s.Connection.Password = p
+	}
+	// Create service
+	handler := &authServiceHandler{
+		signingKey: sk,
+		publicKey:  pk,
+		logger:     s.logger,
+		handle:     s.Handle,
+		keystore:   s.keystore,
+	}
+	definition := &client.ServiceDefinition{
+		QueueGroup: s.QueueGroup,
+		Endpoints: []*client.EndpointDefinition{
+			{
+				Name:    fnutils.DefaultIfEmptyString(s.Name, "auth-service"),
+				Subject: subject,
+				Handler: handler,
+			},
+		},
+		Version:     fnutils.DefaultIfEmptyString(s.Version, "0.0.1"),
+		Description: s.Description,
+		Metadata:    s.Metadata,
+	}
+	nc, err := s.Connection.Conn()
+	if err != nil {
+		return err
+	}
+	service, err := definition.Start(nc)
+	if err != nil {
+		return err
+	}
+	s.service = service
+	return nil
+}
+
+func (s *AuthService) Close() error {
+	if s.service != nil {
+		return s.service.Stop()
+	}
+	return nil
+}
+
+func (a *AuthService) Zero() bool {
+	if a == nil {
+		return true
+	}
+	return a.Connection == nil &&
+		a.AuthSigningKey == "" &&
+		a.Subject == "" &&
+		a.Policies == nil &&
+		a.DefaultHandlerRaw == nil
 }
 
 // setupInternalAuthAccount sets up the internal auth account in embedded server options.
@@ -137,18 +213,14 @@ func (s *AuthService) setupInternalAuthAccount() error {
 	if s.AuthSigningKey != "" {
 		return nil
 	}
-
-	if s.InternalUser != "" && s.InternalAccount == "" {
-		return errors.New("internal account is required when using internal user")
-	}
-	opts := s.app.Options()
-	if s.InternalAccount != "" && opts.Authorization != nil {
+	opts := s.app.GetOptions()
+	if s.Connection.Account != "" && opts.Authorization != nil {
 		return errors.New("internal account is not allowed when custom authorization map is used")
 	}
-	if s.InternalAccount != "" && opts.Accounts == nil {
+	if s.Connection.Account != "" && opts.Accounts == nil {
 		return errors.New("internal account is not allowed when no accounts are defined")
 	}
-	if s.InternalAccount != "" {
+	if s.Connection.Account != "" {
 		sk, err := nkeys.CreateAccount()
 		if err != nil {
 			return errors.New("failed to create internal auth account")
@@ -161,13 +233,10 @@ func (s *AuthService) setupInternalAuthAccount() error {
 		if err != nil {
 			return errors.New("failed to get internal auth account public key")
 		}
-		if s.InternalUser == "" {
-			s.InternalUser = pk
-		}
 		auth := runner.AuthorizationMap{
 			AuthCallout: &runner.AuthCalloutMap{
 				Issuer:    pk,
-				Account:   s.InternalAccount,
+				Account:   s.Connection.Account,
 				AuthUsers: []string{pk},
 			},
 		}
@@ -175,7 +244,7 @@ func (s *AuthService) setupInternalAuthAccount() error {
 			User: pk, Password: string(seed),
 		}
 		acc := runner.Account{
-			Name: s.InternalAccount, Users: []runner.User{user},
+			Name: s.Connection.Account, Users: []runner.User{user},
 		}
 		s.AuthSigningKey = string(seed)
 		opts.Authorization = &auth
@@ -184,6 +253,38 @@ func (s *AuthService) setupInternalAuthAccount() error {
 	return nil
 }
 
-var (
-	_ nats.AuthService = (*AuthService)(nil)
-)
+// getAuthUserPass will return the user and password to use for the auth service
+// according to server configuration.
+func (a *AuthService) getAuthUserPass() (string, string, error) {
+	opts := a.app.GetOptions()
+	// The goal is to "guess" the user and password to use for the auth callout
+	if opts.Authorization != nil {
+		auth := opts.Authorization
+		accs := opts.Accounts
+		config := auth.AuthCallout
+		if config != nil && config.AuthUsers != nil {
+			if auth.Users != nil {
+				for _, user := range auth.Users {
+					for _, authUser := range config.AuthUsers {
+						if user.User == authUser {
+							return user.User, user.Password, nil
+						}
+					}
+				}
+			} else {
+				for _, acc := range accs {
+					if acc.Name == config.Account {
+						for _, user := range acc.Users {
+							for _, authUser := range config.AuthUsers {
+								if user.User == authUser {
+									return user.User, user.Password, nil
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return "", "", fmt.Errorf("user not found")
+}

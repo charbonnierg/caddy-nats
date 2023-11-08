@@ -1,4 +1,5 @@
 {
+	debug
     nats {
         jetstream
 		default_auth_callout deny

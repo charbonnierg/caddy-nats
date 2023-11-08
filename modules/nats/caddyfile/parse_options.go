@@ -4,12 +4,13 @@
 package caddyfile
 
 import (
+	"encoding/json"
+
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/quara-dev/beyond/modules/nats/auth"
 	"github.com/quara-dev/beyond/modules/nats/auth/policies"
-	"github.com/quara-dev/beyond/modules/nats/connectors"
-	"github.com/quara-dev/beyond/modules/nats/connectors/resources"
+	"github.com/quara-dev/beyond/modules/nats/client"
 	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"github.com/quara-dev/beyond/pkg/fnutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
@@ -263,7 +264,7 @@ func parseSubjectMapping(d *caddyfile.Dispenser, account *embedded.Account) erro
 	return nil
 }
 
-func parseAuthPolicyForAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, acc *embedded.Account) error {
+func parseAuthPolicyForAccount(d *caddyfile.Dispenser, auth *auth.AuthService, acc *embedded.Account) error {
 	if auth == nil {
 		return d.Err("internal error: auth service config is nil. Please open a bug report.")
 	}
@@ -277,12 +278,12 @@ func parseAuthPolicyForAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceCon
 	return nil
 }
 
-func ParseConnector(d *caddyfile.Dispenser, connector *connectors.Connection) error {
+func ParseConnector(d *caddyfile.Dispenser, connector *client.Connection) error {
 	return nil
 }
 
-func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, connections *connectors.Connections, acc *embedded.Account) error {
-	var connection *connectors.Connection
+func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthService, connections *client.Connections, acc *embedded.Account) error {
+	var connection *client.Connection
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "auth_policy":
@@ -292,28 +293,34 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, connecti
 		case "stream":
 			acc.JetStream = true
 			if connection == nil {
-				connection = &connectors.Connection{}
+				connection = &client.Connection{}
 			}
 			if connection.Streams == nil {
-				connection.Streams = []*resources.Stream{}
+				connection.Streams = []*client.Stream{}
 			}
-			stream := resources.Stream{}
+			stream := client.Stream{}
 			if err := ParseStream(d, &stream); err != nil {
 				return err
 			}
 			connection.Streams = append(connection.Streams, &stream)
 		case "data_flow":
 			if connection == nil {
-				connection = &connectors.Connection{}
+				connection = &client.Connection{}
 			}
-			if connection.DataFlows == nil {
-				connection.DataFlows = []*connectors.Flow{}
-			}
-			flow := connectors.Flow{}
+			connection.DataFlows = fnutils.DefaultIfEmpty(connection.DataFlows, []*client.Flow{})
+			flow := client.Flow{}
 			if err := ParseFlow(d, &flow); err != nil {
 				return err
 			}
 			connection.DataFlows = append(connection.DataFlows, &flow)
+		case "service":
+			if connection == nil {
+				connection = &client.Connection{}
+			}
+			connection.Services = fnutils.DefaultIfEmpty(connection.Services, []json.RawMessage{})
+			if err := ParseServiceConnection(d, connection); err != nil {
+				return err
+			}
 		case "jetstream":
 			if err := parser.ParseBool(d, &acc.JetStream); err != nil {
 				return err
@@ -431,7 +438,7 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, connecti
 }
 
 // ParseAccounts parses the "accounts" directive found in the Caddyfile "nats_server" option block.
-func ParseAccounts(d *caddyfile.Dispenser, auth *auth.AuthServiceConfig, connections *connectors.Connections, accounts *[]*embedded.Account) error {
+func ParseAccounts(d *caddyfile.Dispenser, auth *auth.AuthService, connections *client.Connections, accounts *[]*embedded.Account) error {
 	if accounts == nil {
 		return d.Err("internal error: accounts is nil. Please open a bug report.")
 	}

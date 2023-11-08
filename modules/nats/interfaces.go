@@ -5,30 +5,35 @@ package nats
 
 import (
 	"context"
+	"errors"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/nats-io/jwt/v2"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/quara-dev/beyond"
-	"github.com/quara-dev/beyond/pkg/natsutils"
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded"
 )
+
+func Load(ctx caddy.Context) (App, error) {
+	unm, err := ctx.App("nats")
+	if err != nil {
+		return nil, err
+	}
+	app, ok := unm.(App)
+	if !ok {
+		return nil, errors.New("nats: failed to type assert module type to nats.App")
+	}
+	return app, nil
+}
 
 type App interface {
 	beyond.App
 	beyond.BeyondAppLoader
-	Options() *embedded.Options
-	GetAuthUserPass() (string, string, error)
+	AddNewTokenBasedAuthPolicy(account string) (string, error)
+	GetOptions() *embedded.Options
 	GetServer() (*server.Server, error)
 	ReloadServer() error
-}
-
-type AuthService interface {
-	Client() *natsutils.Client
-	Provision(app App) error
-	Config() *natsutils.AuthServiceConfig
-	Handle(request *jwt.AuthorizationRequestClaims) (*jwt.UserClaims, error)
 }
 
 type AuthRequest interface {
@@ -48,12 +53,10 @@ type Template interface {
 	Render(request AuthRequest, user *jwt.UserClaims)
 }
 
-// InputConnector is a Caddy module that serves as a connector
-// to a data source. It reads data from a data source and sends it
-// to a stream.
-type Connector interface {
-	caddy.Module
-	Provision(app App) error
-	Start() error
-	Stop() error
+type Matcher interface {
+	Match(request *jwt.AuthorizationRequestClaims) bool
+}
+
+type Keystore interface {
+	Get(account string) (string, error)
 }

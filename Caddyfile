@@ -82,19 +82,19 @@
 	# Start python processes alongside the application
 	# Each python process may be started in a virtual environment and may have a custom entrypoint
 	# Alternatively, it's possible to specify a default virtual environment for all processes.
-	# python {
-	# 	virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
-	# 	app demo1 {
-	# 		entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app1
-	# 		forward_stdout
-	# 		forward_stderr
-	# 	}
-	# 	app demo2 {
-	# 		entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app2
-	# 		forward_stdout
-	# 		forward_stderr
-	# 	}
-	# }
+	python {
+		virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
+		app demo1 {
+			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app1
+			forward_stdout
+			forward_stderr
+		}
+		app demo2 {
+			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app2
+			forward_stdout
+			forward_stderr
+		}
+	}
 	# This block is required to configure and start NATS server when our Web Server starts
 	broker {
 		debug
@@ -103,9 +103,11 @@
 		account OAUTH2 {
 			jetstream on
 			auth_policy {
-				match {
-					connection_type in_process
+				match connect_opts {
 					client_name oauth2-az-endpoint
+				}
+				match client_info {
+					connection_type in_process
 				}
 				callout allow
 			}
@@ -136,10 +138,12 @@
 				}
 			}
 			auth_policy {
-				match {
+				match connect_opts {
+					token DATA
+				}
+				match client_info {
 					connection_type nats
-					client_host 127.0.0.1
-					client_token DATA
+					ip_address 127.0.0.1
 				}
 				callout allow
 			}
@@ -152,17 +156,21 @@
 			}
 			map_subject "pub.>" to "pub.srv-01.>"
 			auth_policy {
-				match {
+				match connect_opts {
+					token APP
+				}
+				match client_info {
 					connection_type nats
-					client_host 127.0.0.1
-					client_token APP
+					ip_address 127.0.0.1
 				}
 				callout allow
 			}
 			auth_policy {
-				match {
+				match client_info {
 					connection_type websocket
-					client_username APP
+				}
+				match connect_opts {
+					username APP
 				}
 				callout oauth2 {
 					endpoint az-oidc-endpoint
@@ -180,9 +188,11 @@
 		account SYS {
 			export_service "$SYS.REQ.SERVER.PING" to MONITORING
 			auth_policy {
-				match {
-					client_token SYS
-					client_host 127.0.0.1
+				match connect_opts {
+					token SYS
+				}
+				match client_info {
+					ip_address 127.0.0.1
 				}
 				callout allow
 			}
@@ -190,9 +200,11 @@
 		account MONITORING {
 			import_service "$SYS.REQ.SERVER.PING" from SYS
 			auth_policy {
-				match {
-					client_token monitoring
-					client_host 127.0.0.1
+				match connect_opts {
+					token monitoring
+				}
+				match client_info {
+					ip_address 127.0.0.1
 				}
 				callout allow
 			}
