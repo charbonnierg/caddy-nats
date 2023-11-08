@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/quara-dev/beyond"
@@ -50,6 +51,10 @@ type App struct {
 	connectionPolicies []caddytls.ConnectionPolicies
 	subjects           []string
 }
+
+var (
+	GLOBAL_LOCK = &sync.Mutex{}
+)
 
 // CaddyModule returns the Caddy module information.
 // It is required to implement the beyond.App interface.
@@ -144,22 +149,34 @@ func (a *App) Start() error {
 			return err
 		}
 	}
-	// Start nats runner
-	if err := a.runner.Start(); err != nil {
-		return err
-	}
-	// Start auth service
-	if a.AuthService != nil {
-		if err := a.AuthService.Connect(); err != nil {
-			return err
+	go func() {
+		GLOBAL_LOCK.Lock()
+		for {
+			// Start nats runner
+			if err := a.runner.Start(); err != nil {
+				a.logger.Error("Failed to start NATS server", zap.Error(err))
+				continue
+			}
+			// Start auth service
+			if a.AuthService != nil {
+				if err := a.AuthService.Connect(); err != nil {
+					a.logger.Error("Failed to start auth service", zap.Error(err))
+					a.runner.Stop()
+					continue
+				}
+			}
+			// Start connectors
+			for _, connector := range a.Connectors {
+				if err := connector.Connect(); err != nil {
+					a.logger.Error("Failed to start connector", zap.Error(err))
+					a.Stop()
+					continue
+				}
+			}
+			return
 		}
-	}
-	// Start connectors
-	for _, connector := range a.Connectors {
-		if err := connector.Connect(); err != nil {
-			return err
-		}
-	}
+	}()
+
 	return nil
 }
 
@@ -167,6 +184,7 @@ func (a *App) Start() error {
 // It stops the nats server and the auth service if defined.
 // It is required to implement the beyond.App interface.
 func (a *App) Stop() error {
+	defer GLOBAL_LOCK.Unlock()
 	a.cancel()
 	// Stop connectors
 	for _, connector := range a.Connectors {

@@ -1,701 +1,780 @@
 {
-  "logging": {
-    "logs": {
-      "default": {
-        "writer": {
-          "output": "stderr"
-        },
-        "encoder": {
-          "format": "console"
-        },
-        "level": "INFO"
-      },
-      "file": {
-        "writer": {
-          "filename": "./caddy.log",
-          "output": "file"
-        },
-        "encoder": {
-          "format": "json"
-        },
-        "level": "INFO"
-      }
-    }
-  },
-  "apps": {
-    "docker": {
-      "containers": {
-        "other": {
-          "restart": {
-            "policy": "on-failure"
-          },
-          "security": null,
-          "image": "docker.io/library/alpine:latest"
-        },
-        "test": {
-          "restart": {
-            "policy": "always"
-          },
-          "security": null,
-          "mounts": [
-            {
-              "Type": "bind",
-              "source": "/data/test",
-              "target": "/data"
+    "logging": {
+        "logs": {
+            "default": {
+                "writer": {
+                    "output": "stderr"
+                },
+                "encoder": {
+                    "format": "console"
+                },
+                "level": "INFO"
+            },
+            "file": {
+                "writer": {
+                    "filename": "./caddy.log",
+                    "output": "file"
+                },
+                "encoder": {
+                    "format": "json"
+                },
+                "level": "INFO"
             }
-          ],
-          "image": "docker.io/library/alpine:latest",
-          "env": {
-            "ENV1": "value1",
-            "ENV2": "value2",
-            "ENV3": "value3"
-          },
-          "cmd": [
-            "sleep",
-            "3600"
-          ],
-          "labels": {
-            "com.quara-dev.service": "test",
-            "com.quara-dev.service.env": "dev",
-            "com.quara-dev.service.version": "1.0.0"
-          },
-          "networks": [
-            {
-              "id": "mynetwork"
-            }
-          ]
         }
-      },
-      "networks": {
-        "mynetwork": {
-          "driver": "bridge",
-          "ipam": {
-            "driver": "default",
-            "config": [
-              {
-                "subnet": "172.200.200.0/24",
-                "gateway": "172.200.200.1"
-              }
-            ]
-          }
-        }
-      }
     },
-    "http": {
-      "servers": {
-        "srv0": {
-          "listen": [
-            ":11443"
-          ],
-          "routes": [
-            {
-              "match": [
-                {
-                  "host": [
-                    "metrics.local.quara-dev.com"
-                  ]
-                }
-              ],
-              "handle": [
-                {
-                  "handler": "subroute",
-                  "routes": [
-                    {
-                      "handle": [
+    "apps": {
+        "docker": {
+            "containers": {
+                "other": {
+                    "restart": {
+                        "policy": "on-failure"
+                    },
+                    "security": null,
+                    "image": "docker.io/library/alpine:latest"
+                },
+                "test": {
+                    "restart": {
+                        "policy": "always"
+                    },
+                    "security": null,
+                    "mounts": [
                         {
-                          "endpoint": {
-                            "name": "az-oidc-endpoint"
-                          },
-                          "handler": "oauth2_session"
-                        },
-                        {
-                          "handler": "metrics"
+                            "Type": "bind",
+                            "source": "/data/test",
+                            "target": "/data"
                         }
-                      ]
-                    }
-                  ]
-                }
-              ],
-              "terminal": true
-            },
-            {
-              "match": [
-                {
-                  "host": [
-                    "admin.local.quara-dev.com"
-                  ]
-                }
-              ],
-              "handle": [
-                {
-                  "handler": "subroute",
-                  "routes": [
-                    {
-                      "handle": [
+                    ],
+                    "image": "docker.io/library/alpine:latest",
+                    "env": {
+                        "ENV1": "value1",
+                        "ENV2": "value2",
+                        "ENV3": "value3"
+                    },
+                    "cmd": [
+                        "sleep",
+                        "3600"
+                    ],
+                    "labels": {
+                        "com.quara-dev.service": "test",
+                        "com.quara-dev.service.env": "dev",
+                        "com.quara-dev.service.version": "1.0.0"
+                    },
+                    "networks": [
                         {
-                          "handler": "vars",
-                          "root": "./www/index.html"
-                        },
-                        {
-                          "endpoint": {
-                            "name": "az-oidc-endpoint"
-                          },
-                          "handler": "oauth2_session"
-                        },
-                        {
-                          "handler": "file_server",
-                          "hide": [
-                            "./Caddyfile"
-                          ]
+                            "id": "mynetwork"
                         }
-                      ]
-                    }
-                  ]
-                }
-              ],
-              "terminal": true
-            },
-            {
-              "match": [
-                {
-                  "host": [
-                    "local.quara-dev.com"
-                  ]
-                }
-              ],
-              "handle": [
-                {
-                  "handler": "subroute",
-                  "routes": [
-                    {
-                      "handle": [
-                        {
-                          "endpoint": {
-                            "name": "az-oidc-endpoint"
-                          },
-                          "handler": "oauth2_session"
-                        },
-                        {
-                          "body": "hello world",
-                          "handler": "static_response"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ],
-              "terminal": true
-            }
-          ],
-          "tls_connection_policies": [
-            {}
-          ],
-          "automatic_https": {
-            "disable": true
-          },
-          "logs": {
-            "logger_names": {
-              "admin.local.quara-dev.com:11443": "",
-              "local.quara-dev.com:11443": "",
-              "metrics.local.quara-dev.com:11443": ""
-            }
-          },
-          "metrics": {}
-        }
-      }
-    },
-    "nats": {
-      "auth_service": {
-        "policies": [
-          {
-            "match": [
-              {
-                "client_info": {
-                  "in_process": true
-                },
-                "connect_opts": {
-                  "name": "oauth2-az-endpoint"
-                }
-              }
-            ],
-            "handler": {
-              "account": "OAUTH2",
-              "module": "allow"
-            }
-          },
-          {
-            "match": [
-              {
-                "client_info": {
-                  "host": "127.0.0.1",
-                  "type": "nats"
-                },
-                "connect_opts": {
-                  "token": "APP"
-                }
-              }
-            ],
-            "handler": {
-              "account": "APP",
-              "module": "allow"
-            }
-          },
-          {
-            "match": [
-              {
-                "client_info": {
-                  "type": "websocket"
-                },
-                "connect_opts": {
-                  "username": "APP"
-                }
-              }
-            ],
-            "handler": {
-              "account": "APP",
-              "endpoint": "az-oidc-endpoint",
-              "module": "oauth2",
-              "template": {
-                "pub": {
-                  "allow": [
-                    ">"
-                  ]
-                },
-                "resp": {
-                  "max": 0,
-                  "ttl": 0
-                },
-                "sub": {
-                  "allow": [
-                    "_INBOX.{oidc.session.email}.>",
-                    "{oidc.session.email}.>"
-                  ]
-                }
-              }
-            }
-          },
-          {
-            "match": [
-              {
-                "client_info": {
-                  "host": "127.0.0.1"
-                },
-                "connect_opts": {
-                  "token": "SYS"
-                }
-              }
-            ],
-            "handler": {
-              "account": "SYS",
-              "module": "allow"
-            }
-          },
-          {
-            "match": [
-              {
-                "client_info": {
-                  "host": "127.0.0.1"
-                },
-                "connect_opts": {
-                  "token": "monitoring"
-                }
-              }
-            ],
-            "handler": {
-              "account": "MONITORING",
-              "module": "allow"
-            }
-          }
-        ],
-        "handler": {
-          "module": "deny"
-        }
-      },
-      "server": {
-        "name": "srv-01",
-        "tags": {
-          "region": "eu-west-3"
-        },
-        "host": "127.0.0.1",
-        "port": 4222,
-        "debug": true,
-        "http_port": 8222,
-        "system_account": "SYS",
-        "accounts": [
-          {
-            "name": "OAUTH2",
-            "jetstream": true
-          },
-          {
-            "name": "APP",
-            "mappings": [
-              {
-                "subject": "canary.req.>",
-                "dest": [
-                  {
-                    "subject": "req.>",
-                    "weight": 50
-                  },
-                  {
-                    "subject": "beta.req.>",
-                    "weight": 50
-                  }
-                ]
-              },
-              {
-                "subject": "pub.>",
-                "dest": [
-                  {
-                    "subject": "pub.srv-01.>",
-                    "weight": 100
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "SYS",
-            "services": {
-              "exports": [
-                {
-                  "subject": "$SYS.REQ.SERVER.PING",
-                  "to": [
-                    "MONITORING"
-                  ]
-                }
-              ]
-            }
-          },
-          {
-            "name": "MONITORING",
-            "services": {
-              "imports": [
-                {
-                  "account": "SYS",
-                  "subject": "$SYS.REQ.SERVER.PING"
-                }
-              ]
-            }
-          }
-        ],
-        "websocket": {
-          "host": "0.0.0.0",
-          "port": 10443,
-          "advertise": "ws.local.quara-dev.com:10443",
-          "tls": {
-            "subjects": [
-              "ws.local.quara-dev.com"
-            ]
-          }
-        },
-        "mqtt": {
-          "host": "0.0.0.0",
-          "port": 8883,
-          "tls": {
-            "subjects": [
-              "mqtt.local.quara-dev.com"
-            ]
-          }
-        },
-        "jetstream": {
-          "unique_tag": "region",
-          "max_memory": 1000000000,
-          "max_file": 10000000000
-        },
-        "metrics": {
-          "healthz": true,
-          "connz": true,
-          "connz_detailed": true,
-          "subz": true,
-          "routez": true,
-          "gatewayz": true,
-          "leafz": true
-        }
-      }
-    },
-    "oauth2": {
-      "endpoints": [
-        {
-          "name": "az-oidc-endpoint",
-          "options": {
-            "email_domains": [
-              "*"
-            ],
-            "whitelist_domains": [
-              ".local.quara-dev.com"
-            ],
-            "cookie": {
-              "name": "_oauth2_session",
-              "domains": [
-                ".local.quara-dev.com"
-              ],
-              "no_http_only": true
-            },
-            "templates": {
-              "show_debug_on_error": true
-            },
-            "providers": [
-              {
-                "clientID": "4a224c79-38e2-487f-96e0-5f4febfa4ce1",
-                "clientSecret": "{secret.oauth2-client-secret@az-kv-srv-01}",
-                "keycloakConfig": {},
-                "azureConfig": {},
-                "ADFSConfig": {},
-                "bitbucketConfig": {},
-                "githubConfig": {},
-                "gitlabConfig": {},
-                "googleConfig": {},
-                "oidcConfig": {
-                  "issuerURL": "https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0",
-                  "jwksURL": "https://login.microsoftonline.com/common/discovery/keys",
-                  "emailClaim": "email",
-                  "userIDClaim": "email",
-                  "audienceClaims": [
-                    "aud"
-                  ]
-                },
-                "loginGovConfig": {},
-                "id": "azure-ad",
-                "provider": "oidc",
-                "name": "Azure AD",
-                "loginURL": "https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/authorize",
-                "redeemURL": "https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/token",
-                "profileURL": "https://graph.microsoft.com/v1.0/me",
-                "scope": "openid email profile"
-              }
-            ],
-            "extra_jwt_issuers": [
-              "https://sts.windows.net/96bdcf75-3f33-4995-966b-d8eddb861f9b/=4a224c79-38e2-487f-96e0-5f4febfa4ce1"
-            ]
-          },
-          "store": {
-            "client": {
-              "internal": true,
-              "name": "oauth2-az-endpoint"
-            },
-            "name": "OAUTH2-SESSIONS",
-            "type": "jetstream"
-          }
-        }
-      ]
-    },
-    "otelcol": {
-      "service": {
-        "extensions": [
-          "zpages",
-          "basicauth/client"
-        ],
-        "pipelines": {
-          "traces": {
-            "receivers": [
-              "otlp"
-            ],
-            "processors": [
-              "batch",
-              "attributes"
-            ],
-            "exporters": [
-              "otlphttp"
-            ]
-          },
-          "metrics": {
-            "receivers": [
-              "otlp",
-              "prometheus",
-              "hostmetrics"
-            ],
-            "processors": [
-              "batch",
-              "attributes"
-            ],
-            "exporters": [
-              "otlphttp"
-            ]
-          },
-          "logs": {
-            "receivers": [
-              "otlp",
-              "filelog"
-            ],
-            "processors": [
-              "batch",
-              "attributes"
-            ],
-            "exporters": [
-              "otlphttp"
-            ]
-          }
-        },
-        "telemetry": {
-          "logs": {},
-          "metrics": {
-            "address": "127.0.0.1:2020"
-          }
-        }
-      },
-      "receivers": {
-        "filelog": {
-          "include": [
-            "*.log"
-          ],
-          "resource": {
-            "environment_name": "dev",
-            "server_name": "srv-01",
-            "service_name": "caddy-beyond"
-          }
-        },
-        "hostmetrics": {
-          "root_path": "/",
-          "collection_interval": 10000000000,
-          "initial_delay": 5000000000,
-          "timeout": 0,
-          "scrapers": {
-            "cpu": {}
-          }
-        },
-        "otlp": {
-          "protocols": {
-            "grpc": {
-              "endpoint": "127.0.0.1:4317"
-            },
-            "http": {
-              "endpoint": "127.0.0.1:4318"
-            }
-          }
-        },
-        "prometheus": {
-          "config": {
-            "global": {
-              "scrape_interval": "10s",
-              "scrape_timeout": "1s"
-            },
-            "scrape_configs": [
-              {
-                "job_name": "caddy-beyond",
-                "static_configs": [
-                  {
-                    "targets": [
-                      "localhost:2019"
                     ]
-                  }
-                ]
-              },
-              {
-                "job_name": "otel-collector",
-                "static_configs": [
-                  {
-                    "targets": [
-                      "localhost:2020"
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        }
-      },
-      "processors": {
-        "attributes": {
-          "actions": [
-            {
-              "action": "insert",
-              "key": "server_name",
-              "value": "srv-01"
-            }
-          ]
-        },
-        "batch": {}
-      },
-      "exporters": {
-        "otlphttp": {
-          "endpoint": "https://otlp-gateway-prod-eu-west-3.grafana.net/otlp",
-          "auth": {
-            "authenticator": "basicauth/client"
-          }
-        }
-      },
-      "extensions": {
-        "basicauth/client": {
-          "client_auth": {
-            "username": "{secret.quara-grafana-stack-id@az-kv-srv-01}",
-            "password": "{secret.quara-grafana-stack-token@az-kv-srv-01}"
-          }
-        },
-        "zpages": {}
-      }
-    },
-    "python": {
-      "processes": [
-        {
-          "name": "demo1",
-          "command": "python3",
-          "args": [
-            "/home/charbonnierg/github/quara-dev/beyond/sandbox/app1"
-          ],
-          "virtualenv": "/home/charbonnierg/github/quara-dev/beyond/sandbox/.venv",
-          "forward_stdout": true,
-          "forward_stderr": true
-        },
-        {
-          "name": "demo2",
-          "command": "python3",
-          "args": [
-            "/home/charbonnierg/github/quara-dev/beyond/sandbox/app2"
-          ],
-          "virtualenv": "/home/charbonnierg/github/quara-dev/beyond/sandbox/.venv",
-          "forward_stdout": true,
-          "forward_stderr": true
-        }
-      ]
-    },
-    "secrets": {
-      "stores": {
-        "az-kv-srv-01": {
-          "module": "azure_keyvault",
-          "uri": "https://kv-srv-01.vault.azure.net"
-        }
-      },
-      "automate": [
-        {
-          "sources": [
-            "some-secret@az-kv-srv-01"
-          ],
-          "template": "The value is: {some-secret@az-kv-srv-01}",
-          "trigger": {
-            "interval": 3600000000000,
-            "type": "periodic"
-          },
-          "handlers": [
-            {
-              "file": "./secret.txt",
-              "file_perm": 384,
-              "notify": [
-                {
-                  "args": [
-                    "./some-other-file"
-                  ],
-                  "command": "touch",
-                  "type": "exec"
                 }
-              ],
-              "type": "file"
+            },
+            "networks": {
+                "mynetwork": {
+                    "driver": "bridge",
+                    "ipam": {
+                        "driver": "default",
+                        "config": [
+                            {
+                                "subnet": "172.200.200.0/24",
+                                "gateway": "172.200.200.1"
+                            }
+                        ]
+                    }
+                }
             }
-          ]
-        }
-      ]
-    },
-    "tls": {
-      "automation": {
-        "policies": [
-          {
-            "issuers": [
-              {
-                "module": "internal"
-              }
+        },
+        "http": {
+            "servers": {
+                "https": {
+                    "listen": [
+                        ":11443"
+                    ],
+                    "routes": [
+                        {
+                            "match": [
+                                {
+                                    "host": [
+                                        "metrics.local.quara-dev.com"
+                                    ]
+                                }
+                            ],
+                            "handle": [
+                                {
+                                    "handler": "subroute",
+                                    "routes": [
+                                        {
+                                            "handle": [
+                                                {
+                                                    "endpoint": {
+                                                        "name": "az-oidc-endpoint"
+                                                    },
+                                                    "handler": "oauth2_session"
+                                                },
+                                                {
+                                                    "handler": "metrics"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "terminal": true
+                        },
+                        {
+                            "match": [
+                                {
+                                    "host": [
+                                        "admin.local.quara-dev.com"
+                                    ]
+                                }
+                            ],
+                            "handle": [
+                                {
+                                    "handler": "subroute",
+                                    "routes": [
+                                        {
+                                            "handle": [
+                                                {
+                                                    "handler": "vars",
+                                                    "root": "./www/index.html"
+                                                },
+                                                {
+                                                    "endpoint": {
+                                                        "name": "az-oidc-endpoint"
+                                                    },
+                                                    "handler": "oauth2_session"
+                                                },
+                                                {
+                                                    "handler": "file_server",
+                                                    "hide": [
+                                                        "./Caddyfile"
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "terminal": true
+                        },
+                        {
+                            "match": [
+                                {
+                                    "host": [
+                                        "local.quara-dev.com"
+                                    ]
+                                }
+                            ],
+                            "handle": [
+                                {
+                                    "handler": "subroute",
+                                    "routes": [
+                                        {
+                                            "handle": [
+                                                {
+                                                    "endpoint": {
+                                                        "name": "az-oidc-endpoint"
+                                                    },
+                                                    "handler": "oauth2_session"
+                                                },
+                                                {
+                                                    "body": "hello world",
+                                                    "handler": "static_response"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "terminal": true
+                        }
+                    ],
+                    "tls_connection_policies": [
+                        {}
+                    ],
+                    "automatic_https": {
+                        "disable": true
+                    },
+                    "logs": {
+                        "logger_names": {
+                            "admin.local.quara-dev.com:11443": "",
+                            "local.quara-dev.com:11443": "",
+                            "metrics.local.quara-dev.com:11443": ""
+                        }
+                    },
+                    "metrics": {}
+                }
+            }
+        },
+        "nats": {
+            "auth_service": {
+                "policies": [
+                    {
+                        "match": [
+                            {
+                                "type": "connect_opts"
+                            },
+                            {
+                                "type": "client_info"
+                            }
+                        ],
+                        "handler": {
+                            "account": "OAUTH2",
+                            "module": "allow"
+                        }
+                    },
+                    {
+                        "match": [
+                            {
+                                "type": "connect_opts"
+                            },
+                            {
+                                "type": "client_info"
+                            }
+                        ],
+                        "handler": {
+                            "account": "DATA",
+                            "module": "allow"
+                        }
+                    },
+                    {
+                        "match": [
+                            {
+                                "type": "connect_opts"
+                            },
+                            {
+                                "type": "client_info"
+                            }
+                        ],
+                        "handler": {
+                            "account": "APP",
+                            "module": "allow"
+                        }
+                    },
+                    {
+                        "match": [
+                            {
+                                "type": "client_info"
+                            },
+                            {
+                                "type": "connect_opts"
+                            }
+                        ],
+                        "handler": {
+                            "account": "APP",
+                            "endpoint": "az-oidc-endpoint",
+                            "module": "oauth2",
+                            "template": {
+                                "pub": {
+                                    "allow": [
+                                        "\u003e"
+                                    ]
+                                },
+                                "resp": {
+                                    "max": 0,
+                                    "ttl": 0
+                                },
+                                "sub": {
+                                    "allow": [
+                                        "_INBOX.{oidc.session.email}.\u003e",
+                                        "{oidc.session.email}.\u003e"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "match": [
+                            {
+                                "type": "connect_opts"
+                            },
+                            {
+                                "type": "client_info"
+                            }
+                        ],
+                        "handler": {
+                            "account": "SYS",
+                            "module": "allow"
+                        }
+                    },
+                    {
+                        "match": [
+                            {
+                                "type": "connect_opts"
+                            },
+                            {
+                                "type": "client_info"
+                            }
+                        ],
+                        "handler": {
+                            "account": "MONITORING",
+                            "module": "allow"
+                        }
+                    }
+                ],
+                "handler": {
+                    "module": "deny"
+                }
+            },
+            "server": {
+                "name": "srv-01",
+                "tags": {
+                    "region": "eu-west-3"
+                },
+                "host": "127.0.0.1",
+                "port": 4222,
+                "debug": true,
+                "http_port": 8222,
+                "system_account": "SYS",
+                "accounts": [
+                    {
+                        "name": "OAUTH2",
+                        "jetstream": true
+                    },
+                    {
+                        "name": "DATA",
+                        "jetstream": true
+                    },
+                    {
+                        "name": "APP",
+                        "jetstream": true,
+                        "mappings": [
+                            {
+                                "subject": "canary.req.\u003e",
+                                "dest": [
+                                    {
+                                        "subject": "req.\u003e",
+                                        "weight": 50
+                                    },
+                                    {
+                                        "subject": "beta.req.\u003e",
+                                        "weight": 50
+                                    }
+                                ]
+                            },
+                            {
+                                "subject": "pub.\u003e",
+                                "dest": [
+                                    {
+                                        "subject": "pub.srv-01.\u003e",
+                                        "weight": 100
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "SYS",
+                        "services": {
+                            "exports": [
+                                {
+                                    "subject": "$SYS.REQ.SERVER.PING",
+                                    "to": [
+                                        "MONITORING"
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "MONITORING",
+                        "services": {
+                            "imports": [
+                                {
+                                    "account": "SYS",
+                                    "subject": "$SYS.REQ.SERVER.PING"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "websocket": {
+                    "host": "0.0.0.0",
+                    "port": 10443,
+                    "advertise": "ws.local.quara-dev.com:10443",
+                    "tls": {
+                        "subjects": [
+                            "ws.local.quara-dev.com"
+                        ]
+                    }
+                },
+                "mqtt": {
+                    "host": "0.0.0.0",
+                    "port": 8883,
+                    "tls": {
+                        "subjects": [
+                            "mqtt.local.quara-dev.com"
+                        ]
+                    }
+                },
+                "jetstream": {
+                    "unique_tag": "region",
+                    "max_memory": 1000000000,
+                    "max_file": 10000000000
+                },
+                "metrics": {
+                    "healthz": true,
+                    "connz": true,
+                    "connz_detailed": true,
+                    "subz": true,
+                    "routez": true,
+                    "gatewayz": true,
+                    "leafz": true
+                }
+            },
+            "connectors": [
+                {
+                    "account": "DATA",
+                    "streams": [
+                        {
+                            "name": "test",
+                            "subjects": [
+                                "test.\u003e"
+                            ],
+                            "retention": "limits",
+                            "max_consumers": 0,
+                            "max_msgs": 0,
+                            "max_bytes": 0,
+                            "discard": "old",
+                            "max_age": 0,
+                            "max_msgs_per_subject": 0,
+                            "storage": "file",
+                            "num_replicas": 0,
+                            "compression": "none",
+                            "allow_direct": false,
+                            "mirror_direct": false,
+                            "consumer_limits": {},
+                            "prefix": ""
+                        }
+                    ],
+                    "flows": [
+                        {
+                            "source": {
+                                "collection": "test1",
+                                "database": "test",
+                                "type": "mongodb_change_stream",
+                                "uri": "mongodb://localhost:27017"
+                            },
+                            "destination": {
+                                "allow_direct": false,
+                                "compression": "none",
+                                "consumer_limits": {},
+                                "discard": "old",
+                                "max_age": 0,
+                                "max_bytes": 0,
+                                "max_consumers": 0,
+                                "max_msgs": 0,
+                                "max_msgs_per_subject": 0,
+                                "mirror_direct": false,
+                                "name": "MONGOSTREAM",
+                                "num_replicas": 0,
+                                "prefix": "mongo",
+                                "retention": "limits",
+                                "storage": "file",
+                                "type": "stream"
+                            }
+                        },
+                        {
+                            "source": {
+                                "ack_policy": "none",
+                                "deliver_policy": "all",
+                                "durable_name": "db-sync",
+                                "num_replicas": 0,
+                                "replay_policy": "instant",
+                                "stream": "MONGOSTREAM",
+                                "type": "stream_consumer"
+                            },
+                            "destination": {
+                                "database": "test2",
+                                "type": "mongodb_change_stream",
+                                "uri": "mongodb://localhost:27017"
+                            }
+                        }
+                    ]
+                }
             ]
-          }
-        ]
-      }
+        },
+        "oauth2": {
+            "endpoints": [
+                {
+                    "name": "az-oidc-endpoint",
+                    "options": {
+                        "email_domains": [
+                            "*"
+                        ],
+                        "whitelist_domains": [
+                            ".local.quara-dev.com"
+                        ],
+                        "cookie": {
+                            "name": "_oauth2_session",
+                            "domains": [
+                                ".local.quara-dev.com"
+                            ],
+                            "no_http_only": true
+                        },
+                        "templates": {
+                            "show_debug_on_error": true
+                        },
+                        "providers": [
+                            {
+                                "clientID": "4a224c79-38e2-487f-96e0-5f4febfa4ce1",
+                                "clientSecret": "{secret.oauth2-client-secret@az-kv-srv-01}",
+                                "keycloakConfig": {},
+                                "azureConfig": {},
+                                "ADFSConfig": {},
+                                "bitbucketConfig": {},
+                                "githubConfig": {},
+                                "gitlabConfig": {},
+                                "googleConfig": {},
+                                "oidcConfig": {
+                                    "issuerURL": "https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0",
+                                    "jwksURL": "https://login.microsoftonline.com/common/discovery/keys",
+                                    "emailClaim": "email",
+                                    "userIDClaim": "email",
+                                    "audienceClaims": [
+                                        "aud"
+                                    ]
+                                },
+                                "loginGovConfig": {},
+                                "id": "azure-ad",
+                                "provider": "oidc",
+                                "name": "Azure AD",
+                                "loginURL": "https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/authorize",
+                                "redeemURL": "https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/token",
+                                "profileURL": "https://graph.microsoft.com/v1.0/me",
+                                "scope": "openid email profile"
+                            }
+                        ],
+                        "extra_jwt_issuers": [
+                            "https://sts.windows.net/96bdcf75-3f33-4995-966b-d8eddb861f9b/=4a224c79-38e2-487f-96e0-5f4febfa4ce1"
+                        ]
+                    },
+                    "store": {
+                        "connection": {
+                            "internal": true,
+                            "name": "oauth2-az-endpoint"
+                        },
+                        "name": "OAUTH2-SESSIONS",
+                        "type": "jetstream"
+                    }
+                }
+            ]
+        },
+        "otelcol": {
+            "service": {
+                "extensions": [
+                    "zpages",
+                    "basicauth/client"
+                ],
+                "pipelines": {
+                    "traces": {
+                        "receivers": [
+                            "otlp"
+                        ],
+                        "processors": [
+                            "batch",
+                            "attributes"
+                        ],
+                        "exporters": [
+                            "otlphttp"
+                        ]
+                    },
+                    "metrics": {
+                        "receivers": [
+                            "otlp",
+                            "prometheus",
+                            "hostmetrics"
+                        ],
+                        "processors": [
+                            "batch",
+                            "attributes"
+                        ],
+                        "exporters": [
+                            "otlphttp"
+                        ]
+                    },
+                    "logs": {
+                        "receivers": [
+                            "otlp",
+                            "filelog"
+                        ],
+                        "processors": [
+                            "batch",
+                            "attributes"
+                        ],
+                        "exporters": [
+                            "otlphttp"
+                        ]
+                    }
+                },
+                "telemetry": {
+                    "logs": {},
+                    "metrics": {
+                        "address": "127.0.0.1:2020"
+                    }
+                }
+            },
+            "receivers": {
+                "filelog": {
+                    "include": [
+                        "*.log"
+                    ],
+                    "resource": {
+                        "environment_name": "dev",
+                        "server_name": "srv-01",
+                        "service_name": "caddy-beyond"
+                    }
+                },
+                "hostmetrics": {
+                    "root_path": "/",
+                    "collection_interval": 10000000000,
+                    "initial_delay": 5000000000,
+                    "timeout": 0,
+                    "scrapers": {
+                        "cpu": {}
+                    }
+                },
+                "otlp": {
+                    "protocols": {
+                        "grpc": {
+                            "endpoint": "127.0.0.1:4317"
+                        },
+                        "http": {
+                            "endpoint": "127.0.0.1:4318"
+                        }
+                    }
+                },
+                "prometheus": {
+                    "config": {
+                        "global": {
+                            "scrape_interval": "10s",
+                            "scrape_timeout": "1s"
+                        },
+                        "scrape_configs": [
+                            {
+                                "job_name": "caddy-beyond",
+                                "static_configs": [
+                                    {
+                                        "targets": [
+                                            "localhost:2019"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "job_name": "otel-collector",
+                                "static_configs": [
+                                    {
+                                        "targets": [
+                                            "localhost:2020"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            "processors": {
+                "attributes": {
+                    "actions": [
+                        {
+                            "action": "insert",
+                            "key": "server_name",
+                            "value": "srv-01"
+                        }
+                    ]
+                },
+                "batch": {}
+            },
+            "exporters": {
+                "otlphttp": {
+                    "endpoint": "https://otlp-gateway-prod-eu-west-3.grafana.net/otlp",
+                    "auth": {
+                        "authenticator": "basicauth/client"
+                    }
+                }
+            },
+            "extensions": {
+                "basicauth/client": {
+                    "client_auth": {
+                        "username": "{secret.quara-grafana-stack-id@az-kv-srv-01}",
+                        "password": "{secret.quara-grafana-stack-token@az-kv-srv-01}"
+                    }
+                },
+                "zpages": {}
+            }
+        },
+        "python": {
+            "processes": [
+                {
+                    "name": "demo1",
+                    "command": "python3",
+                    "args": [
+                        "/home/charbonnierg/github/quara-dev/beyond/sandbox/app1"
+                    ],
+                    "virtualenv": "/home/charbonnierg/github/quara-dev/beyond/sandbox/.venv",
+                    "forward_stdout": true,
+                    "forward_stderr": true
+                },
+                {
+                    "name": "demo2",
+                    "command": "python3",
+                    "args": [
+                        "/home/charbonnierg/github/quara-dev/beyond/sandbox/app2"
+                    ],
+                    "virtualenv": "/home/charbonnierg/github/quara-dev/beyond/sandbox/.venv",
+                    "forward_stdout": true,
+                    "forward_stderr": true
+                }
+            ]
+        },
+        "secrets": {
+            "stores": {
+                "az-kv-srv-01": {
+                    "module": "azure_keyvault",
+                    "uri": "https://kv-srv-01.vault.azure.net"
+                }
+            },
+            "automate": [
+                {
+                    "sources": [
+                        "some-secret@az-kv-srv-01"
+                    ],
+                    "template": "The value is: {some-secret@az-kv-srv-01}",
+                    "trigger": {
+                        "interval": 3600000000000,
+                        "type": "periodic"
+                    },
+                    "handlers": [
+                        {
+                            "file": "./secret.txt",
+                            "file_perm": 384,
+                            "notify": [
+                                {
+                                    "args": [
+                                        "./some-other-file"
+                                    ],
+                                    "command": "touch",
+                                    "type": "exec"
+                                }
+                            ],
+                            "type": "file"
+                        }
+                    ]
+                }
+            ]
+        },
+        "tls": {
+            "automation": {
+                "policies": [
+                    {
+                        "issuers": [
+                            {
+                                "module": "internal"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
     }
-  }
 }

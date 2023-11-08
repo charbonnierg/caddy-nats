@@ -23,7 +23,8 @@
 	cert_issuer internal
 	# This enables Prometheus metrics for HTTP servers
 	# I'd like to have this enabled by default, but for now it is required
-	servers {
+	servers :11443 {
+		name https
 		metrics
 	}
 	# This declares Azure Key Vault instances (secret stores) where secrets can be fetched

@@ -17,6 +17,7 @@ import (
 	_ "github.com/quara-dev/beyond/modules/nats/auth/callout"
 	_ "github.com/quara-dev/beyond/modules/nats/auth/matchers"
 
+	_ "github.com/quara-dev/beyond/modules/config/cmd"
 	// Connectors modules
 	_ "github.com/quara-dev/beyond/modules/nats/cmd"
 	_ "github.com/quara-dev/beyond/modules/nats/connectors/mongo/changestreamexporter"

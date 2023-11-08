@@ -6,6 +6,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
@@ -32,6 +33,10 @@ import (
 	_ "github.com/quara-dev/beyond/modules/otelcol/app/receivers/hostmetrics"
 	_ "github.com/quara-dev/beyond/modules/otelcol/app/receivers/otlp"
 	_ "github.com/quara-dev/beyond/modules/otelcol/app/receivers/prometheus"
+)
+
+var (
+	GLOBAL_LOCK = &sync.Mutex{}
 )
 
 func init() {
@@ -218,6 +223,7 @@ func (o *App) Start() error {
 }
 
 func (o *App) Stop() error {
+	defer GLOBAL_LOCK.Unlock()
 	if o.collector != nil {
 		o.logger.Warn("Stopping OTEL Collector")
 		o.collector.Shutdown()
@@ -227,6 +233,7 @@ func (o *App) Stop() error {
 
 func (o *App) run() {
 	go func() {
+		GLOBAL_LOCK.Lock()
 		if err := o.collector.Run(o.ctx); err != nil {
 			o.logger.Error("collector run failed", zap.Error(err))
 		}
