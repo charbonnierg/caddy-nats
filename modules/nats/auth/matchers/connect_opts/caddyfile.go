@@ -6,6 +6,9 @@ import (
 )
 
 func (m *ConnectOptsMatcher) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	if err := parser.ExpectString(d); err != nil {
+		return err
+	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "token", "client_token":

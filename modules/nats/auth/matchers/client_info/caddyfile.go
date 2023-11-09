@@ -6,6 +6,9 @@ import (
 )
 
 func (m *ClientInfoMatcher) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	if err := parser.ExpectString(d); err != nil {
+		return err
+	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "host", "ip_address":
@@ -20,7 +23,7 @@ func (m *ClientInfoMatcher) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := parser.ParseString(d, &m.User); err != nil {
 				return err
 			}
-		case "type":
+		case "type", "connection_type":
 			if err := parser.ParseString(d, &m.Type); err != nil {
 				return err
 			}
