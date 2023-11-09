@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/quara-dev/beyond/modules/nats/connectors/components/mongo/common"
+	"github.com/quara-dev/beyond/modules/nats/connectors/mongo/common"
 )
 
 var _ = Describe("Events", func() {

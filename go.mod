@@ -84,6 +84,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/prometheus/common v0.44.0
 	github.com/prometheus/prometheus v0.47.1
+	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	go.mongodb.org/mongo-driver v1.12.0
 	go.opentelemetry.io/collector/component v0.87.0
@@ -351,7 +352,6 @@ require (
 	github.com/smallstep/truststore v0.12.1 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
-	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.6.3 // indirect
