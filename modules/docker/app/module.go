@@ -27,7 +27,7 @@ type App struct {
 	networks        []*NetworkDefinition
 	ctx             caddy.Context
 	logger          *zap.Logger
-	Client          *ClientOptions        `json:"client,omitempty"`
+	ClientOptions   *ClientOptions        `json:"client,omitempty"`
 	Containers      map[string]*Container `json:"containers,omitempty"`
 	Networks        map[string]*Network   `json:"networks,omitempty"`
 }
@@ -59,7 +59,7 @@ func (a *App) Provision(ctx caddy.Context) error {
 	repl := caddy.NewReplacer()
 	secrets.AddSecretsReplacerVars(repl)
 
-	client, err := NewDockerClient(a.ctx, a.Client)
+	client, err := NewDockerClient(a.ctx, a.ClientOptions)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (a *App) Start() error {
 	}
 	for _, d := range a.containers {
 		a.logger.Info("Starting container", zap.String("name", d.Name), zap.String("image", d.Config.Image))
-		spec, err := a.client.RunContainer(d)
+		spec, err := a.client.ProvisionContainer(d)
 		if err != nil {
 			return err
 		}

@@ -60,10 +60,9 @@ func (s *AuthService) Handle(claims *jwt.AuthorizationRequestClaims) (*jwt.UserC
 	// Match handler for this request
 	matchedHandler, ok := s.Policies.Match(claims)
 	if !ok {
-		s.logger.Info("using default handler", zap.Any("client_infos", claims.ClientInformation))
+		s.logger.Info("using default callout", zap.Any("client_infos", claims.ClientInformation))
 		handler = s.defaultHandler
 	} else {
-		s.logger.Info("handler policy matcher", zap.String("handler", string(matchedHandler.HandlerRaw)), zap.Any("client_infos", claims.ClientInformation))
 		handler = matchedHandler
 	}
 	if handler == nil {
@@ -166,7 +165,7 @@ func (s *AuthService) Connect() error {
 		keystore:   s.keystore,
 	}
 	definition := &client.ServiceDefinition{
-		QueueGroup: s.QueueGroup,
+		QueueGroup: fnutils.DefaultIfEmptyString(s.QueueGroup, "auth_callout"),
 		Endpoints: []*client.EndpointDefinition{
 			{
 				Name:    fnutils.DefaultIfEmptyString(s.Name, "auth-service"),
@@ -210,11 +209,8 @@ func (a *AuthService) Zero() bool {
 
 // setupInternalAuthAccount sets up the internal auth account in embedded server options.
 func (s *AuthService) setupInternalAuthAccount() error {
-	if s.AuthSigningKey != "" {
-		return nil
-	}
 	opts := s.app.GetOptions()
-	if s.Connection.Account != "" && opts.Authorization != nil {
+	if s.Connection.Account != "" && opts.Authorization != nil && (opts.Authorization.Users != nil || opts.Authorization.User != "" || opts.Authorization.Token != "") {
 		return errors.New("internal account is not allowed when custom authorization map is used")
 	}
 	if s.Connection.Account != "" && opts.Accounts == nil {
@@ -246,8 +242,19 @@ func (s *AuthService) setupInternalAuthAccount() error {
 		acc := runner.Account{
 			Name: s.Connection.Account, Users: []runner.User{user},
 		}
-		s.AuthSigningKey = string(seed)
-		opts.Authorization = &auth
+		if opts.Authorization == nil {
+			opts.Authorization = &auth
+		} else {
+			if opts.Authorization.AuthCallout == nil {
+				opts.Authorization.AuthCallout = auth.AuthCallout
+			} else {
+				opts.Authorization.AuthCallout.AuthUsers = []string{pk}
+				opts.Authorization.AuthCallout.Account = s.Connection.Account
+			}
+		}
+		if s.AuthSigningKey == "" {
+			s.AuthSigningKey = string(seed)
+		}
 		opts.Accounts = append(opts.Accounts, &acc)
 	}
 	return nil

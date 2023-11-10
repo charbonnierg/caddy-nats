@@ -89,6 +89,9 @@ func (c *ConnectionPolicy) loadMatchers(app nats.App) error {
 		if !ok {
 			return errors.New("matcher invalid type: must be a matcher")
 		}
+		if err := matcher.Provision(app); err != nil {
+			return fmt.Errorf("failed to provision matcher: %s", err.Error())
+		}
 		c.matchers = append(c.matchers, matcher)
 	}
 	return nil

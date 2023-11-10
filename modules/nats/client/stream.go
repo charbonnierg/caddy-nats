@@ -16,7 +16,7 @@ func (d *Stream) Configure(ctx context.Context, clients *Clients) error {
 	if d.StreamConfig == nil {
 		return errors.New("stream config is nil")
 	}
-	if d.StreamConfig.Subjects == nil {
+	if d.StreamConfig.Subjects == nil && d.Prefix != "" {
 		d.StreamConfig.Subjects = []string{d.Prefix + ".>"}
 	}
 	js := clients.JetStream()

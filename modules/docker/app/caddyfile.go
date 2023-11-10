@@ -35,8 +35,8 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			switch d.Val() {
 			case "client":
-				a.Client = fnutils.DefaultIfNil(a.Client, new(ClientOptions))
-				if err := parseClientOption(d, a.Client); err != nil {
+				a.ClientOptions = fnutils.DefaultIfNil(a.ClientOptions, new(ClientOptions))
+				if err := parseClientOption(d, a.ClientOptions); err != nil {
 					return err
 				}
 			case "network":

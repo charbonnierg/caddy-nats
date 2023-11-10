@@ -5,6 +5,8 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	natscaddyfile "github.com/quara-dev/beyond/modules/nats/caddyfile"
+	"github.com/quara-dev/beyond/modules/nats/client"
+	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
 func parseHandlerDirective(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
@@ -46,7 +48,8 @@ func (p *JetStreamPublish) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 			p.Subject = sub
 		case "connection":
-			if err := natscaddyfile.ParseConnection(d, &p.Connection); err != nil {
+			p.Connection = fnutils.DefaultIfNil(p.Connection, &client.Connection{})
+			if err := natscaddyfile.ParseConnection(d, p.Connection); err != nil {
 				return err
 			}
 		default:

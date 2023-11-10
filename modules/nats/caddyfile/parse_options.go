@@ -5,6 +5,7 @@ package caddyfile
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/nats-io/nats-server/v2/server"
@@ -136,6 +137,11 @@ func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 			if err := parseTLS(d, o.TLS); err != nil {
 				return err
 			}
+		case "cluster":
+			o.Cluster = fnutils.DefaultIfNil(o.Cluster, &embedded.Cluster{})
+			if err := ParseCluster(d, o.Cluster); err != nil {
+				return err
+			}
 		case "jetstream":
 			o.JetStream = fnutils.DefaultIfNil(o.JetStream, &embedded.JetStream{})
 			if err := ParseJetStream(d, o.JetStream); err != nil {
@@ -176,6 +182,17 @@ func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 			if err := parser.ParseStringArray(d, &o.Operators); err != nil {
 				return err
 			}
+		case "auth", "authorization":
+			o.Authorization = fnutils.DefaultIfNil(o.Authorization, &embedded.AuthorizationMap{})
+			if err := ParseAuthorization(d, o.Authorization); err != nil {
+				return err
+			}
+		case "auth_callout":
+			o.Authorization = fnutils.DefaultIfNil(o.Authorization, &embedded.AuthorizationMap{})
+			o.Authorization.AuthCallout = fnutils.DefaultIfNil(o.Authorization.AuthCallout, &embedded.AuthCalloutMap{})
+			if err := parseAuthCallout(d, o.Authorization.AuthCallout); err != nil {
+				return err
+			}
 		case "accounts":
 			o.Accounts = fnutils.DefaultIfEmpty(o.Accounts, []*embedded.Account{})
 			if err := ParseAccounts(d, nil, nil, &o.Accounts); err != nil {
@@ -211,6 +228,34 @@ func ParseOptions(d *caddyfile.Dispenser, o *embedded.Options) error {
 			return d.Err("resolver directive has been removed, use full_resolver, cache_resolver or memory_resolver instead")
 		default:
 			return d.Errf("unrecognized nats_server subdirective: %s", d.Val())
+		}
+	}
+	return nil
+}
+
+func ParseCluster(d *caddyfile.Dispenser, cluster *embedded.Cluster) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		switch d.Val() {
+		case "name":
+			if err := parser.ParseString(d, &cluster.Name); err != nil {
+				return err
+			}
+		case "host":
+			if err := parser.ParseString(d, &cluster.Host); err != nil {
+				return err
+			}
+		case "port":
+			if err := parser.ParseNetworkPort(d, &cluster.Port); err != nil {
+				return err
+			}
+		case "advertise":
+			if err := parser.ParseString(d, &cluster.Advertise); err != nil {
+				return err
+			}
+		case "routes", "route":
+			if err := parser.ParseStringArray(d, &cluster.Routes); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -279,7 +324,7 @@ func parseAuthPolicyForAccount(d *caddyfile.Dispenser, auth *auth.AuthService, a
 }
 
 func ParseConnector(d *caddyfile.Dispenser, connector *client.Connection) error {
-	return nil
+	return errors.New("not implemented")
 }
 
 func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthService, connections *client.Connections, acc *embedded.Account) error {
@@ -319,6 +364,14 @@ func ParseAccount(d *caddyfile.Dispenser, auth *auth.AuthService, connections *c
 			}
 			connection.Services = fnutils.DefaultIfEmpty(connection.Services, []json.RawMessage{})
 			if err := ParseServiceConnection(d, connection); err != nil {
+				return err
+			}
+		case "object_store":
+			if connection == nil {
+				connection = &client.Connection{}
+			}
+			connection.ObjectStores = fnutils.DefaultIfEmpty(connection.ObjectStores, []*client.ObjectStore{})
+			if err := ParseObjectStore(d, connection); err != nil {
 				return err
 			}
 		case "jetstream":
@@ -448,6 +501,71 @@ func ParseAccounts(d *caddyfile.Dispenser, auth *auth.AuthService, connections *
 			return err
 		}
 		*accounts = append(*accounts, &acc)
+	}
+	return nil
+}
+
+func ParseAuthorization(d *caddyfile.Dispenser, auth *embedded.AuthorizationMap) error {
+	if auth == nil {
+		return d.Err("internal error: authorization map is nil. Please open a bug report.")
+	}
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		switch d.Val() {
+		case "token":
+			if err := parser.ParseString(d, &auth.Token); err != nil {
+				return err
+			}
+		case "user":
+			if err := parser.ParseString(d, &auth.User); err != nil {
+				return err
+			}
+		case "password":
+			if err := parser.ParseString(d, &auth.Password); err != nil {
+				return err
+			}
+		case "timeout":
+			if err := parser.ParseDuration(d, &auth.Timeout); err != nil {
+				return err
+			}
+		case "auth_callout":
+			auth.AuthCallout = fnutils.DefaultIfNil(auth.AuthCallout, &embedded.AuthCalloutMap{})
+			if err := parseAuthCallout(d, auth.AuthCallout); err != nil {
+				return err
+			}
+		case "users":
+			auth.Users = fnutils.DefaultIfEmpty(auth.Users, []embedded.User{})
+			if err := parseAuthUsers(d, auth); err != nil {
+				return err
+			}
+		default:
+			return d.Errf("unrecognized authorization subdirective: %s", d.Val())
+		}
+	}
+	return nil
+}
+
+func parseAuthCallout(d *caddyfile.Dispenser, dest *embedded.AuthCalloutMap) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		switch d.Val() {
+		case "issuer":
+			if err := parser.ParseString(d, &dest.Issuer); err != nil {
+				return err
+			}
+		case "account":
+			if err := parser.ParseString(d, &dest.Account); err != nil {
+				return err
+			}
+		case "auth_users":
+			if err := parser.ParseStringArray(d, &dest.AuthUsers); err != nil {
+				return err
+			}
+		case "xkey":
+			if err := parser.ParseString(d, &dest.XKey); err != nil {
+				return err
+			}
+		default:
+			return d.Errf("unrecognized auth_callout subdirective: %s", d.Val())
+		}
 	}
 	return nil
 }
@@ -706,7 +824,7 @@ func ParseLeafnodes(d *caddyfile.Dispenser, leafopts *embedded.Leafnode) error {
 					return err
 				}
 			case "remotes":
-				if err := parseRemoteLeafnodes(d, &leafopts.Remotes); err != nil {
+				if err := ParseRemoteLeafnodes(d, &leafopts.Remotes); err != nil {
 					return err
 				}
 			}
@@ -715,63 +833,70 @@ func ParseLeafnodes(d *caddyfile.Dispenser, leafopts *embedded.Leafnode) error {
 	return nil
 }
 
-// parseRemoteLeafnodes parse the "remote_leafnodes" directive found in the Caddyfile "nats_server" option block.
-func parseRemoteLeafnodes(d *caddyfile.Dispenser, remotes *[]embedded.Remote) error {
+// ParseRemoteLeafnodes parse the "remote_leafnodes" directive found in the Caddyfile "nats_server" option block.
+func ParseRemoteLeafnodes(d *caddyfile.Dispenser, remotes *[]*embedded.Remote) error {
 	if remotes == nil {
 		return d.Err("internal error: remotes is nil. Please open a bug report.")
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		remote := embedded.Remote{Url: d.Val()}
-		for nesting := d.Nesting(); d.NextBlock(nesting); {
-			switch d.Val() {
-			case "url":
-				if err := parser.ParseString(d, &remote.Url); err != nil {
-					return err
-				}
-			case "urls":
-				if err := parser.ParseStringArray(d, &remote.Urls); err != nil {
-					return err
-				}
-			case "hub":
-				if err := parser.ParseBool(d, &remote.Hub); err != nil {
-					return err
-				}
-			case "deny_import":
-				if err := parser.ParseStringArray(d, &remote.DenyImports); err != nil {
-					return err
-				}
-			case "deny_export":
-				if err := parser.ParseStringArray(d, &remote.DenyExports); err != nil {
-					return err
-				}
-			case "account":
-				if err := parser.ParseString(d, &remote.Account); err != nil {
-					return err
-				}
-			case "credentials":
-				if err := parser.ParseString(d, &remote.Credentials); err != nil {
-					return err
-				}
-			case "websocket":
-				for nesting := d.Nesting(); d.NextBlock(nesting); {
-					switch d.Val() {
-					case "compression":
-						if err := parser.ParseBool(d, &remote.Websocket.Compression); err != nil {
-							return err
-						}
-					case "no_masking":
-						if err := parser.ParseBool(d, &remote.Websocket.NoMasking); err != nil {
-							return err
-						}
-					default:
-						return d.Errf("unrecognized remote leafnode websocket subdirective: %s", d.Val())
-					}
-				}
-			default:
-				return d.Errf("unrecognized remote leafnode subdirective: %s", d.Val())
-			}
+		if err := ParseRemoteLeafnode(d, &remote); err != nil {
+			return err
 		}
-		*remotes = append(*remotes, remote)
+		*remotes = append(*remotes, &remote)
+	}
+	return nil
+}
+
+func ParseRemoteLeafnode(d *caddyfile.Dispenser, remote *embedded.Remote) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		switch d.Val() {
+		case "url":
+			if err := parser.ParseString(d, &remote.Url); err != nil {
+				return err
+			}
+		case "urls":
+			if err := parser.ParseStringArray(d, &remote.Urls); err != nil {
+				return err
+			}
+		case "hub":
+			if err := parser.ParseBool(d, &remote.Hub); err != nil {
+				return err
+			}
+		case "deny_import":
+			if err := parser.ParseStringArray(d, &remote.DenyImports); err != nil {
+				return err
+			}
+		case "deny_export":
+			if err := parser.ParseStringArray(d, &remote.DenyExports); err != nil {
+				return err
+			}
+		case "account":
+			if err := parser.ParseString(d, &remote.Account); err != nil {
+				return err
+			}
+		case "credentials":
+			if err := parser.ParseString(d, &remote.Credentials); err != nil {
+				return err
+			}
+		case "websocket":
+			for nesting := d.Nesting(); d.NextBlock(nesting); {
+				switch d.Val() {
+				case "compression":
+					if err := parser.ParseBool(d, &remote.Websocket.Compression); err != nil {
+						return err
+					}
+				case "no_masking":
+					if err := parser.ParseBool(d, &remote.Websocket.NoMasking); err != nil {
+						return err
+					}
+				default:
+					return d.Errf("unrecognized remote leafnode websocket subdirective: %s", d.Val())
+				}
+			}
+		default:
+			return d.Errf("unrecognized remote leafnode subdirective: %s", d.Val())
+		}
 	}
 	return nil
 }

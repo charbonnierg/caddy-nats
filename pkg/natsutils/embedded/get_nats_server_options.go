@@ -13,6 +13,7 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 )
 
+// GetServerOptions returns the options for the NATS server.
 func (o *Options) GetServerOptions() (*server.Options, error) {
 	// Initialize options
 	// DisableJetStreamBanner is always set to true

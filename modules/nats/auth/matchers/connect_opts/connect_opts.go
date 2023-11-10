@@ -40,6 +40,10 @@ type ConnectOptsMatcher struct {
 	Protocol int    `json:"protocol,omitempty"`
 }
 
+func (c *ConnectOptsMatcher) Provision(app nats.App) error {
+	return nil
+}
+
 func (c *ConnectOptsMatcher) Match(request *jwt.AuthorizationRequestClaims) bool {
 	if c.User != "" && c.User != request.ConnectOptions.Username {
 		return false

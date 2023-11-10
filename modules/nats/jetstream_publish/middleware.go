@@ -37,8 +37,8 @@ func (JetStreamPublish) CaddyModule() caddy.ModuleInfo {
 // the sequence the message was inserted to.
 type JetStreamPublish struct {
 	logger     *zap.Logger
-	Connection client.Connection `json:"connection,omitempty" caddy:"namespace=nats.connection inline_key=type"`
-	Subject    string            `json:"subject,omitempty"`
+	Connection *client.Connection `json:"connection,omitempty" caddy:"namespace=nats.connection inline_key=type"`
+	Subject    string             `json:"subject,omitempty"`
 }
 
 // Provision implements the caddy.Provisioner interface.

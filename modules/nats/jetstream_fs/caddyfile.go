@@ -3,6 +3,8 @@ package jetstream_fs
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	natscaddyfile "github.com/quara-dev/beyond/modules/nats/caddyfile"
+	"github.com/quara-dev/beyond/modules/nats/client"
+	"github.com/quara-dev/beyond/pkg/fnutils"
 )
 
 // UnmarshalCaddyfile parses the "jetstream_publish" directive from
@@ -44,7 +46,8 @@ func (f *JetStreamFS) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 			f.SyncDir = syncDir
 		case "connection":
-			if err := natscaddyfile.ParseConnection(d, &f.Connection); err != nil {
+			f.Connection = fnutils.DefaultIfNil(f.Connection, &client.Connection{})
+			if err := natscaddyfile.ParseConnection(d, f.Connection); err != nil {
 				return err
 			}
 		default:

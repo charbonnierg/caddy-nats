@@ -10,6 +10,7 @@ import (
 	"github.com/quara-dev/beyond/pkg/natsutils/embedded/internal/natsmetrics"
 )
 
+// GetExporterOptions returns the options for the NATS metrics collector.
 func (o *Options) GetExporterOptions() (*natsmetrics.CollectorOptions, error) {
 	if o.Metrics == nil {
 		return nil, nil

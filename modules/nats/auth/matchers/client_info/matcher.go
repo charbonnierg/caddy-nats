@@ -36,6 +36,10 @@ type ClientInfoMatcher struct {
 	Type      string `json:"type,omitempty"`
 }
 
+func (m *ClientInfoMatcher) Provision(app nats.App) error {
+	return nil
+}
+
 func (m *ClientInfoMatcher) Match(request *jwt.AuthorizationRequestClaims) bool {
 	if m.InProcess && request.ClientInformation.Host != "" {
 		return false

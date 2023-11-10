@@ -51,6 +51,26 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := parser.ParseBool(d, &a.ServerOptions.Debug); err != nil {
 				return err
 			}
+		case "trace":
+			a.ServerOptions = fnutils.DefaultIfNil(a.ServerOptions, embedded.NewOptions())
+			if err := parser.ParseBool(d, &a.ServerOptions.Trace); err != nil {
+				return err
+			}
+			if a.ServerOptions.Trace {
+				a.ServerOptions.Debug = true
+			}
+		case "cluster":
+			a.ServerOptions = fnutils.DefaultIfNil(a.ServerOptions, embedded.NewOptions())
+			a.ServerOptions.Cluster = fnutils.DefaultIfNil(a.ServerOptions.Cluster, &embedded.Cluster{})
+			if err := natscaddyfile.ParseCluster(d, a.ServerOptions.Cluster); err != nil {
+				return err
+			}
+		case "auth", "authorization":
+			a.ServerOptions = fnutils.DefaultIfNil(a.ServerOptions, embedded.NewOptions())
+			a.ServerOptions.Authorization = fnutils.DefaultIfNil(a.ServerOptions.Authorization, &embedded.AuthorizationMap{})
+			if err := natscaddyfile.ParseAuthorization(d, a.ServerOptions.Authorization); err != nil {
+				return err
+			}
 		case "default_auth_callout":
 			var name string
 			if err := parser.ParseString(d, &name); err != nil {
@@ -108,6 +128,15 @@ func (a *App) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := natscaddyfile.ParseWebsocket(d, a.ServerOptions.Websocket); err != nil {
 				return err
 			}
+		case "remote_server", "remote_connection", "leafnode_connection":
+			a.ServerOptions = fnutils.DefaultIfNil(a.ServerOptions, embedded.NewOptions())
+			a.ServerOptions.Leafnode = fnutils.DefaultIfNil(a.ServerOptions.Leafnode, &embedded.Leafnode{})
+			a.ServerOptions.Leafnode.Remotes = fnutils.DefaultIfEmpty(a.ServerOptions.Leafnode.Remotes, []*embedded.Remote{})
+			remote := embedded.Remote{}
+			if err := natscaddyfile.ParseRemoteLeafnode(d, &remote); err != nil {
+				return err
+			}
+			a.ServerOptions.Leafnode.Remotes = append(a.ServerOptions.Leafnode.Remotes, &remote)
 		case "leafnode", "leafnode_server":
 			a.ServerOptions = fnutils.DefaultIfNil(a.ServerOptions, embedded.NewOptions())
 			a.ServerOptions.Leafnode = fnutils.DefaultIfNil(a.ServerOptions.Leafnode, &embedded.Leafnode{})

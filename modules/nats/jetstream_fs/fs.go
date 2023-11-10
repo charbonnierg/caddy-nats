@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -34,10 +35,11 @@ func (JetStreamFS) CaddyModule() caddy.ModuleInfo {
 // bucket. This is very experimental, and may change in the future.
 type JetStreamFS struct {
 	logger     *zap.Logger
+	mutex      *sync.Mutex
 	store      nats.ObjectStore
-	Store      string            `json:"store,omitempty"`
-	Connection client.Connection `json:"connection,omitempty"`
-	SyncDir    string            `json:"sync_dir,omitempty"`
+	Store      string             `json:"store,omitempty"`
+	Connection *client.Connection `json:"connection,omitempty"`
+	SyncDir    string             `json:"sync_dir,omitempty"`
 }
 
 // Open implements the fs.FS interface. It returns a fs.File interface
@@ -47,15 +49,15 @@ type JetStreamFS struct {
 // If file does not exist in sync directory, this module will attempt
 // to download file using nats client connection, and write the file
 // under the sync directory, before opening the file from the sync directory.
-func (f JetStreamFS) Open(name string) (fs.File, error) {
+func (f *JetStreamFS) Open(name string) (fs.File, error) {
 	// Rewrite filename for root path
 	if name == "." || name == "" || name == "/" {
 		name = "index.html"
 	}
+	f.logger.Info("Opening file", zap.String("file", name))
 	// Make sure store exists
-	if f.store == nil {
-		f.setup()
-	}
+	f.setup()
+	f.logger.Info("Checking if file exists on disk", zap.String("file", name))
 	// Check if file exists on disk
 	file, err := f.readFromCache(name)
 	switch {
@@ -72,10 +74,21 @@ func (f JetStreamFS) Open(name string) (fs.File, error) {
 }
 
 func (f *JetStreamFS) setup() error {
+	if f.store != nil {
+		return nil
+	}
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+	if f.store != nil {
+		return nil
+	}
+	f.logger.Info("Connecting to JetStream", zap.String("store", f.Store))
 	js, err := f.Connection.JetStream()
 	if err != nil {
+		f.logger.Error("Failed to connect to JetStream", zap.String("store", f.Store), zap.Error(err))
 		return err
 	}
+	f.logger.Info("JetStream connection established", zap.String("store", f.Store))
 	syncDir, err := os.Stat(f.SyncDir)
 	if err != nil {
 		f.logger.Info("Creating sync dir for jetstream_fs", zap.String("dir", f.SyncDir))
@@ -87,13 +100,15 @@ func (f *JetStreamFS) setup() error {
 	}
 	store, err := js.ObjectStore(f.Store)
 	if err != nil {
+		f.logger.Error("Failed to get object store", zap.String("store", f.Store), zap.Error(err))
 		return err
 	}
 	f.store = store
 	return nil
 }
 
-func (f JetStreamFS) readFromCache(name string) (fs.File, error) {
+func (f *JetStreamFS) readFromCache(name string) (fs.File, error) {
+	f.logger.Info("reading from cache", zap.String("file", name))
 	target := filepath.Join(f.SyncDir, name)
 	_, err := os.Stat(target)
 	if err == nil {
@@ -102,7 +117,8 @@ func (f JetStreamFS) readFromCache(name string) (fs.File, error) {
 	return nil, os.ErrNotExist
 }
 
-func (f JetStreamFS) download(name string) (fs.File, error) {
+func (f *JetStreamFS) download(name string) (fs.File, error) {
+	f.logger.Info("downloading", zap.String("file", name))
 	// Expect file to be new.
 	target := filepath.Join(f.SyncDir, name)
 	name = filepath.ToSlash(name)
@@ -151,11 +167,13 @@ func (f JetStreamFS) download(name string) (fs.File, error) {
 // nats client connection used to communicate with JetStream
 // engine.
 func (f *JetStreamFS) Provision(ctx caddy.Context) error {
+	f.mutex = &sync.Mutex{}
 	app, err := caddynats.Load(ctx)
 	if err != nil {
 		return err
 	}
 	f.logger = ctx.Logger()
+	f.logger.Info("Provisioning jetstream_fs connection")
 	if err := f.Connection.Provision(app); err != nil {
 		return err
 	}

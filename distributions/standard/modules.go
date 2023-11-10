@@ -12,6 +12,8 @@ import (
 
 	// Docker modules
 	_ "github.com/quara-dev/beyond/modules/docker/app"
+	_ "github.com/quara-dev/beyond/modules/docker/nats_matcher"
+
 	// NATS modules
 	_ "github.com/quara-dev/beyond/modules/nats/app"
 	_ "github.com/quara-dev/beyond/modules/nats/auth/callout"

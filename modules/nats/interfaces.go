@@ -54,6 +54,7 @@ type Template interface {
 }
 
 type Matcher interface {
+	Provision(app App) error
 	Match(request *jwt.AuthorizationRequestClaims) bool
 }
 

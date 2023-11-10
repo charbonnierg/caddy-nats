@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Server returns a NATS server.
 func (o *Options) Server(logger *zap.Logger) (*server.Server, error) {
 	opts, err := o.GetServerOptions()
 	if err != nil {
@@ -30,6 +31,7 @@ func (o *Options) Server(logger *zap.Logger) (*server.Server, error) {
 	return srv, nil
 }
 
+// Collector returns a NATS metrics collector.
 func (o *Options) Collector() (*natsmetrics.Collector, error) {
 	if o.Metrics == nil {
 		return nil, nil

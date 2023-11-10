@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 )
@@ -20,6 +21,10 @@ type ContainerDefinition struct {
 	Config           *container.Config
 	HostConfig       *container.HostConfig
 	NetworkingConfig *network.NetworkingConfig
+}
+
+func (c *ContainerDefinition) isApproximatelyEqualTo(other types.ContainerJSON) bool {
+	return c.Config.Image == other.Config.Image
 }
 
 type NetworkSpec struct {
@@ -102,7 +107,46 @@ func (c *DockerClient) ProvisionNetwork(definition *NetworkDefinition) (*Network
 	}, nil
 }
 
-func (c *DockerClient) RunContainer(definition *ContainerDefinition) (*ContainerSpec, error) {
+func (c *DockerClient) ProvisionContainer(definition *ContainerDefinition) (*ContainerSpec, error) {
+	// Check if container exists with same name
+	inspectResponse, err := c.client.ContainerInspect(c.ctx, definition.Name)
+	if err != nil {
+		// If container does not exist, continue
+		// else return error
+		if !client.IsErrNotFound(err) {
+			return nil, err
+		}
+	} else {
+		// If container exists, check if it uses the same definition
+		if definition.isApproximatelyEqualTo(inspectResponse) {
+			// Start container if it is not running
+			if !inspectResponse.State.Running {
+				if err := c.client.ContainerStart(c.ctx, inspectResponse.ID, types.ContainerStartOptions{}); err != nil {
+					return nil, err
+				}
+			}
+			// Return the container spec (i.e., do nothing)
+			return &ContainerSpec{
+				ID:         inspectResponse.ID,
+				Definition: definition,
+			}, nil
+		}
+		// If it does not, remove the container
+		c.client.ContainerRemove(c.ctx, inspectResponse.ID, types.ContainerRemoveOptions{Force: true})
+	}
+	// Check image
+	imgs, err := c.client.ImageList(c.ctx, types.ImageListOptions{
+		Filters: filters.NewArgs(
+			filters.Arg("image", definition.Config.Image),
+		),
+	})
+	if err != nil || len(imgs) == 0 {
+		_, err := c.client.ImagePull(c.ctx, definition.Config.Image, types.ImagePullOptions{})
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Create container
 	response, err := c.client.ContainerCreate(
 		c.ctx,
 		definition.Config,
@@ -115,6 +159,7 @@ func (c *DockerClient) RunContainer(definition *ContainerDefinition) (*Container
 		return nil, err
 	}
 	cid := response.ID
+	// Start container
 	if err := c.client.ContainerStart(c.ctx, cid, types.ContainerStartOptions{}); err != nil {
 		return nil, err
 	}

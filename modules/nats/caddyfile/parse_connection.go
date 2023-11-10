@@ -18,6 +18,10 @@ func ParseConnection(d *caddyfile.Dispenser, c *client.Connection) error {
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
+		case "account":
+			if err := parser.ParseString(d, &c.Account); err != nil {
+				return err
+			}
 		case "in_process", "internal":
 			if err := parser.ParseBool(d, &c.Internal); err != nil {
 				return err
@@ -90,6 +94,11 @@ func ParseConnection(d *caddyfile.Dispenser, c *client.Connection) error {
 			c.DataFlows = append(c.DataFlows, &dataFlow)
 		case "service":
 			if err := ParseServiceConnection(d, c); err != nil {
+				return err
+			}
+		case "object_store":
+			c.ObjectStores = fnutils.DefaultIfEmpty(c.ObjectStores, []*client.ObjectStore{})
+			if err := ParseObjectStore(d, c); err != nil {
 				return err
 			}
 		default:

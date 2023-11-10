@@ -59,7 +59,7 @@ func (a *AllowAuthCallout) Handle(request nats.AuthRequest) (*jwt.UserClaims, er
 		// If the target account is still empty, deny access
 		return nil, errors.New("no target account specified")
 	}
-	a.logger.Info("allowing access", zap.Any("user_claims", userClaims))
+	a.logger.Info("allowing access", zap.Any("jwt_claims", userClaims.ClaimsData), zap.Any("user_claims", userClaims.User))
 	// And that's it, return the user claims
 	return userClaims, nil
 }

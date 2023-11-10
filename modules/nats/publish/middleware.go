@@ -30,8 +30,8 @@ func (NatsPublish) CaddyModule() caddy.ModuleInfo {
 // response.
 type NatsPublish struct {
 	logger     *zap.Logger
-	Connection client.Connection `json:"connection,omitempty"`
-	Subject    string            `json:"subject,omitempty"`
+	Connection *client.Connection `json:"connection,omitempty"`
+	Subject    string             `json:"subject,omitempty"`
 }
 
 func (p *NatsPublish) Provision(ctx caddy.Context) error {

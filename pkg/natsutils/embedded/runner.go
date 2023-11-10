@@ -6,9 +6,6 @@ package embedded
 import (
 	"errors"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/quara-dev/beyond/pkg/fnutils"
@@ -17,20 +14,6 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"go.uber.org/zap"
 )
-
-// Run a NATS server with given logger
-func Run(opts *Options, logger *zap.Logger, deadline time.Duration) error {
-	runner, err := New().
-		WithOptions(opts).
-		WithLogger(logger).
-		WithReadyTimeout(deadline).
-		Build()
-	if err != nil {
-		return err
-	}
-	runner.RunForever()
-	return nil
-}
 
 // Create a NATS server runner
 func New() *Runner {
@@ -208,7 +191,7 @@ func (r *Runner) setupAccounts() error {
 				if err != nil {
 					return fmt.Errorf("account was not initialized: %s", err.Error())
 				}
-				err = remoteAcc.AddStreamImport(account, import_.Subject, import_.To)
+				err = account.AddStreamImport(remoteAcc, import_.Subject, import_.To)
 				if err != nil {
 					return fmt.Errorf("failed to add stream import: %s", err.Error())
 				}
@@ -232,6 +215,7 @@ func (r *Runner) setupAccounts() error {
 func (r *Runner) Start() error {
 	// Start the server
 	r.server.Start()
+	// Setup accounts on server
 	if err := r.setupAccounts(); err != nil {
 		r.server.Shutdown()
 		return err
@@ -250,6 +234,7 @@ func (r *Runner) Start() error {
 		r.server.WaitForShutdown()
 		r.done <- true
 	}()
+	// Start the metric collector
 	if r.collector != nil {
 		err := r.collector.Start()
 		if err != nil {
@@ -263,6 +248,7 @@ func (r *Runner) Start() error {
 // Stop will stop the NATS server.
 func (r *Runner) Stop() error {
 	// Only stop the server if it is running
+	// TODO: In cluster mode, this panic sometimes
 	if r.server.Running() {
 		r.server.Shutdown()
 	}
@@ -289,48 +275,4 @@ func (r *Runner) Reload() error {
 		return errors.New("server is not running")
 	}
 	return nil
-}
-
-// Wait will wait for the NATS server to be down or for an operating system
-// signal to be received. If the server is down before operating system signal
-// is received, an error is returned.
-func (r *Runner) Wait() {
-	// Wait for an OS signal to be received
-	signalReceived := make(chan os.Signal, 1)
-	signal.Notify(signalReceived, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-	// Exit as soon as one of the two waiters is finished
-	for {
-		select {
-		// Exit on OS signal (interrupt or sigterm)
-		case s := <-signalReceived:
-			r.server.Noticef("received signal %s", s)
-			switch s {
-			case syscall.SIGHUP:
-				r.server.Noticef("reloading server")
-				r.Reload()
-				continue
-			default:
-				r.server.Noticef("stopping server")
-				r.Stop()
-				os.Exit(0)
-			}
-		// Return on server shutdown
-		case <-r.done:
-			return
-		}
-	}
-}
-
-// Run the NATS server forever.
-// If an operating system signal is received, the server will be stopped,
-// and the program will exit with code 0.
-func (r *Runner) RunForever() error {
-	// Start the server
-	if err := r.Start(); err != nil {
-		return err
-	}
-	// Wait for NATS server to be down
-	r.Wait()
-	// This will be a no-op if server is already stopped
-	return r.Stop()
 }

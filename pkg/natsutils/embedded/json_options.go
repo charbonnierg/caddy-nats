@@ -40,47 +40,49 @@ func NewFromJSONFile(path string) (*Options, error) {
 // Default values will be used for missing fields.
 type Options struct {
 	systemAccount    *jwt.AccountClaims
-	ServerName       string                 `json:"name,omitempty"`
-	ServerTags       map[string]string      `json:"tags,omitempty"`
-	Host             string                 `json:"host,omitempty"`
-	Port             int                    `json:"port,omitempty"`
-	Advertise        string                 `json:"advertise,omitempty"`
-	Debug            bool                   `json:"debug,omitempty"`
-	Trace            bool                   `json:"trace,omitempty"`
-	TraceVerbose     bool                   `json:"trace_verbose,omitempty"`
-	HTTPHost         string                 `json:"http_host,omitempty"`
-	HTTPPort         int                    `json:"http_port,omitempty"`
-	HTTPSPort        int                    `json:"https_port,omitempty"`
-	HTTPBasePath     string                 `json:"http_base_path,omitempty"`
-	NoLog            bool                   `json:"disable_logging,omitempty"`
-	NoTLS            bool                   `json:"no_tls,omitempty"`
-	TLS              *TLSMap                `json:"tls,omitempty"`
-	NoSublistCache   bool                   `json:"disable_sublist_cache,omitempty"`
-	MaxConn          int                    `json:"max_connections,omitempty"`
-	MaxPayload       int32                  `json:"max_payload,omitempty"`
-	MaxPending       int64                  `json:"max_pending,omitempty"`
-	MaxClosedClients int                    `json:"max_closed_clients,omitempty"`
-	MaxSubs          int                    `json:"max_subscriptions,omitempty"`
-	MaxSubsTokens    uint8                  `json:"max_subscriptions_tokens,omitempty"`
-	MaxControlLine   int32                  `json:"max_control_line,omitempty"`
-	MaxTracedMsgLen  int                    `json:"max_traced_msg_len,omitempty"`
-	MaxPingsOut      int                    `json:"max_pings_out,omitempty"`
-	PingInterval     time.Duration          `json:"ping_interval,omitempty"`
-	WriteDeadline    time.Duration          `json:"write_deadline,omitempty"`
-	NoAuthUser       string                 `json:"no_auth_user,omitempty"`
-	Operators        []string               `json:"operators,omitempty"`
-	SystemAccount    string                 `json:"system_account,omitempty"`
-	Accounts         []*Account             `json:"accounts,omitempty"`
-	Authorization    *AuthorizationMap      `json:"authorization,omitempty"`
-	FullResolver     *FullAccountResolver   `json:"full_resolver,omitempty"`
-	CacheResolver    *CacheAccountResolver  `json:"cache_resolver,omitempty"`
-	MemoryResolver   *MemoryAccountResolver `json:"memory_resolver,omitempty"`
-	Cluster          *Cluster               `json:"cluster,omitempty"`
-	Websocket        *Websocket             `json:"websocket,omitempty"`
-	Mqtt             *MQTT                  `json:"mqtt,omitempty"`
-	JetStream        *JetStream             `json:"jetstream,omitempty"`
-	Leafnode         *Leafnode              `json:"leafnode,omitempty"`
-	Metrics          *Metrics               `json:"metrics,omitempty"`
+	ServerName       string            `json:"name,omitempty"`
+	ServerTags       map[string]string `json:"tags,omitempty"`
+	Host             string            `json:"host,omitempty"`
+	Port             int               `json:"port,omitempty"`
+	Advertise        string            `json:"advertise,omitempty"`
+	Debug            bool              `json:"debug,omitempty"`
+	Trace            bool              `json:"trace,omitempty"`
+	TraceVerbose     bool              `json:"trace_verbose,omitempty"`
+	HTTPHost         string            `json:"http_host,omitempty"`
+	HTTPPort         int               `json:"http_port,omitempty"`
+	HTTPSPort        int               `json:"https_port,omitempty"`
+	HTTPBasePath     string            `json:"http_base_path,omitempty"`
+	NoLog            bool              `json:"disable_logging,omitempty"`
+	NoTLS            bool              `json:"no_tls,omitempty"`
+	TLS              *TLSMap           `json:"tls,omitempty"`
+	NoSublistCache   bool              `json:"disable_sublist_cache,omitempty"`
+	MaxConn          int               `json:"max_connections,omitempty"`
+	MaxPayload       int32             `json:"max_payload,omitempty"`
+	MaxPending       int64             `json:"max_pending,omitempty"`
+	MaxClosedClients int               `json:"max_closed_clients,omitempty"`
+	MaxSubs          int               `json:"max_subscriptions,omitempty"`
+	MaxSubsTokens    uint8             `json:"max_subscriptions_tokens,omitempty"`
+	MaxControlLine   int32             `json:"max_control_line,omitempty"`
+	MaxTracedMsgLen  int               `json:"max_traced_msg_len,omitempty"`
+	MaxPingsOut      int               `json:"max_pings_out,omitempty"`
+	PingInterval     time.Duration     `json:"ping_interval,omitempty"`
+	WriteDeadline    time.Duration     `json:"write_deadline,omitempty"`
+	NoAuthUser       string            `json:"no_auth_user,omitempty"`
+	Operators        []string          `json:"operators,omitempty"`
+	SystemAccount    string            `json:"system_account,omitempty"`
+	// TODO: This should be "outside" of server config
+	Accounts []*Account `json:"accounts,omitempty"`
+	// TODO: This should be partly outside of server config
+	Authorization  *AuthorizationMap      `json:"authorization,omitempty"`
+	FullResolver   *FullAccountResolver   `json:"full_resolver,omitempty"`
+	CacheResolver  *CacheAccountResolver  `json:"cache_resolver,omitempty"`
+	MemoryResolver *MemoryAccountResolver `json:"memory_resolver,omitempty"`
+	Cluster        *Cluster               `json:"cluster,omitempty"`
+	Websocket      *Websocket             `json:"websocket,omitempty"`
+	Mqtt           *MQTT                  `json:"mqtt,omitempty"`
+	JetStream      *JetStream             `json:"jetstream,omitempty"`
+	Leafnode       *Leafnode              `json:"leafnode,omitempty"`
+	Metrics        *Metrics               `json:"metrics,omitempty"`
 }
 
 // SubjectMapping is for mapping published subjects for clients.
@@ -279,12 +281,12 @@ type Remote struct {
 // by providing an empty Leafnode struct (Leafnode{}).
 // Default values will be used for missing fields.
 type Leafnode struct {
-	Host      string   `json:"host,omitempty"`
-	Port      int      `json:"port,omitempty"`
-	Advertise string   `json:"advertise,omitempty"`
-	NoTLS     bool     `json:"no_tls,omitempty"`
-	TLS       *TLSMap  `json:"tls,omitempty"`
-	Remotes   []Remote `json:"remotes,omitempty"`
+	Host      string    `json:"host,omitempty"`
+	Port      int       `json:"port,omitempty"`
+	Advertise string    `json:"advertise,omitempty"`
+	NoTLS     bool      `json:"no_tls,omitempty"`
+	TLS       *TLSMap   `json:"tls,omitempty"`
+	Remotes   []*Remote `json:"remotes,omitempty"`
 }
 
 // FullAccountResolver is the configuration for the full NATS account resolver.
