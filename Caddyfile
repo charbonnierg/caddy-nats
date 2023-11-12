@@ -134,6 +134,39 @@
 					database test2
 				}
 			}
+			flow {
+				source azure_eventgrid {
+					endpoint https://beyond-ms-grid.westeurope-1.eventgrid.azure.net
+					topic_name demo-az-storage-account-feed
+					subscription_name test
+					credential {
+						access_key {env.{env.AZ_EVENT_GRID_ACCOUNT_KEY}}
+					}
+				}
+				transform <<EOF
+					root.payload = this.payload.data_base64.decode("base64").parse_json()
+					root.subject = this.subject
+					root.headers = this.headers
+					EOF
+				destination stream {
+					name "AZ-STORAGE-ACCOUNT"
+					prefix "azstorage"
+				}
+			}
+			flow {
+				source stream_consumer {
+					stream "AZ-STORAGE-ACCOUNT"
+					durable_name "storage-sync"
+				}
+				destination azure_eventgrid {
+					endpoint https://beyond-ms-grid.westeurope-1.eventgrid.azure.net
+					topic_name demo-custom
+					event_type CloudEventSchemaV1_0
+					credential {
+						access_key {env.AZ_EVENT_GRID_ACCOUNT_KEY}
+					}
+				}
+			}
 		}
 		account APP {
 			jetstream
