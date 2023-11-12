@@ -80,7 +80,7 @@ func (r *ChangeStreamReader) Open(ctx caddy.Context, clients *natsclient.NatsCli
 // Close the connection
 func (r *ChangeStreamReader) Close() error {
 	if r.client != nil {
-		r.logger.Info("Disconnecting mongodb client")
+		r.logger.Info("disconnecting mongodb client")
 		return r.client.Disconnect(r.ctx)
 	}
 	return nil
@@ -88,7 +88,7 @@ func (r *ChangeStreamReader) Close() error {
 
 // Read returns the next change event from the change stream.
 func (r *ChangeStreamReader) Read() (caddynats.Message, func() error, error) {
-	r.logger.Info("Waiting for next document in change stream")
+	r.logger.Info("waiting for next document in change stream")
 	if !r.stream.Next(r.ctx) {
 		err := r.stream.Err()
 		if strings.Contains(err.Error(), "context canceled") {
@@ -143,7 +143,7 @@ func (r *ChangeStreamReader) start(uri *url.URL) error {
 // transform is used to transform a change stream document into a message.
 func (r *ChangeStreamReader) transform(doc bson.Raw) (caddynats.Message, error) {
 	json, err := bson.MarshalExtJSON(r.stream.Current, false, false)
-	r.logger.Info("New document received in change stream", zap.ByteString("document", json))
+	r.logger.Info("new document received in change stream", zap.String("collection", r.Collection), zap.String("operation", doc.Lookup("operationType").StringValue()))
 	if err != nil {
 		return nil, err
 	}

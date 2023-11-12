@@ -38,7 +38,7 @@ func (s *StreamExporter) Write(msg caddynats.Message) error {
 	if err != nil {
 		return err
 	}
-	s.logger.Info("Publishing to NATS", zap.String("subject", sub), zap.ByteString("payload", payload))
+	s.logger.Info("publishing message to stream", zap.String("subject", sub), zap.String("stream", s.Name))
 	if _, err := s.js.PublishMsg(s.ctx, &nats.Msg{Subject: sub, Data: payload}, jetstream.WithExpectStream(s.Name)); err != nil {
 		return err
 	}
@@ -46,9 +46,9 @@ func (s *StreamExporter) Write(msg caddynats.Message) error {
 }
 
 func (s *StreamExporter) Open(ctx caddy.Context, client *natsclient.NatsClient) error {
-	s.logger.Info("opening NATS stream writer", zap.String("stream", s.Name), zap.Strings("subjects", s.Subjects))
 	s.ctx = ctx
 	s.logger = ctx.Logger().Named("writer.stream")
+	s.logger.Info("opening NATS stream writer", zap.String("stream", s.Name))
 	if s.StreamConfig.Subjects == nil && s.Prefix == "" {
 		return errors.New("subjects and prefix are empty")
 	}

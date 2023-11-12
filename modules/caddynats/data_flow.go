@@ -85,7 +85,6 @@ type Writer interface {
 
 type Flow struct {
 	ctx         caddy.Context
-	current     caddy.Context
 	cancel      context.CancelFunc
 	done        chan struct{}
 	logger      *zap.Logger
@@ -103,8 +102,17 @@ type Flow struct {
 // Provision configures the receiver and the exporter
 // and returns an error if any.
 func (c *Flow) Provision(server *Server, account *Account) error {
-	c.ctx = server.ctx
-	c.logger = c.ctx.Logger().Named("flow")
+	c.account = account
+	c.server = server
+	ctx, cancel := caddy.NewContext(server.ctx)
+	c.client = &natsclient.NatsClient{Internal: true}
+	if _, err := c.server.createInternalClientForAccount(c.account, c.client); err != nil {
+		return err
+	}
+	c.ctx = ctx
+	c.cancel = cancel
+	c.done = make(chan struct{})
+	c.logger = server.logger.Named("flow")
 	sunm, err := c.ctx.LoadModule(c, "Source")
 	if err != nil {
 		return err
@@ -156,25 +164,25 @@ func (c *Flow) tick() (bool, error) {
 }
 
 // Run starts the flow and blocks until the context is cancelled.
-func (c *Flow) run(ctx caddy.Context, done chan struct{}, client *natsclient.NatsClient) error {
+func (c *Flow) run() error {
 	defer func() {
-		if err := client.Close(); err != nil {
-			c.logger.Error("error closing nats client", zap.Error(err), zap.String("source", c.source.CaddyModule().String()), zap.String("destination", c.destination.CaddyModule().String()))
+		if err := c.client.Close(); err != nil {
+			c.logger.Error("error closing nats client", zap.Error(err), zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("destination", c.destination.CaddyModule().ID.Name()))
 		}
-		close(done)
+		close(c.done)
 	}()
-	c.logger.Info("starting data flow", zap.String("source", c.source.CaddyModule().String()), zap.String("destination", c.destination.CaddyModule().String()))
-	if err := client.Connect(); err != nil {
-		c.logger.Error("error connecting nats client", zap.Error(err), zap.String("source", c.source.CaddyModule().String()), zap.String("destination", c.destination.CaddyModule().String()))
+	c.logger.Info("starting data flow", zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("destination", c.destination.CaddyModule().ID.Name()))
+	if err := c.client.Connect(); err != nil {
+		c.logger.Error("error connecting nats client", zap.Error(err), zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("destination", c.destination.CaddyModule().ID.Name()))
 		return err
 	}
 	// Try connecting to source forever until it succeeds
 	for {
-		if err := c.source.Open(ctx, client); err != nil {
-			c.logger.Error("error connecting source", zap.Error(err), zap.String("source", c.source.CaddyModule().String()), zap.String("retry_in", "2s"))
+		if err := c.source.Open(c.ctx, c.client); err != nil {
+			c.logger.Error("error connecting source", zap.Error(err), zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("retry_in", "2s"))
 			// TODO: add exponential backoff
 			select {
-			case <-ctx.Done():
+			case <-c.ctx.Done():
 				return nil
 			case <-time.After(time.Second * 2):
 				continue
@@ -184,11 +192,11 @@ func (c *Flow) run(ctx caddy.Context, done chan struct{}, client *natsclient.Nat
 	}
 	// Try connecting to destination forever until it succeeds
 	for {
-		if err := c.destination.Open(ctx, client); err != nil {
-			c.logger.Error("error connecting destination", zap.Error(err), zap.String("destination", c.destination.CaddyModule().String()), zap.String("retry_in", "2s"))
+		if err := c.destination.Open(c.ctx, c.client); err != nil {
+			c.logger.Error("error connecting destination", zap.Error(err), zap.String("destination", c.destination.CaddyModule().ID.Name()), zap.String("retry_in", "2s"))
 			// TODO: add exponential backoff
 			select {
-			case <-ctx.Done():
+			case <-c.ctx.Done():
 				return nil
 			case <-time.After(time.Second * 2):
 				continue
@@ -199,17 +207,17 @@ func (c *Flow) run(ctx caddy.Context, done chan struct{}, client *natsclient.Nat
 	// Start ticking
 	for {
 		select {
-		case <-ctx.Done():
-			c.logger.Warn("data flow is stopped", zap.String("source", c.source.CaddyModule().String()), zap.String("destination", c.destination.CaddyModule().String()))
+		case <-c.ctx.Done():
+			c.logger.Warn("data flow is stopped", zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("destination", c.destination.CaddyModule().ID.Name()))
 			return nil
 		default:
-			c.logger.Debug("data flow tick", zap.String("source", c.source.CaddyModule().String()), zap.String("destination", c.destination.CaddyModule().String()))
+			c.logger.Debug("waiting for next message", zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("destination", c.destination.CaddyModule().ID.Name()))
 			keepgoing, err := c.tick()
 			if err != nil {
 				if err == context.Canceled {
 					return nil
 				}
-				c.logger.Error(err.Error(), zap.String("source", c.source.CaddyModule().String()), zap.String("destination", c.destination.CaddyModule().String()))
+				c.logger.Error(err.Error(), zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("destination", c.destination.CaddyModule().ID.Name()))
 			}
 			if !keepgoing {
 				return nil
@@ -222,15 +230,8 @@ func (c *Flow) Start() error {
 	if c.Disabled {
 		return nil
 	}
-	ctx, cancel := caddy.NewContext(c.ctx)
-	client := &natsclient.NatsClient{Internal: true}
-	if err := c.server.provisionInternalClientConnection(c.account.Name, client); err != nil {
-		return err
-	}
-	c.done = make(chan struct{})
-	c.current = ctx
-	c.cancel = cancel
-	go c.run(ctx, c.done, c.client)
+
+	go c.run()
 	return nil
 }
 

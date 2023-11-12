@@ -71,7 +71,7 @@ func (s *Server) provisionInternalClientConnection(account string, client *natsc
 // GetAccount returns the account with the given name.
 // An account cannot be updated once the server is started without a config reload.
 func (s *Server) GetAccount(name string) (*Account, bool) {
-	for _, acc := range s.Options.Accounts {
+	for _, acc := range s.Accounts {
 		if acc.Name == name {
 			return acc, true
 		}
@@ -115,6 +115,14 @@ func (s *Server) Provision(ctx caddy.Context) error {
 	err := s.Options.Provision(s.ctx)
 	if err != nil {
 		return err
+	}
+	// this is a hack
+	for _, acc := range s.Options.Accounts {
+		for _, flow := range acc.Flows {
+			if err := flow.Provision(s, acc); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -195,6 +203,15 @@ func (s *Server) Stop() error {
 	// Do nothing if there is no server
 	if s.srv == nil {
 		return nil
+	}
+	// Stop data flows
+	for _, acc := range s.Options.Accounts {
+		for _, flow := range acc.Flows {
+			s.logger.Warn("stopping data flow", zap.String("source", flow.source.CaddyModule().String()), zap.String("destination", flow.destination.CaddyModule().String()), zap.String("account", acc.Name))
+			if err := flow.Stop(); err != nil {
+				s.logger.Warn("failed to stop data flow", zap.String("source", flow.source.CaddyModule().String()), zap.String("destination", flow.destination.CaddyModule().String()), zap.String("account", acc.Name), zap.Error(err))
+			}
+		}
 	}
 	// Stop client connections
 	for _, client := range s.clients {
@@ -433,7 +450,12 @@ func (s *Server) setupAccounts() error {
 	// Look once again and make sure all resources exist
 	go func() {
 		for _, acc := range s.Options.Accounts {
-			if acc.Streams == nil && acc.Consumers == nil && acc.KeyValueStores == nil && acc.ObjectStores == nil && acc.services == nil {
+			if len(acc.Streams) == 0 &&
+				len(acc.Consumers) == 0 &&
+				len(acc.KeyValueStores) == 0 &&
+				len(acc.ObjectStores) == 0 &&
+				len(acc.services) == 0 &&
+				len(acc.Flows) == 0 {
 				continue
 			}
 			// Create a new client for this account
@@ -495,6 +517,14 @@ func (s *Server) setupAccounts() error {
 				_, err := client.ConfigureService(service)
 				if err != nil {
 					s.logger.Error("failed to start service", zap.String("account", acc.Name), zap.Error(err))
+				}
+			}
+			// Make sure all data flows are started
+			for _, flow := range acc.Flows {
+				s.logger.Info("starting data flow", zap.String("source", flow.source.CaddyModule().String()), zap.String("destination", flow.destination.CaddyModule().String()), zap.String("account", acc.Name))
+				err := flow.Start()
+				if err != nil {
+					s.logger.Error("failed to start flow", zap.String("source", flow.source.CaddyModule().String()), zap.String("destination", flow.destination.CaddyModule().String()), zap.String("account", acc.Name), zap.Error(err))
 				}
 			}
 		}
@@ -565,6 +595,9 @@ func (s *Server) createClientForAuthService() error {
 
 // Helper method to create a client for any account.
 func (s *Server) createInternalClientForAccount(account *Account, client *natsclient.NatsClient) (*natsclient.NatsClient, error) {
+	if s.Options == nil {
+		return nil, errors.New("server options are not provisioned")
+	}
 	switch {
 	case s.Operators != nil:
 		return nil, errors.New("cannot create internal client in operator mode")

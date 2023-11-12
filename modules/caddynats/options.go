@@ -99,7 +99,7 @@ type Options struct {
 func (o *Options) Provision(ctx caddy.Context) error {
 	o.ctx = ctx
 	o.automateSubjects = []string{}
-	o.logger = ctx.Logger()
+	o.logger = ctx.Logger().Named("nats")
 	if o.AutomationPolicyTemplate == nil {
 		o.AutomationPolicyTemplate = &caddytls.AutomationPolicy{}
 	}

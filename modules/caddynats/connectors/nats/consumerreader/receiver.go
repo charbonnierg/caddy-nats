@@ -40,15 +40,18 @@ func (r *StreamConsumerReader) Read() (caddynats.Message, func() error, error) {
 		case <-r.ctx.Done():
 			return nil, nil, errors.New("EOF")
 		case msg := <-batch.Messages():
+			if msg == nil {
+				continue
+			}
 			return caddynats.NewJetStreamMessage(msg), func() error { return msg.Ack() }, nil
 		}
 	}
 }
 
 func (r *StreamConsumerReader) Open(ctx caddy.Context, client *natsclient.NatsClient) error {
-	r.logger.Info("provisioning NATS stream consumer reader", zap.String("name", r.Durable), zap.String("stream", r.Stream))
 	r.ctx = ctx
 	r.logger = ctx.Logger().Named("readers.stream_consumer")
+	r.logger.Info("provisioning NATS stream consumer reader", zap.String("name", r.Durable), zap.String("stream", r.Stream))
 	if err := client.ConfigureConsumer(ctx, r.Consumer); err != nil {
 		return err
 	}

@@ -33,7 +33,6 @@ type InProcessConnProvider interface {
 // NATS server. An empty NatsClient is not usable, and must be
 // provisioned AND connected before being used.
 type NatsClient struct {
-	closed bool
 	sdk    *sdk
 	opts   *nats.Options
 	logger *zap.Logger
@@ -140,9 +139,6 @@ func (c *NatsClient) SetOptions(opt ...nats.Option) error {
 // context. If the connection is already established, it returns
 // the existing JetStream context.
 func (c *NatsClient) Connect() error {
-	if c.closed {
-		return errors.New("client is closed")
-	}
 	if c.sdk != nil {
 		return nil
 	}
@@ -236,10 +232,6 @@ func (c *NatsClient) Connect() error {
 
 // Close closes the connection to the NATS server.
 func (c *NatsClient) Close() error {
-	defer func() {
-		c.closed = true
-		c.sdk = nil
-	}()
 	switch {
 	case c.sdk == nil:
 		return nil
