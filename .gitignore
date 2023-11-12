@@ -25,3 +25,9 @@
 /caddy.exe
 /config-operator.json
 /cmd/qnats
+/test1
+/test2
+/test3
+/test*.json
+/test*.Caddyfile
+/Caddyfile.*

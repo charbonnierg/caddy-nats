@@ -120,7 +120,7 @@ func (l *Lock) getRemote() (uint64, *Expiration, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	item, err := kv.Get(l.key)
+	item, err := kv.Get(l.kvstore.ctx, l.key)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -143,7 +143,7 @@ func (l *Lock) updateRemote() error {
 	if err != nil {
 		return err
 	}
-	newRevision, err := kv.Update(l.key, payload, l.revision)
+	newRevision, err := kv.Update(l.kvstore.ctx, l.key, payload, l.revision)
 	if err != nil {
 		return err
 	}

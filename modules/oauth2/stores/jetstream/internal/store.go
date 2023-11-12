@@ -10,12 +10,12 @@ import (
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/persistence"
-	"github.com/quara-dev/beyond/modules/nats/client"
+	"github.com/quara-dev/beyond/modules/caddynats/natsclient"
 	"go.uber.org/zap"
 )
 
-func NewStore(name string, client *client.Connection, ttl time.Duration, logger *zap.Logger) *Store {
-	return &Store{kvstore: KeyValueStore{name: name, client: client, ttl: ttl, logger: logger.Named("kv")}, logger: logger}
+func NewStore(ctx context.Context, name string, client *natsclient.NatsClient, ttl time.Duration, logger *zap.Logger) *Store {
+	return &Store{kvstore: KeyValueStore{ctx: ctx, name: name, client: client, ttl: ttl, logger: logger.Named("kv")}, logger: logger}
 }
 
 type Store struct {
@@ -37,7 +37,7 @@ func (s *Store) Clear(ctx context.Context, key string) error {
 		s.logger.Error("failed to get kv", zap.Error(err))
 		return err
 	}
-	return kv.Delete(key)
+	return kv.Delete(ctx, key)
 }
 
 func (s *Store) Load(ctx context.Context, key string) ([]byte, error) {
@@ -46,7 +46,7 @@ func (s *Store) Load(ctx context.Context, key string) ([]byte, error) {
 		s.logger.Error("failed to get kv", zap.Error(err))
 		return nil, err
 	}
-	item, err := kv.Get(key)
+	item, err := kv.Get(ctx, key)
 	if err != nil {
 		s.logger.Error("failed to get key", zap.Error(err))
 		return nil, err
@@ -65,7 +65,7 @@ func (s *Store) VerifyConnection(ctx context.Context) error {
 		s.logger.Error("failed to get kv", zap.Error(err))
 		return err
 	}
-	_, err = kv.Status()
+	_, err = kv.Status(ctx)
 	if err != nil {
 		s.logger.Error("failed to get status", zap.Error(err))
 		return err
@@ -84,7 +84,7 @@ func (s *Store) Save(ctx context.Context, key string, value []byte, expires time
 		s.logger.Error("failed to encode value", zap.Error(err))
 		return err
 	}
-	_, err = kv.Put(key, encoded)
+	_, err = kv.Put(ctx, key, encoded)
 	if err != nil {
 		s.logger.Error("failed to put key", zap.Error(err))
 		return err

@@ -33,6 +33,7 @@ type DockerUpstreams struct {
 	cancel   context.CancelFunc
 
 	Container string `json:"container,omitempty"`
+	Network   string `json:"network,omitempty"`
 	Port      int    `json:"port,omitempty"`
 }
 
@@ -71,11 +72,44 @@ func (mu *DockerUpstreams) watch() error {
 	mu.client = client
 	container, err := mu.client.ContainerInspect(ctx, mu.Container)
 	if err != nil {
+		if strings.Contains(err.Error(), "context cancelled") {
+			return nil
+		}
 		return fmt.Errorf("inspecting container: %v", err)
+	}
+	var addr string = container.NetworkSettings.IPAddress
+	if mu.Network != "" {
+		for name, network := range container.NetworkSettings.Networks {
+			if name == mu.Network || network.NetworkID == mu.Network {
+				if network.IPAMConfig != nil && network.IPAMConfig.IPv4Address != "" {
+					addr = network.IPAMConfig.IPv4Address
+				} else if network.IPAddress != "" {
+					addr = network.IPAddress
+				}
+				break
+			}
+			for _, alias := range network.Aliases {
+				if alias == mu.Network {
+					if network.IPAMConfig != nil && network.IPAMConfig.IPv4Address != "" {
+						addr = network.IPAMConfig.IPv4Address
+					} else if network.IPAddress != "" {
+						addr = network.IPAddress
+					}
+					break
+				}
+			}
+			if addr != "" {
+				break
+			}
+		}
+	}
+	if addr == "" {
+		mu.logger.Error("did not found ip address", zap.Any("container", container))
+		return fmt.Errorf("container not found")
 	}
 	// Set upstream
 	mu.upstream = &reverseproxy.Upstream{
-		Dial: fmt.Sprintf("%s:%d", container.NetworkSettings.IPAddress, mu.Port),
+		Dial: fmt.Sprintf("%s:%d", addr, mu.Port),
 	}
 	// Subscribe to events
 	msgs, errs := client.Events(ctx, types.EventsOptions{
@@ -124,8 +158,31 @@ func (mu *DockerUpstreams) watch() error {
 						mu.upstream = nil
 						continue
 					}
+					var addr string = container.NetworkSettings.IPAddress
+					if mu.Network != "" {
+						for _, network := range container.NetworkSettings.Networks {
+							if network.NetworkID == mu.Network {
+								if network.IPAMConfig != nil && network.IPAMConfig.IPv4Address != "" {
+									addr = network.IPAMConfig.IPv4Address
+								} else if network.IPAddress != "" {
+									addr = network.IPAddress
+								}
+								break
+							}
+							for _, alias := range network.Aliases {
+								if alias == mu.Network {
+									if network.IPAMConfig != nil && network.IPAMConfig.IPv4Address != "" {
+										addr = network.IPAMConfig.IPv4Address
+									} else if network.IPAddress != "" {
+										addr = network.IPAddress
+									}
+									break
+								}
+							}
+						}
+					}
 					mu.upstream = &reverseproxy.Upstream{
-						Dial: fmt.Sprintf("%s:%d", container.NetworkSettings.IPAddress, mu.Port),
+						Dial: fmt.Sprintf("%s:%d", addr, mu.Port),
 					}
 				}
 			}
@@ -155,6 +212,10 @@ func (mu *DockerUpstreams) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return err
 			}
 			mu.Container = d.Val()
+		case "network":
+			if err := parser.ParseString(d, &mu.Network); err != nil {
+				return err
+			}
 		case "port":
 			if err := parser.ParseNetworkPort(d, &mu.Port); err != nil {
 				return err

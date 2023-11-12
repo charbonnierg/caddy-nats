@@ -9,8 +9,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/nats-io/jwt/v2"
+	"github.com/quara-dev/beyond"
 	"github.com/quara-dev/beyond/modules/docker"
-	"github.com/quara-dev/beyond/modules/nats"
 	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 )
 
@@ -33,8 +33,8 @@ func (DockerHostMatcher) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (m *DockerHostMatcher) Provision(app nats.App) error {
-	m.ctx = app.Context()
+func (m *DockerHostMatcher) Provision(ctx caddy.Context) error {
+	m.ctx = ctx
 	if m.Container != "" && m.Labels != nil {
 		return errors.New("container and labels are mutually exclusive")
 	}
@@ -44,15 +44,9 @@ func (m *DockerHostMatcher) Provision(app nats.App) error {
 	if m.Labels != nil && m.Network != nil {
 		return errors.New("labels and network are mutually exclusive")
 	}
-	unm, err := app.LoadBeyondApp("docker")
-	if err != nil {
+	if err := m.loadDockerApp(ctx); err != nil {
 		return err
 	}
-	dockerApp, ok := unm.(docker.App)
-	if !ok {
-		return errors.New("failed to load docker app")
-	}
-	m.app = dockerApp
 	return nil
 }
 
@@ -153,6 +147,19 @@ func (m *DockerHostMatcher) matchByContainerName(request *jwt.AuthorizationReque
 		}
 	}
 	return false
+}
+
+func (m *DockerHostMatcher) loadDockerApp(ctx caddy.Context) error {
+	unm, err := beyond.Load(ctx, "docker")
+	if err != nil {
+		return err
+	}
+	dockerApp, ok := unm.(docker.App)
+	if !ok {
+		return errors.New("failed to load docker app")
+	}
+	m.app = dockerApp
+	return nil
 }
 
 func (m *DockerHostMatcher) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {

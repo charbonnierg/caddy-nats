@@ -31,6 +31,22 @@ func Register(ctx caddy.Context, app App) (*Beyond, error) {
 	return b, nil
 }
 
+func Load(ctx caddy.Context, name string) (App, error) {
+	unm, err := ctx.App("beyond")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load beyond module")
+	}
+	b, ok := unm.(*Beyond)
+	if !ok {
+		return nil, errors.New("invalid beyond module type")
+	}
+	loaded, err := b.LoadApp(name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load app: %v", err)
+	}
+	return loaded, nil
+}
+
 // LoadTLSApp can be used to load the TLS caddy app from other caddy apps.
 // It makes sure the TLS app is loaded using the beyond app context before returning it.
 func (b *Beyond) LoadTLSApp() (*caddytls.TLS, error) {

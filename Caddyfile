@@ -3,28 +3,23 @@
 	log default {
 		output stderr
 		format console
-		level INFO
+		level DEBUG
 	}
 	# Configure a file as an additional logging output using JSON format
-	log file {
-		output file ./caddy.log
-		format json
-		level INFO
-	}
+	# log file {
+	# 	output file ./caddy.log
+	# 	format json
+	# 	level INFO
+	# }
 	# This line is required to tell our Web Server that authentication should happen BEFORE forwarding requests to handler
 	# I'd like to remove it, but for now it is required
 	order authorize_with before handle
-	# This disables binding to port 80 (HTTP) automatically and redirecting to port 443 (HTTPS)
-	# It does not disable HTTPS, it just disables the automatic redirection, and in this specific
-	# case, it disables binding to port 80 because this port is not used anywhere else in config.
-	auto_https off
 	# This line is required to use a local certificate issuer rather than Let's Encrypt or ZeroSSL
 	# Valid values are: letsencrypt, zerossl, internal
 	cert_issuer internal
 	# This enables Prometheus metrics for HTTP servers
 	# I'd like to have this enabled by default, but for now it is required
-	servers :11443 {
-		name https
+	servers :443 {
 		metrics
 	}
 	# This declares Azure Key Vault instances (secret stores) where secrets can be fetched
@@ -60,9 +55,8 @@
 				gateway 172.200.200.1
 			}
 		}
-		container test {
-			image docker.io/library/alpine:latest
-			command sleep 3600
+		container demo-nginx {
+			image docker.io/library/nginx:latest
 			network mynetwork
 			restart always
 			mount /data/test to /data
@@ -83,70 +77,62 @@
 	# Start python processes alongside the application
 	# Each python process may be started in a virtual environment and may have a custom entrypoint
 	# Alternatively, it's possible to specify a default virtual environment for all processes.
-	python {
-		virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
-		app demo1 {
-			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app1
-			forward_stdout
-			forward_stderr
-		}
-		app demo2 {
-			entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app2
-			forward_stdout
-			forward_stderr
-		}
-	}
+	# python {
+	# 	virtualenv /home/charbonnierg/github/quara-dev/beyond/sandbox/.venv
+	# 	app demo1 {
+	# 		entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app1
+	# 		forward_stdout
+	# 		forward_stderr
+	# 	}
+	# 	app demo2 {
+	# 		entrypoint /home/charbonnierg/github/quara-dev/beyond/sandbox/app2
+	# 		forward_stdout
+	# 		forward_stderr
+	# 	}
+	# }
 	# This block is required to configure and start NATS server when our Web Server starts
 	broker {
-		debug
-		metrics all
-		default_auth_callout deny
+		cert_issuer internal
 		account OAUTH2 {
 			jetstream on
-			auth_policy {
-				match connect_opts {
-					client_name oauth2-az-endpoint
-				}
-				match client_info {
-					connection_type in_process
-				}
+			authorize {
+				match token OAUTH2
+				match host 127.0.0.1
 				callout allow
 			}
 		}
+		auth_callout {
+			account AUTH
+		}
 		account DATA {
+			authorize {
+				match token DATA
+				match host 127.0.0.1
+				callout allow
+			}
 			stream test {
 				subjects "test.>"
 			}
-			data_flow {
-				from mongodb_change_stream {
+			flow {
+				source mongodb_change_stream {
 					uri "mongodb://localhost:27017"
 					database test
 					collection test1
 				}
-				to stream {
+				destination stream {
 					name "MONGOSTREAM"
 					prefix "mongo"
 				}
 			}
-			data_flow {
-				from stream_consumer {
+			flow {
+				source stream_consumer {
 					stream "MONGOSTREAM"
-					consumer_name "db-sync"
+					durable_name "db-sync"
 				}
-				to mongodb_change_stream {
+				destination mongodb_change_stream {
 					uri "mongodb://localhost:27017"
 					database test2
 				}
-			}
-			auth_policy {
-				match connect_opts {
-					token DATA
-				}
-				match client_info {
-					connection_type nats
-					ip_address 127.0.0.1
-				}
-				callout allow
 			}
 		}
 		account APP {
@@ -156,28 +142,18 @@
 				to "beta.req.>" weight 50
 			}
 			map_subject "pub.>" to "pub.srv-01.>"
-			auth_policy {
-				match connect_opts {
-					token APP
-				}
-				match client_info {
-					connection_type nats
-					ip_address 127.0.0.1
-				}
+			authorize {
+				match token APP
+				match type nats
+				match host 127.0.0.1
 				callout allow
 			}
-			auth_policy {
-				match client_info {
-					connection_type websocket
-				}
-				match connect_opts {
-					username APP
-				}
+			authorize {
+				match type websocket
+				match username APP
 				callout oauth2 {
 					endpoint az-oidc-endpoint
 					template {
-						# read_bucket kvdemo
-						# write_bucket kvdemo "{oidc.session.email}.>"
 						allow_sub "_INBOX.{oidc.session.email}.>"
 						allow_sub "{oidc.session.email}.>"
 						allow_pub ">"
@@ -188,25 +164,17 @@
 		}
 		account SYS {
 			export_service "$SYS.REQ.SERVER.PING" to MONITORING
-			auth_policy {
-				match connect_opts {
-					token SYS
-				}
-				match client_info {
-					ip_address 127.0.0.1
-				}
+			authorize {
+				match token SYS
+				match host 127.0.0.1
 				callout allow
 			}
 		}
 		account MONITORING {
 			import_service "$SYS.REQ.SERVER.PING" from SYS
-			auth_policy {
-				match connect_opts {
-					token monitoring
-				}
-				match client_info {
-					ip_address 127.0.0.1
-				}
+			authorize {
+				match token monitoring
+				match host 127.0.0.1
 				callout allow
 			}
 		}
@@ -214,25 +182,27 @@
 			unique_tag region
 			max_disk 10GB
 			max_memory 1GB
+			store_dir ./tmp/jetstream/t2
 		}
 		nats_server {
 			name srv-01
 			tags region:eu-west-3
-			host 127.0.0.1
-			port 4222
+			tls local.quara-dev.com localhost
 			http_port 8222
 			system_account SYS
+			debug
+			metrics all
 		}
 		websocket_server {
-			host 0.0.0.0
-			port 10443
 			advertise ws.local.quara-dev.com:10443
 			tls ws.local.quara-dev.com
 		}
 		mqtt_server {
-			host 0.0.0.0
-			port 8883
 			tls mqtt.local.quara-dev.com
+		}
+		leafnode_server {
+			advertise leafnode.local.quara-dev.com:7422
+			tls leafnode.local.quara-dev.com
 		}
 	}
 	# Enable oauth2 authentication/authorization by creating an oauth2 endpoint.
@@ -242,9 +212,7 @@
 		az-oidc-endpoint {
 			store jetstream {
 				name OAUTH2-SESSIONS
-				client in_process {
-					name oauth2-az-endpoint
-				}
+				account OAUTH2
 			}
 			display_debug
 			cookie_secure
@@ -274,90 +242,106 @@
 	# Enable and configure an embedded OpenTelemetry Collector
 	# A collector must have at least one receiver and one exporter used together
 	# in one pipeline. Processors can be used to modify telemetry data before exporting it.
-	telemetry {
-		extension zpages
-		extension basicauth/client {
-			username {secret.quara-grafana-stack-id@az-kv-srv-01}
-			password {secret.quara-grafana-stack-token@az-kv-srv-01}
-		}
-		receiver hostmetrics {
-			collection_interval 10s
-			initial_delay 5s
-			root_path /
-			scrap cpu
-		}
-		receiver prometheus {
-			scrape_interval 10s
-			scrape_timeout 1s
-			# Scrap caddy and otel-collector metrics
-			scrape_config caddy-beyond localhost:2019
-			scrape_config otel-collector localhost:2020
-			# Scrap additional metrics
-			# ...
-		}
-		receiver otlp {
-			grpc 127.0.0.1:4317
-			http 127.0.0.1:4318
-		}
-		receiver filelog {
-			include "*.log"
-			resource {
-				environment_name dev
-				service_name caddy-beyond
-				server_name srv-01
-			}
-		}
-		exporter otlphttp {
-			endpoint https://otlp-gateway-prod-eu-west-3.grafana.net/otlp
-			authenticator basicauth/client
-		}
-		processor batch
-		processor attributes {
-			action insert {
-				key server_name
-				value srv-01
-			}
-		}
-		service {
-			metrics 127.0.0.1:2020
-			extensions zpages basicauth/client
-			trace_pipeline {
-				receivers otlp
-				processors batch attributes
-				exporters otlphttp
-			}
-			metric_pipeline {
-				receivers otlp prometheus hostmetrics
-				processors batch attributes
-				exporters otlphttp
-			}
-			log_pipeline {
-				receivers otlp filelog
-				processors batch attributes
-				exporters otlphttp
-			}
-		}
-	}
+	# telemetry {
+	# 	extension zpages
+	# 	extension basicauth/client {
+	# 		username {secret.quara-grafana-stack-id@az-kv-srv-01}
+	# 		password {secret.quara-grafana-stack-token@az-kv-srv-01}
+	# 	}
+	# 	receiver hostmetrics {
+	# 		collection_interval 10s
+	# 		initial_delay 5s
+	# 		root_path /
+	# 		scrap cpu
+	# 	}
+	# 	receiver prometheus {
+	# 		scrape_interval 10s
+	# 		scrape_timeout 1s
+	# 		# Scrap caddy and otel-collector metrics
+	# 		scrape_config caddy-beyond localhost:2019
+	# 		scrape_config otel-collector localhost:2020
+	# 		# Scrap additional metrics
+	# 		# ...
+	# 	}
+	# 	receiver otlp {
+	# 		grpc 127.0.0.1:4317
+	# 		http 127.0.0.1:4318
+	# 	}
+	# 	receiver filelog {
+	# 		include "*.log"
+	# 		resource {
+	# 			environment_name dev
+	# 			service_name caddy-beyond
+	# 			server_name srv-01
+	# 		}
+	# 	}
+	# 	exporter otlphttp {
+	# 		endpoint https://otlp-gateway-prod-eu-west-3.grafana.net/otlp
+	# 		authenticator basicauth/client
+	# 	}
+	# 	processor batch
+	# 	processor attributes {
+	# 		action insert {
+	# 			key server_name
+	# 			value srv-01
+	# 		}
+	# 	}
+	# 	service {
+	# 		metrics 127.0.0.1:2020
+	# 		extensions zpages basicauth/client
+	# 		trace_pipeline {
+	# 			receivers otlp
+	# 			processors batch attributes
+	# 			exporters otlphttp
+	# 		}
+	# 		metric_pipeline {
+	# 			receivers otlp prometheus hostmetrics
+	# 			processors batch attributes
+	# 			exporters otlphttp
+	# 		}
+	# 		log_pipeline {
+	# 			receivers otlp filelog
+	# 			processors batch attributes
+	# 			exporters otlphttp
+	# 		}
+	# 	}
+	# }
 }
 
 # Each website is defined by a block like this one
-local.quara-dev.com:11443 {
+# This is a "dummy" website with static content
+local.quara-dev.com {
 	log
 	authorize_with oauth2 az-oidc-endpoint
 	respond "hello world"
 }
 
 # This is another website
-admin.local.quara-dev.com:11443 {
+# This is a "file server" website, which serves static files from a directory
+admin.local.quara-dev.com {
 	log
 	authorize_with oauth2 az-oidc-endpoint
 	root * ./www/index.html
 	file_server
 }
 
-# Yet another website, which serves web server and NATS metrics
-metrics.local.quara-dev.com:11443 {
+# This is another website
+# This is a "reverse proxy" website, which forwards requests to another server
+demo.local.quara-dev.com {
 	log
 	authorize_with oauth2 az-oidc-endpoint
+	reverse_proxy {
+		dynamic docker {
+			container demo-nginx
+			network mynetwork
+			port 80
+		}
+	}
+}
+
+# Yet another website, which serves web server and NATS metrics
+metrics.local.quara-dev.com {
+	log
+	# authorize_with oauth2 az-oidc-endpoint
 	metrics
 }

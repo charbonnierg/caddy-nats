@@ -6,16 +6,29 @@ package standard
 import (
 	// plug in Caddy modules here
 	_ "github.com/quara-dev/beyond"
+	_ "github.com/quara-dev/beyond/modules/caddynats"
+	_ "github.com/quara-dev/beyond/modules/caddynats/connectors/nats/consumerreader"
+	_ "github.com/quara-dev/beyond/modules/caddynats/connectors/nats/streamwriter"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natsauth"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natsauth/callout/allow"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natsauth/callout/deny"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natsauth/callout/oauth2"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natsauth/matchers"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natscmd"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/jetstream_fs"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/jetstream_get_msg"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/jetstream_kv_get"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/jetstream_kv_put"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/jetstream_publish"
+	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/nats_publish"
+	_ "github.com/quara-dev/beyond/modules/testapp"
+
 	// DNS modules
 	_ "github.com/quara-dev/beyond/modules/dns/azure"
 	_ "github.com/quara-dev/beyond/modules/dns/digitalocean"
 
 	// Docker modules
 	_ "github.com/quara-dev/beyond/modules/docker/app"
-	// NATS modules
-	_ "github.com/quara-dev/beyond/modules/nats/app"
-	_ "github.com/quara-dev/beyond/modules/nats/auth/callout"
-	_ "github.com/quara-dev/beyond/modules/nats/auth/policies"
 
 	// OAuth2 modules
 	_ "github.com/quara-dev/beyond/modules/oauth2/app"
