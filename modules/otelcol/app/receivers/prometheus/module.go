@@ -1,3 +1,6 @@
+// Copyright 2023 QUARA - RGPI
+// SPDX-License-Identifier: Apache-2.0
+
 package prometheus
 
 import (
@@ -20,13 +23,6 @@ func (PrometheusReceiver) CaddyModule() caddy.ModuleInfo {
 		New: func() caddy.Module { return new(PrometheusReceiver) },
 	}
 }
-
-// func (p *PrometheusReceiver) MarshalJSON() ([]byte, error) {
-// 	// for _, cfg := range p.Config.ScrapeConfigs {
-// 	// 	cfg.HTTPClientConfig = fnutils.DefaultIfNil(cfg.HTTPClientConfig, &promconfig.DefaultHTTPClientConfig)
-// 	// }
-// 	return json.Marshal(map[string]*pconfig.Config{"config": p.Config})
-// }
 
 // Interface guards
 var (

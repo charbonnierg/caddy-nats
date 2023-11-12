@@ -1,3 +1,6 @@
+// Copyright 2023 QUARA - RGPI
+// SPDX-License-Identifier: Apache-2.0
+
 package fnutils
 
 func DefaultIfNil[T any](value *T, defaultValue *T) *T {
