@@ -15,9 +15,11 @@ import (
 )
 
 var (
-	ErrTenantIdNotSpecified     = errors.New("tenant_id or tenant_id_file must be specified")
-	ErrClientIdNotSpecified     = errors.New("client_id or client_id_file must be specified")
-	ErrClientSecretNotSpecified = errors.New("client_secret or client_secret_file must be specified")
+	ErrTenantIdNotSpecified       = errors.New("tenant_id or tenant_id_file must be specified")
+	ErrClientIdNotSpecified       = errors.New("client_id or client_id_file must be specified")
+	ErrAccessKeyNotSpecified      = errors.New("access_key or access_key_file must be specified")
+	ErrSubscriptionIdNotSpecified = errors.New("subscription_id or subscription_id_file must be specified")
+	ErrClientSecretNotSpecified   = errors.New("client_secret or client_secret_file must be specified")
 )
 
 // CredentialConfig is a configuration for creating an Azure credential.
@@ -34,6 +36,10 @@ type CredentialConfig struct {
 	ClientSecretFile           string   `json:"client_secret_file,omitempty"`
 	TenantId                   string   `json:"tenant_id,omitempty"`
 	TenantIdFile               string   `json:"tenant_id_file,omitempty"`
+	SubscriptionId             string   `json:"subscription_id,omitempty"`
+	SubscriptionIdFile         string   `json:"subscription_id_file,omitempty"`
+	AccessKey                  string   `json:"access_key,omitempty"`
+	AccessKeyFile              string   `json:"access_key_file,omitempty"`
 	NoDefaultCredentials       bool     `json:"no_default_credentials,omitempty"`
 	NoManagedIdentity          bool     `json:"no_managed_identity,omitempty"`
 	ManagedIdentityClientId    string   `json:"managed_identity_client_id,omitempty"`
@@ -52,6 +58,10 @@ type CredentialConfig struct {
 //   - AZURE_CLIENT_SECRET_FILE: the path to a file containing the client secret of a service principal
 //   - AZURE_TENANT_ID: the tenant ID of the service principal
 //   - AZURE_TENANT_ID_FILE: the path to a file containing the tenant ID of the service principal
+//   - AZURE_SUBSCRIPTION_ID: the subscription ID of the service principal
+//   - AZURE_SUBSCRIPTION_ID_FILE: the path to a file containing the subscription ID of the service principal
+//   - AZURE_ACCESS_KEY: the access key of the target resource.
+//   - AZURE_ACCESS_KEY_FILE: the path to a file containing the access key of the target resource.
 //   - NO_DEFAULT_CREDENTIALS: if set to true, the default credentials will not be used. Default credentials are used when no client id or managed identity is specified.
 //   - NO_MANAGED_IDENTITY: if set to true, managed identity will not be used. Managed identity is used when no client id is specified.
 //   - DISABLE_INSTANCE_DISCOVERY: if set true skip request for Azure AD instance metadata from https://login.microsoft.com before authenticating, making the application responsible for ensuring the configured authority is valid and trustworthy.
@@ -83,6 +93,22 @@ func (azc *CredentialConfig) ParseEnv() *CredentialConfig {
 	tenantIdFile, ok := os.LookupEnv("AZURE_TENANT_ID_FILE")
 	if ok && tenantIdFile != "" {
 		azc.TenantIdFile = tenantIdFile
+	}
+	subId, ok := os.LookupEnv("AZURE_SUBSCRIPTION_ID")
+	if ok && subId != "" {
+		azc.SubscriptionId = subId
+	}
+	subIdFile, ok := os.LookupEnv("AZURE_SUBSCRIPTION_ID_FILE")
+	if ok && subIdFile != "" {
+		azc.SubscriptionIdFile = subIdFile
+	}
+	accessKey, ok := os.LookupEnv("AZURE_ACCESS_KEY")
+	if ok && accessKey != "" {
+		azc.AccessKey = accessKey
+	}
+	accessKeyFile, ok := os.LookupEnv("AZURE_ACCESS_KEY_FILE")
+	if ok && accessKeyFile != "" {
+		azc.AccessKeyFile = accessKeyFile
 	}
 	noDefaultCredentials, ok := os.LookupEnv("NO_DEFAULT_CREDENTIALS")
 	if ok && noDefaultCredentials != "" {
@@ -129,6 +155,48 @@ func (azc *CredentialConfig) GetTenantId() (string, error) {
 		return string(content), nil
 	default:
 		return "", ErrTenantIdNotSpecified
+	}
+}
+
+// GetAccessKey returns the access key specified in the config if it exists.
+// If the access key is not specified, it returns an error (ErrAccessKeyNotSpecified).
+// If the access key cannot be read from the config, it returns a wrapped error.
+func (azc *CredentialConfig) GetAccessKey() (string, error) {
+	switch {
+	case azc.AccessKey != "":
+		if azc.AccessKeyFile != "" {
+			return "", errors.New("access_key and access_key_file are mutually exclusive")
+		}
+		return azc.AccessKey, nil
+	case azc.AccessKeyFile != "":
+		content, err := os.ReadFile(azc.AccessKeyFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to read access_key_file: %v", err)
+		}
+		return string(content), nil
+	default:
+		return "", ErrAccessKeyNotSpecified
+	}
+}
+
+// GetSubscriptionId returns the subscription ID specified in the config if it exists.
+// If the subscription ID is not specified, it returns an error (ErrSubscriptionIdNotSpecified).
+// If the subscription ID cannot be read from the config, it returns a wrapped error.
+func (azc *CredentialConfig) GetSubscriptionId() (string, error) {
+	switch {
+	case azc.SubscriptionId != "":
+		if azc.SubscriptionIdFile != "" {
+			return "", errors.New("subscription_id and subscription_id_file are mutually exclusive")
+		}
+		return azc.SubscriptionId, nil
+	case azc.SubscriptionIdFile != "":
+		content, err := os.ReadFile(azc.SubscriptionIdFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to read subscription_id_file: %v", err)
+		}
+		return string(content), nil
+	default:
+		return "", ErrSubscriptionIdNotSpecified
 	}
 }
 
@@ -259,6 +327,16 @@ func (azc *CredentialConfig) Authenticate() (azcore.TokenCredential, error) {
 		}
 	}
 	return azc.factory()
+}
+
+// AuthenticateWithAccessKey creates a new Azure credential based on the config.
+// If the config is invalid, it returns an error.
+func (azc *CredentialConfig) AuthenticateWithAccessKey() (*azcore.KeyCredential, error) {
+	accessKey, err := azc.GetAccessKey()
+	if err != nil {
+		return nil, err
+	}
+	return azcore.NewKeyCredential(accessKey), nil
 }
 
 // SetCredentialFactories sets the factories for creating credentials.

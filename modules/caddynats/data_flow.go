@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/Jeffail/benthos/v3/public/bloblang"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -16,6 +18,115 @@ import (
 	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 	"go.uber.org/zap"
 )
+
+type Event struct {
+	subject string
+	payload []byte
+	headers map[string][]string
+}
+
+func (e *Event) Subject() string {
+	return e.subject
+}
+
+func (e *Event) Payload() []byte {
+	return e.payload
+}
+
+func (e *Event) Headers() map[string][]string {
+	return e.headers
+}
+
+func (e *Event) SetHeader(key string, value string) {
+	if e.headers == nil {
+		e.headers = make(map[string][]string)
+	}
+	if e.headers[key] == nil {
+		e.headers[key] = []string{value}
+	} else {
+		e.headers[key] = append(e.headers[key], value)
+	}
+}
+
+func (e *Event) Transform(executor *bloblang.Executor) error {
+	var iface interface{}
+	if err := json.Unmarshal(e.payload, &iface); err != nil {
+		return err
+	}
+	res, err := executor.Query(map[string]interface{}{
+		"subject": e.subject,
+		"payload": iface,
+		"headers": e.headers,
+	})
+	if err != nil {
+		return err
+	}
+	switch v := res.(type) {
+	case map[string]interface{}:
+		subjectRaw, ok := v["subject"]
+		if !ok {
+			return fmt.Errorf("bad transform: subject is missing: %v", v)
+		}
+		subject, ok := subjectRaw.(string)
+		if !ok {
+			return fmt.Errorf("bad transform: subject is not a string: %v", subject)
+		}
+		e.subject = subject
+		payload, ok := v["payload"]
+		if !ok {
+			return fmt.Errorf("bad transform: payload is missing: %v", v)
+		}
+		e.payload, err = json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+		headers, ok := v["headers"]
+		if !ok {
+			return fmt.Errorf("bad transform: headers is missing: %v", v)
+		}
+		encoded, err := json.Marshal(headers)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(encoded, &e.headers); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("bad transform: result is not an object: %v", v)
+	}
+	return nil
+}
+
+func NewEventFromMessage(message Message) (*Event, error) {
+	subject, err := message.Subject("")
+	if err != nil {
+		return nil, err
+	}
+	payload, err := message.Payload()
+	if err != nil {
+		return nil, err
+	}
+	headers, err := message.Headers()
+	if err != nil {
+		return nil, err
+	}
+	return &Event{subject: subject, payload: payload, headers: headers}, nil
+}
+
+type event struct {
+	evt Event
+}
+
+func (e *event) Subject(prefix string) (string, error) {
+	if prefix != "" {
+		sub := prefix + "." + e.evt.Subject()
+		sub = strings.ReplaceAll(sub, "..", ".")
+		return sub, nil
+	}
+	return e.evt.Subject(), nil
+}
+func (e *event) Payload() ([]byte, error)              { return e.evt.Payload(), nil }
+func (e *event) Headers() (map[string][]string, error) { return e.evt.Headers(), nil }
 
 type Message interface {
 	Subject(prefix string) (string, error)
@@ -91,10 +202,12 @@ type Flow struct {
 	account     *Account
 	client      *natsclient.NatsClient
 	server      *Server
+	executor    *bloblang.Executor
 	source      Reader
 	destination Writer
 
 	Source      json.RawMessage `json:"source,omitempty" caddy:"namespace=nats_server.readers inline_key=type"`
+	Transform   string          `json:"transform,omitempty"`
 	Destination json.RawMessage `json:"destination,omitempty" caddy:"namespace=nats_server.writers inline_key=type"`
 	Disabled    bool            `json:"disabled,omitempty"`
 }
@@ -131,6 +244,12 @@ func (c *Flow) Provision(server *Server, account *Account) error {
 		return errors.New("destination is not an Exporter")
 	}
 	c.destination = destination
+	if c.Transform != "" {
+		c.executor, err = bloblang.Parse(string(c.Transform))
+		if err != nil {
+			return fmt.Errorf("error parsing transform: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -148,6 +267,16 @@ func (c *Flow) tick() (bool, error) {
 	// If there is no message, return false to stop
 	if msg == nil {
 		return false, nil
+	}
+	if c.executor != nil {
+		evt, err := NewEventFromMessage(msg)
+		if err != nil {
+			return true, err
+		}
+		if err := evt.Transform(c.executor); err != nil {
+			return true, err
+		}
+		msg = &event{evt: *evt}
 	}
 	// Write message to destination
 	if err := c.destination.Write(msg); err != nil {
@@ -213,15 +342,23 @@ func (c *Flow) run() error {
 		default:
 			c.logger.Debug("waiting for next message", zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("destination", c.destination.CaddyModule().ID.Name()))
 			keepgoing, err := c.tick()
+			if !keepgoing {
+				return err
+			}
 			if err != nil {
-				if err == context.Canceled {
+				if err == context.Canceled || strings.Contains(err.Error(), "context canceled") {
 					return nil
 				}
 				c.logger.Error(err.Error(), zap.String("source", c.source.CaddyModule().ID.Name()), zap.String("destination", c.destination.CaddyModule().ID.Name()))
+				// TODO: add exponential backoff
+				select {
+				case <-c.ctx.Done():
+					return nil
+				case <-time.After(time.Second * 2):
+					continue
+				}
 			}
-			if !keepgoing {
-				return nil
-			}
+
 		}
 	}
 }
@@ -268,6 +405,10 @@ func (flow *Flow) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return err
 			}
 			flow.Destination = caddyconfig.JSONModuleObject(unm, "type", module, nil)
+		case "transform":
+			if err := parser.ParseString(d, &flow.Transform); err != nil {
+				return err
+			}
 		default:
 			return d.Errf("unrecognized subdirective '%s'", d.Val())
 		}

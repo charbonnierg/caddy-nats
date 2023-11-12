@@ -32,6 +32,22 @@ func (c *CredentialConfig) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := parser.ParseString(d, &c.TenantIdFile); err != nil {
 				return err
 			}
+		case "subscription_id":
+			if err := parser.ParseString(d, &c.SubscriptionId); err != nil {
+				return err
+			}
+		case "subscription_id_file":
+			if err := parser.ParseString(d, &c.SubscriptionIdFile); err != nil {
+				return err
+			}
+		case "access_key":
+			if err := parser.ParseString(d, &c.AccessKey); err != nil {
+				return err
+			}
+		case "access_key_file":
+			if err := parser.ParseString(d, &c.AccessKeyFile); err != nil {
+				return err
+			}
 		case "no_default_credentials":
 			if err := parser.ParseBool(d, &c.NoDefaultCredentials); err != nil {
 				return err

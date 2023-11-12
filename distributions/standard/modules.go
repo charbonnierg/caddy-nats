@@ -7,6 +7,8 @@ import (
 	// plug in Caddy modules here
 	_ "github.com/quara-dev/beyond"
 	_ "github.com/quara-dev/beyond/modules/caddynats"
+	_ "github.com/quara-dev/beyond/modules/caddynats/connectors/azure/eventgridreceiver"
+	_ "github.com/quara-dev/beyond/modules/caddynats/connectors/azure/eventgridwriter"
 	_ "github.com/quara-dev/beyond/modules/caddynats/connectors/mongo/changestreamreader"
 	_ "github.com/quara-dev/beyond/modules/caddynats/connectors/mongo/changestreamwriter"
 	_ "github.com/quara-dev/beyond/modules/caddynats/connectors/nats/consumerreader"
