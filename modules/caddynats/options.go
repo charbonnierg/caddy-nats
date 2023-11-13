@@ -417,15 +417,14 @@ type RemoteWebsocketClient struct {
 // Default values will be used for missing fields.
 // Either a single URL can be provided, or a list of URLs.
 type Remote struct {
-	Url         string                `json:"url,omitempty"`
-	Urls        []string              `json:"urls,omitempty"`
-	Hub         bool                  `json:"hub,omitempty"`
-	DenyImports []string              `json:"deny_imports,omitempty"`
-	DenyExports []string              `json:"deny_exports,omitempty"`
-	NoRandomize bool                  `json:"no_randomize,omitempty"`
-	Account     string                `json:"account,omitempty"`
-	Credentials string                `json:"credentials,omitempty"`
-	Websocket   RemoteWebsocketClient `json:"websocket,omitempty"`
+	Urls        []string               `json:"urls,omitempty"`
+	Hub         bool                   `json:"hub,omitempty"`
+	DenyImports []string               `json:"deny_imports,omitempty"`
+	DenyExports []string               `json:"deny_exports,omitempty"`
+	NoRandomize bool                   `json:"no_randomize,omitempty"`
+	Account     string                 `json:"account,omitempty"`
+	Credentials string                 `json:"credentials,omitempty"`
+	Websocket   *RemoteWebsocketClient `json:"websocket,omitempty"`
 }
 
 // Leafnode is the configuration for the leafnode server
@@ -1236,6 +1235,41 @@ func (o *Options) setWebsocketOpts(opts *server.Options) error {
 }
 
 func (o *Options) setLeafnodeOpts(opts *server.Options) error {
+	// Override leafnode connections using accounts
+	for _, account := range o.Accounts {
+		if account.LeafnodeConnections == nil {
+			continue
+		}
+		for _, remote := range account.LeafnodeConnections {
+			urls := []*url.URL{}
+			for _, r := range remote.Urls {
+				parsed, err := url.Parse(r)
+				if err != nil {
+					return fmt.Errorf("invalid leafnode connection url: %s", err.Error())
+				}
+				urls = append(urls, parsed)
+			}
+			serverLeaf := &server.RemoteLeafOpts{
+				URLs:         urls,
+				NoRandomize:  remote.NoRandomize,
+				LocalAccount: remote.Account,
+				Hub:          remote.Hub,
+				Credentials:  remote.Credentials,
+				DenyImports:  remote.DenyImports,
+				DenyExports:  remote.DenyExports,
+			}
+			if remote.Websocket != nil {
+				serverLeaf.Websocket = struct {
+					Compression bool `json:"-"`
+					NoMasking   bool `json:"-"`
+				}(*remote.Websocket)
+			}
+			if opts.LeafNode.Remotes == nil {
+				opts.LeafNode.Remotes = []*server.RemoteLeafOpts{}
+			}
+			opts.LeafNode.Remotes = append(opts.LeafNode.Remotes, serverLeaf)
+		}
+	}
 	if o.Leafnode == nil {
 		return nil
 	}
@@ -1247,29 +1281,20 @@ func (o *Options) setLeafnodeOpts(opts *server.Options) error {
 	opts.LeafNode.Host = o.Leafnode.Host
 	opts.LeafNode.Port = port
 	opts.LeafNode.Advertise = o.Leafnode.Advertise
-	if len(o.Leafnode.Remotes) == 0 {
-		return nil
+	if opts.LeafNode.Remotes == nil {
+		opts.LeafNode.Remotes = []*server.RemoteLeafOpts{}
 	}
-	opts.LeafNode.Remotes = make([]*server.RemoteLeafOpts, len(o.Leafnode.Remotes))
-	for i, remote := range o.Leafnode.Remotes {
-		if remote.Url == "" && len(remote.Urls) == 0 {
-			return errors.New("leafnode.remotes.url or leafnode.remotes.urls must be set")
-		}
-		if remote.Url != "" && len(remote.Urls) > 0 {
-			return errors.New("leafnode.remotes.url and leafnode.remotes.urls cannot be set at the same time")
-		}
+	opts.LeafNode.Remotes = []*server.RemoteLeafOpts{}
+	for _, remote := range o.Leafnode.Remotes {
 		urls := []*url.URL{}
-		if remote.Url != "" {
-			remote.Urls = append(remote.Urls, remote.Url)
-		}
 		for _, r := range remote.Urls {
-			remoteUrl, err := url.Parse(r)
+			parsed, err := url.Parse(r)
 			if err != nil {
 				return fmt.Errorf("invalid remote leafnode url: %s", err.Error())
 			}
-			urls = append(urls, remoteUrl)
+			urls = append(urls, parsed)
 		}
-		opts.LeafNode.Remotes[i] = &server.RemoteLeafOpts{
+		serverLeaf := &server.RemoteLeafOpts{
 			URLs:         urls,
 			NoRandomize:  remote.NoRandomize,
 			LocalAccount: remote.Account,
@@ -1277,11 +1302,14 @@ func (o *Options) setLeafnodeOpts(opts *server.Options) error {
 			Credentials:  remote.Credentials,
 			DenyImports:  remote.DenyImports,
 			DenyExports:  remote.DenyExports,
-			Websocket: struct {
+		}
+		if remote.Websocket != nil {
+			serverLeaf.Websocket = struct {
 				Compression bool `json:"-"`
 				NoMasking   bool `json:"-"`
-			}(remote.Websocket),
+			}(*remote.Websocket)
 		}
+		opts.LeafNode.Remotes = append(opts.LeafNode.Remotes, serverLeaf)
 	}
 	if o.Leafnode.TLS != nil {
 		t := o.Leafnode.TLS

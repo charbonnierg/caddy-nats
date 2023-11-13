@@ -248,6 +248,11 @@ func (o *Options) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := parseAuthCallout(d, o.AuthCallout); err != nil {
 				return err
 			}
+		case "auth_account":
+			o.AuthCallout = fnutils.DefaultIfNil(o.AuthCallout, &AuthCalloutMap{})
+			if err := parser.ParseString(d, &o.AuthCallout.Account); err != nil {
+				return err
+			}
 		case "account":
 			o.Accounts = fnutils.DefaultIfEmpty(o.Accounts, []*Account{})
 			acc := Account{}
@@ -377,92 +382,12 @@ func parseSubjectMapping(d *caddyfile.Dispenser, account *Account) error {
 func ParseAccount(d *caddyfile.Dispenser, acc *Account) error {
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
-		case "auth_policy", "authorize":
-			if acc.AuthorizationPolicies == nil {
-				acc.AuthorizationPolicies = []*natsauth.AuthorizationPolicy{}
-			}
-			policy := natsauth.AuthorizationPolicy{}
-			for nesting := d.Nesting(); d.NextBlock(nesting); {
-				switch d.Val() {
-				case "match":
-					if policy.MatchersRaw == nil {
-						policy.MatchersRaw = map[string]json.RawMessage{}
-					}
-					if d.CountRemainingArgs() > 0 {
-						module := ""
-						if err := parser.ParseString(d, &module); err != nil {
-							return err
-						}
-						unm, err := caddyfile.UnmarshalModule(d, "nats_server.matchers."+module)
-						if err != nil {
-							return err
-						}
-						matcher, ok := unm.(natsauth.AuthorizationMatcher)
-						if !ok {
-							return errors.New("matcher module is not a matcher")
-						}
-						policy.MatchersRaw[module] = caddyconfig.JSON(matcher, nil)
-					} else {
-						for nesting := d.Nesting(); d.NextBlock(nesting); {
-							module := d.Val()
-							unm, err := caddyfile.UnmarshalModule(d, "nats_server.matchers."+module)
-							if err != nil {
-								return err
-							}
-							matcher, ok := unm.(natsauth.AuthorizationMatcher)
-							if !ok {
-								return errors.New("matcher module is not a matcher")
-							}
-							policy.MatchersRaw[module] = caddyconfig.JSON(matcher, nil)
-						}
-					}
-
-				case "callout":
-					module := ""
-					if err := parser.ParseString(d, &module); err != nil {
-						return err
-					}
-					unm, err := caddyfile.UnmarshalModule(d, "nats_server.callouts."+module)
-					if err != nil {
-						return err
-					}
-					callout, ok := unm.(natsauth.AuthorizationCallout)
-					if !ok {
-						return errors.New("callout module is not a callout")
-					}
-					policy.CalloutRaw = caddyconfig.JSONModuleObject(callout, "module", module, nil)
-				default:
-					return d.Errf("unrecognized auth_policy subdirective: %s", d.Val())
-				}
-			}
-			acc.AuthorizationPolicies = append(acc.AuthorizationPolicies, &policy)
-		case "stream":
-			acc.JetStream = true
-			acc.Streams = fnutils.DefaultIfEmpty(acc.Streams, []*natsclient.Stream{})
-			stream := natsclient.Stream{}
-			if err := stream.UnmarshalCaddyfile(d); err != nil {
+		case "name":
+			if err := parser.ParseString(d, &acc.Name); err != nil {
 				return err
 			}
-			acc.Streams = append(acc.Streams, &stream)
-		case "flow", "data_flow":
-			acc.JetStream = true
-			acc.Flows = fnutils.DefaultIfEmpty(acc.Flows, []*Flow{})
-			flow := Flow{}
-			if err := flow.UnmarshalCaddyfile(d); err != nil {
-				return err
-			}
-			acc.Flows = append(acc.Flows, &flow)
-		case "service":
-			acc.Services = fnutils.DefaultIfEmpty(acc.Services, []json.RawMessage{})
-			provider, err := natsclient.LoadRawServiceProvider(d, "type")
-			if err != nil {
-				return err
-			}
-			acc.Services = append(acc.Services, provider)
-		case "object_store":
-			acc.ObjectStores = fnutils.DefaultIfEmpty(acc.ObjectStores, []*natsclient.ObjectStore{})
-			store := natsclient.ObjectStore{}
-			if err := store.UnmarshalCaddyfile(d); err != nil {
+		case "nkey":
+			if err := parser.ParseString(d, &acc.NKey); err != nil {
 				return err
 			}
 		case "jetstream":
@@ -570,6 +495,105 @@ func ParseAccount(d *caddyfile.Dispenser, acc *Account) error {
 				}
 			}
 			acc.Imports.Streams = append(acc.Imports.Streams, import_)
+		case "auth_policy", "authorize":
+			if acc.AuthorizationPolicies == nil {
+				acc.AuthorizationPolicies = []*natsauth.AuthorizationPolicy{}
+			}
+			policy := natsauth.AuthorizationPolicy{}
+			for nesting := d.Nesting(); d.NextBlock(nesting); {
+				switch d.Val() {
+				case "match":
+					if policy.MatchersRaw == nil {
+						policy.MatchersRaw = map[string]json.RawMessage{}
+					}
+					if d.CountRemainingArgs() > 0 {
+						module := ""
+						if err := parser.ParseString(d, &module); err != nil {
+							return err
+						}
+						unm, err := caddyfile.UnmarshalModule(d, "nats_server.matchers."+module)
+						if err != nil {
+							return err
+						}
+						matcher, ok := unm.(natsauth.AuthorizationMatcher)
+						if !ok {
+							return errors.New("matcher module is not a matcher")
+						}
+						policy.MatchersRaw[module] = caddyconfig.JSON(matcher, nil)
+					} else {
+						for nesting := d.Nesting(); d.NextBlock(nesting); {
+							module := d.Val()
+							unm, err := caddyfile.UnmarshalModule(d, "nats_server.matchers."+module)
+							if err != nil {
+								return err
+							}
+							matcher, ok := unm.(natsauth.AuthorizationMatcher)
+							if !ok {
+								return errors.New("matcher module is not a matcher")
+							}
+							policy.MatchersRaw[module] = caddyconfig.JSON(matcher, nil)
+						}
+					}
+
+				case "callout":
+					module := ""
+					if err := parser.ParseString(d, &module); err != nil {
+						return err
+					}
+					unm, err := caddyfile.UnmarshalModule(d, "nats_server.callouts."+module)
+					if err != nil {
+						return err
+					}
+					callout, ok := unm.(natsauth.AuthorizationCallout)
+					if !ok {
+						return errors.New("callout module is not a callout")
+					}
+					policy.CalloutRaw = caddyconfig.JSONModuleObject(callout, "module", module, nil)
+				default:
+					return d.Errf("unrecognized auth_policy subdirective: %s", d.Val())
+				}
+			}
+			acc.AuthorizationPolicies = append(acc.AuthorizationPolicies, &policy)
+		case "connect_leaf", "leafnode_connection", "leafnode_connect":
+			remote := &Remote{
+				Account: acc.Name,
+			}
+			if err := ParseRemoteLeafnode(d, remote); err != nil {
+				return err
+			}
+			if acc.LeafnodeConnections == nil {
+				acc.LeafnodeConnections = []*Remote{}
+			}
+			acc.LeafnodeConnections = append(acc.LeafnodeConnections, remote)
+		case "stream":
+			acc.JetStream = true
+			acc.Streams = fnutils.DefaultIfEmpty(acc.Streams, []*natsclient.Stream{})
+			stream := natsclient.Stream{}
+			if err := stream.UnmarshalCaddyfile(d); err != nil {
+				return err
+			}
+			acc.Streams = append(acc.Streams, &stream)
+		case "flow", "data_flow":
+			acc.JetStream = true
+			acc.Flows = fnutils.DefaultIfEmpty(acc.Flows, []*Flow{})
+			flow := Flow{}
+			if err := flow.UnmarshalCaddyfile(d); err != nil {
+				return err
+			}
+			acc.Flows = append(acc.Flows, &flow)
+		case "service":
+			acc.Services = fnutils.DefaultIfEmpty(acc.Services, []json.RawMessage{})
+			provider, err := natsclient.LoadRawServiceProvider(d, "type")
+			if err != nil {
+				return err
+			}
+			acc.Services = append(acc.Services, provider)
+		case "object_store":
+			acc.ObjectStores = fnutils.DefaultIfEmpty(acc.ObjectStores, []*natsclient.ObjectStore{})
+			store := natsclient.ObjectStore{}
+			if err := store.UnmarshalCaddyfile(d); err != nil {
+				return err
+			}
 		default:
 			return d.Errf("unrecognized account subdirective: %s", d.Val())
 		}
@@ -920,7 +944,7 @@ func ParseRemoteLeafnodes(d *caddyfile.Dispenser, remotes *[]*Remote) error {
 		return d.Err("internal error: remotes is nil. Please open a bug report.")
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
-		remote := Remote{Url: d.Val()}
+		remote := Remote{Urls: []string{d.Val()}}
 		if err := ParseRemoteLeafnode(d, &remote); err != nil {
 			return err
 		}
@@ -930,12 +954,13 @@ func ParseRemoteLeafnodes(d *caddyfile.Dispenser, remotes *[]*Remote) error {
 }
 
 func ParseRemoteLeafnode(d *caddyfile.Dispenser, remote *Remote) error {
+	if d.CountRemainingArgs() > 0 {
+		if err := parser.ParseStringArray(d, &remote.Urls); err != nil {
+			return err
+		}
+	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
-		case "url":
-			if err := parser.ParseString(d, &remote.Url); err != nil {
-				return err
-			}
 		case "urls":
 			if err := parser.ParseStringArray(d, &remote.Urls); err != nil {
 				return err
