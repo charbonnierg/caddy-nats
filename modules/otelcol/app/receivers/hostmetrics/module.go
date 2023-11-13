@@ -125,6 +125,10 @@ func (HostMetricsReceiver) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+func (e *HostMetricsReceiver) ReplaceAll(repl *caddy.Replacer) error {
+	return nil
+}
+
 var (
 	_ config.Receiver = (*HostMetricsReceiver)(nil)
 )

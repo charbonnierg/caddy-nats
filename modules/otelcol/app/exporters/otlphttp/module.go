@@ -123,6 +123,53 @@ func (OtlpHttpExporter) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+func (e *OtlpHttpExporter) ReplaceAll(repl *caddy.Replacer) error {
+	if e.Endpoint != "" {
+		endpoint, err := repl.ReplaceOrErr(e.Endpoint, true, true)
+		if err != nil {
+			return err
+		}
+		e.Endpoint = endpoint
+	}
+	if e.TracesEndpoint != "" {
+		tracesEndpoint, err := repl.ReplaceOrErr(e.TracesEndpoint, true, true)
+		if err != nil {
+			return err
+		}
+		e.TracesEndpoint = tracesEndpoint
+	}
+	if e.MetricsEndpoint != "" {
+		metricsEndpoint, err := repl.ReplaceOrErr(e.MetricsEndpoint, true, true)
+		if err != nil {
+			return err
+		}
+		e.MetricsEndpoint = metricsEndpoint
+	}
+	if e.LogsEndpoint != "" {
+		logsEndpoint, err := repl.ReplaceOrErr(e.LogsEndpoint, true, true)
+		if err != nil {
+			return err
+		}
+		e.LogsEndpoint = logsEndpoint
+	}
+	if e.Headers != nil {
+		headers := map[string]string{}
+		for k, v := range e.Headers {
+			key, err := repl.ReplaceOrErr(k, true, true)
+			if err != nil {
+				return err
+			}
+			value, err := repl.ReplaceOrErr(v, true, true)
+			if err != nil {
+				return err
+			}
+			headers[key] = value
+		}
+		e.Headers = headers
+	}
+	return nil
+}
+
 // Interface guards
 var (
 	_ config.Exporter = (*OtlpHttpExporter)(nil)

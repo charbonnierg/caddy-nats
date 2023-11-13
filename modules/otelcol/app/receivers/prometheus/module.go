@@ -24,6 +24,10 @@ func (PrometheusReceiver) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+func (e *PrometheusReceiver) ReplaceAll(repl *caddy.Replacer) error {
+	return e.Config.ReplaceAll(repl)
+}
+
 // Interface guards
 var (
 	_ config.Receiver = (*PrometheusReceiver)(nil)

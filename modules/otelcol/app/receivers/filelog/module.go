@@ -73,6 +73,74 @@ func (FileLogReceiver) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+func (f *FileLogReceiver) ReplaceAll(repl *caddy.Replacer) error {
+	if f.OrderingCriteria != nil {
+		if f.OrderingCriteria.Regex != "" {
+			regex, err := repl.ReplaceOrErr(f.OrderingCriteria.Regex, true, true)
+			if err != nil {
+				return err
+			}
+			f.OrderingCriteria.Regex = regex
+		}
+		if f.OrderingCriteria.SortBy != nil {
+			for _, sort := range f.OrderingCriteria.SortBy {
+				if sort.RegexKey != "" {
+					regexKey, err := repl.ReplaceOrErr(sort.RegexKey, true, true)
+					if err != nil {
+						return err
+					}
+					sort.RegexKey = regexKey
+				}
+				if sort.Layout != "" {
+					layout, err := repl.ReplaceOrErr(sort.Layout, true, true)
+					if err != nil {
+						return err
+					}
+					sort.Layout = layout
+				}
+				if sort.Location != "" {
+					location, err := repl.ReplaceOrErr(sort.Location, true, true)
+					if err != nil {
+						return err
+					}
+					sort.Location = location
+				}
+			}
+		}
+	}
+	if f.SplitConfig != nil {
+		if f.SplitConfig.LineStartPattern != "" {
+			lineStartPattern, err := repl.ReplaceOrErr(f.SplitConfig.LineStartPattern, true, true)
+			if err != nil {
+				return err
+			}
+			f.SplitConfig.LineStartPattern = lineStartPattern
+		}
+		if f.SplitConfig.LineEndPattern != "" {
+			lineEndPattern, err := repl.ReplaceOrErr(f.SplitConfig.LineEndPattern, true, true)
+			if err != nil {
+				return err
+			}
+			f.SplitConfig.LineEndPattern = lineEndPattern
+		}
+	}
+	if f.StartAt != "" {
+		startAt, err := repl.ReplaceOrErr(f.StartAt, true, true)
+		if err != nil {
+			return err
+		}
+		f.StartAt = startAt
+	}
+	if f.Encoding != "" {
+		encoding, err := repl.ReplaceOrErr(f.Encoding, true, true)
+		if err != nil {
+			return err
+		}
+		f.Encoding = encoding
+	}
+	return nil
+}
+
 var (
 	_ config.Receiver = (*FileLogReceiver)(nil)
 )

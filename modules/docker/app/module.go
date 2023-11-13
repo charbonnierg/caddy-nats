@@ -44,21 +44,17 @@ func (a *App) Provision(ctx caddy.Context) error {
 	a.logger = ctx.Logger()
 	a.containers = []*ContainerDefinition{}
 	a.networks = []*NetworkDefinition{}
-	// This will load the beyond module and register the "secrets" app within beyond module
-	b, err := beyond.Register(ctx, a)
-	if err != nil {
+	repl := caddy.NewReplacer()
+	if err := secrets.UpdateReplacer(ctx, repl); err != nil {
 		return err
 	}
-	// At this point we can use the beyond module to load other apps
-	// Let's load the secret app
-	unm, err := b.LoadApp(secrets.NS)
-	if err != nil {
-		return fmt.Errorf("failed to load secrets app: %v", err)
+	if a.ClientOptions != nil {
+		host, err := repl.ReplaceOrErr(a.ClientOptions.Host, true, true)
+		if err != nil {
+			return fmt.Errorf("failed to replace host: %w", err)
+		}
+		a.ClientOptions.Host = host
 	}
-	secrets := unm.(secrets.App)
-	repl := caddy.NewReplacer()
-	secrets.AddSecretsReplacerVars(repl)
-
 	client, err := NewDockerClient(a.ctx, a.ClientOptions)
 	if err != nil {
 		return err

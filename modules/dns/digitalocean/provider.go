@@ -31,13 +31,9 @@ func (Provider) CaddyModule() caddy.ModuleInfo {
 // Implements caddy.Provisioner.
 func (p *Provider) Provision(ctx caddy.Context) error {
 	repl := caddy.NewReplacer()
-	// Load the secrets app
-	secrets, err := secrets.LoadCaddyApp(&ctx)
-	if err != nil {
+	if err := secrets.UpdateReplacer(ctx, repl); err != nil {
 		return err
 	}
-	// Add the secrets replacer vars in order to resolve the API token
-	secrets.AddSecretsReplacerVars(repl)
 	token, err := repl.ReplaceOrErr(p.Provider.APIToken, true, true)
 	if err != nil {
 		return err

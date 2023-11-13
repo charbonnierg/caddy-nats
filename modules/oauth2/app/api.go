@@ -19,8 +19,8 @@ func (a *App) Context() caddy.Context { return a.ctx }
 // Logger returns the logger for the app.
 func (a *App) Logger() *zap.Logger { return a.logger }
 
-// GetReplacer returns the caddy replacer for the app.
-func (a *App) GetReplacer() *caddy.Replacer { return a.repl }
+// Replacer returns the caddy replacer for the app.
+func (a *App) Replacer() *caddy.Replacer { return a.repl }
 
 // LoadBeyondApp returns the beyond app with the given id.
 func (a *App) LoadBeyondApp(id string) (beyond.App, error) {

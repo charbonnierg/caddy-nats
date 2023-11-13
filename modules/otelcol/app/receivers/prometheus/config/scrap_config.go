@@ -7,8 +7,8 @@ import (
 	"net/url"
 
 	"github.com/alecthomas/units"
+	"github.com/caddyserver/caddy/v2"
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/model/relabel"
 )
 
 type StaticConfig struct {
@@ -68,12 +68,117 @@ type ScrapeConfig struct {
 	// 0 means no limit.
 	KeepDroppedTargets uint `json:"keep_dropped_targets,omitempty"`
 	// List of target relabel configurations.
-	RelabelConfigs []*relabel.Config `json:"relabel_configs,omitempty"`
+	RelabelConfigs []*RelabelConfig `json:"relabel_configs,omitempty"`
 	// List of metric relabel configurations.
-	MetricRelabelConfigs []*relabel.Config `json:"metric_relabel_configs,omitempty"`
+	MetricRelabelConfigs []*RelabelConfig `json:"metric_relabel_configs,omitempty"`
 	// Discovery configurations.
 	StaticConfig        []*StaticConfig        `json:"static_configs,omitempty"`
 	FileSDConfig        []*FileSDConfig        `json:"file_sd_configs,omitempty"`
 	DockerSDConfig      []*DockerSDConfig      `json:"docker_sd_configs,omitempty"`
 	DockerSwarmSDConfig []*DockerSwarmSDConfig `json:"docker_swarm_sd_configs,omitempty"`
+}
+
+func (c *ScrapeConfig) ReplaceAll(repl *caddy.Replacer) error {
+	if c.JobName != "" {
+		jobName, err := repl.ReplaceOrErr(c.JobName, true, true)
+		if err != nil {
+			return err
+		}
+		c.JobName = jobName
+	}
+	for _, params := range c.Params {
+		for i, param := range params {
+			param, err := repl.ReplaceOrErr(param, true, true)
+			if err != nil {
+				return err
+			}
+			params[i] = param
+		}
+	}
+	if c.MetricsPath != "" {
+		metricsPath, err := repl.ReplaceOrErr(c.MetricsPath, true, true)
+		if err != nil {
+			return err
+		}
+		c.MetricsPath = metricsPath
+	}
+	if c.Scheme != "" {
+		scheme, err := repl.ReplaceOrErr(c.Scheme, true, true)
+		if err != nil {
+			return err
+		}
+		c.Scheme = scheme
+	}
+	for _, rc := range c.RelabelConfigs {
+		if err := rc.ReplaceAll(repl); err != nil {
+			return err
+		}
+	}
+	for _, rc := range c.MetricRelabelConfigs {
+		if err := rc.ReplaceAll(repl); err != nil {
+			return err
+		}
+	}
+	for _, sc := range c.StaticConfig {
+		for i, target := range sc.Targets {
+			target, err := repl.ReplaceOrErr(target, true, true)
+			if err != nil {
+				return err
+			}
+			sc.Targets[i] = target
+		}
+	}
+	for _, fsc := range c.FileSDConfig {
+		for i, file := range fsc.Files {
+			file, err := repl.ReplaceOrErr(file, true, true)
+			if err != nil {
+				return err
+			}
+			fsc.Files[i] = file
+		}
+	}
+	for _, dsc := range c.DockerSDConfig {
+		if dsc.Host != "" {
+			host, err := repl.ReplaceOrErr(dsc.Host, true, true)
+			if err != nil {
+				return err
+			}
+			dsc.Host = host
+		}
+		for _, filter := range dsc.Filters {
+			for i, value := range filter.Values {
+				value, err := repl.ReplaceOrErr(value, true, true)
+				if err != nil {
+					return err
+				}
+				filter.Values[i] = value
+			}
+		}
+	}
+	for _, dssc := range c.DockerSwarmSDConfig {
+		if dssc.Host != "" {
+			host, err := repl.ReplaceOrErr(dssc.Host, true, true)
+			if err != nil {
+				return err
+			}
+			dssc.Host = host
+		}
+		if dssc.Role != "" {
+			role, err := repl.ReplaceOrErr(dssc.Role, true, true)
+			if err != nil {
+				return err
+			}
+			dssc.Role = role
+		}
+		for _, filter := range dssc.Filters {
+			for i, value := range filter.Values {
+				value, err := repl.ReplaceOrErr(value, true, true)
+				if err != nil {
+					return err
+				}
+				filter.Values[i] = value
+			}
+		}
+	}
+	return nil
 }

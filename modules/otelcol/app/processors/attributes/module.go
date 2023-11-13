@@ -70,6 +70,10 @@ func (AttributeProcessor) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+func (e *AttributeProcessor) ReplaceAll(repl *caddy.Replacer) error {
+	return nil
+}
+
 // Interface guards
 var (
 	_ config.Processor = (*AttributeProcessor)(nil)

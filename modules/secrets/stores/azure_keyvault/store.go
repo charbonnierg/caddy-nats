@@ -5,6 +5,7 @@ package azure_keyvault
 
 import (
 	"errors"
+	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -24,7 +25,8 @@ type AzureKeyvault struct {
 	logger *zap.Logger
 	client AzureKeyvaultClient `json:"-"`
 	// The Azure Keyvault URI
-	URI string `json:"uri,omitempty"`
+	URI string        `json:"uri,omitempty"`
+	TTL time.Duration `json:"ttl,omitempty"`
 	// The Azure Keyvault credential config
 	CredentialConfig *azutils.CredentialConfig `json:"credential,omitempty"`
 }
@@ -45,7 +47,7 @@ func (s *AzureKeyvault) Provision(app secrets.App) error {
 		return errors.New("uri is required")
 	}
 	s.ctx = app.Context()
-	s.logger = s.ctx.Logger().Named("azure_keyvault")
+	s.logger = s.ctx.Logger().Named("store.azure_keyvault").With(zap.String("uri", s.URI))
 	if s.CredentialConfig == nil {
 		s.CredentialConfig = new(azutils.CredentialConfig)
 	}
@@ -53,8 +55,11 @@ func (s *AzureKeyvault) Provision(app secrets.App) error {
 	if err != nil {
 		return err
 	}
-	s.logger.Info("provisioning azure keyvault store", zap.String("uri", s.URI))
-	client, err := NewClient(s.URI, s.CredentialConfig)
+	if s.TTL == 0 {
+		s.TTL = 1 * time.Minute
+	}
+	s.logger.Info("provisioning azure keyvault store")
+	client, err := NewClient(s.URI, s.TTL, s.CredentialConfig)
 	if err != nil {
 		s.logger.Error("error creating azure keyvault client", zap.Error(err))
 		return err

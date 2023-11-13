@@ -21,6 +21,10 @@ func (BatchProcessor) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+func (e *BatchProcessor) ReplaceAll(repl *caddy.Replacer) error {
+	return nil
+}
+
 // Interface guards
 var (
 	_ config.Processor = (*BatchProcessor)(nil)

@@ -20,6 +20,7 @@ type Operator struct {
 	*FilterOperator
 	*SeverityParser
 	*RemoveOperator
+	*MoveOperator
 }
 
 func (o *Operator) MarshalJSON() ([]byte, error) {
@@ -78,9 +79,81 @@ func (o *Operator) MarshalJSON() ([]byte, error) {
 			Type string `json:"type,omitempty"`
 			*RemoveOperator
 		}{Type: o.Type, RemoveOperator: o.RemoveOperator})
+	case o.MoveOperator != nil:
+		o.Type = "move"
+		return json.Marshal(&struct {
+			Type string `json:"type,omitempty"`
+			*MoveOperator
+		}{Type: o.Type, MoveOperator: o.MoveOperator})
 	default:
 		return nil, errors.New("empty operator")
 	}
+}
+
+func (o *Operator) UnmarshalJSON(data []byte) error {
+	var op map[string]interface{}
+	if err := json.Unmarshal(data, &op); err != nil {
+		return err
+	}
+	rawtype, ok := op["type"]
+	if !ok {
+		return errors.New("operator type not found")
+	}
+	switch rawtype {
+	case "file_input":
+		o.FileInputOperator = &FileInputOperator{}
+		if err := json.Unmarshal(data, o.FileInputOperator); err != nil {
+			return err
+		}
+	case "journald_input":
+		o.JournaldInputOperator = &JournaldInputOperator{}
+		if err := json.Unmarshal(data, o.JournaldInputOperator); err != nil {
+			return err
+		}
+	case "json_parser":
+		o.JsonParserOperator = &JsonParserOperator{}
+		if err := json.Unmarshal(data, o.JsonParserOperator); err != nil {
+			return err
+		}
+	case "regex_parser":
+		o.RegexParserOperator = &RegexParserOperator{}
+		if err := json.Unmarshal(data, o.RegexParserOperator); err != nil {
+			return err
+		}
+	case "time_parser":
+		o.TimeParser = &TimeParser{}
+		if err := json.Unmarshal(data, o.TimeParser); err != nil {
+			return err
+		}
+	case "severity_parser":
+		o.SeverityParser = &SeverityParser{}
+		if err := json.Unmarshal(data, o.SeverityParser); err != nil {
+			return err
+		}
+	case "add":
+		o.AddOperator = &AddOperator{}
+		if err := json.Unmarshal(data, o.AddOperator); err != nil {
+			return err
+		}
+	case "filter":
+		o.FilterOperator = &FilterOperator{}
+		if err := json.Unmarshal(data, o.FilterOperator); err != nil {
+			return err
+		}
+	case "remove":
+		o.RemoveOperator = &RemoveOperator{}
+		if err := json.Unmarshal(data, o.RemoveOperator); err != nil {
+			return err
+		}
+	case "move":
+		o.MoveOperator = &MoveOperator{}
+		if err := json.Unmarshal(data, o.MoveOperator); err != nil {
+			return err
+		}
+	default:
+		return errors.New("unknown operator type")
+	}
+	return nil
 }
 
 type FileInputOperator struct {
@@ -173,6 +246,14 @@ type FilterOperator struct {
 type RemoveOperator struct {
 	Output  string `json:"output,omitempty"`
 	Field   string `json:"field,omitempty"`
+	OnError string `json:"on_error,omitempty"`
+	If      string `json:"if,omitempty"`
+}
+
+type MoveOperator struct {
+	Output  string `json:"output,omitempty"`
+	From    string `json:"from,omitempty"`
+	To      string `json:"to,omitempty"`
 	OnError string `json:"on_error,omitempty"`
 	If      string `json:"if,omitempty"`
 }

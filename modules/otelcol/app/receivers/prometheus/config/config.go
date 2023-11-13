@@ -5,6 +5,7 @@ package config
 
 import (
 	"github.com/alecthomas/units"
+	"github.com/caddyserver/caddy/v2"
 	promconfig "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	promlabels "github.com/prometheus/prometheus/model/labels"
@@ -53,4 +54,37 @@ type Config struct {
 	GlobalConfig      GlobalConfig    `json:"global"`
 	ScrapeConfigFiles []string        `json:"scrape_config_files,omitempty"`
 	ScrapeConfigs     []*ScrapeConfig `json:"scrape_configs,omitempty"`
+}
+
+func (c *Config) ReplaceAll(repl *caddy.Replacer) error {
+	if c.GlobalConfig.ExternalLabels != nil {
+		labels := promlabels.Labels{}
+		for _, l := range c.GlobalConfig.ExternalLabels {
+			name, err := repl.ReplaceOrErr(l.Name, true, true)
+			if err != nil {
+				return err
+			}
+			value, err := repl.ReplaceOrErr(l.Value, true, true)
+			if err != nil {
+				return err
+			}
+			labels = append(labels, promlabels.Label{Name: name, Value: value})
+		}
+		c.GlobalConfig.ExternalLabels = labels
+	}
+	if c.ScrapeConfigFiles != nil {
+		for i, file := range c.ScrapeConfigFiles {
+			file, err := repl.ReplaceOrErr(file, true, true)
+			if err != nil {
+				return err
+			}
+			c.ScrapeConfigFiles[i] = file
+		}
+	}
+	for _, sc := range c.ScrapeConfigs {
+		if err := sc.ReplaceAll(repl); err != nil {
+			return err
+		}
+	}
+	return nil
 }

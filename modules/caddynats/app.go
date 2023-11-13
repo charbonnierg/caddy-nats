@@ -69,6 +69,7 @@ func (App) CaddyModule() caddy.ModuleInfo {
 }
 
 func (a *App) Provision(ctx caddy.Context) error {
+	a.ctx = ctx
 	if _, err := beyond.Register(ctx, a); err != nil {
 		return err
 	}

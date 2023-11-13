@@ -85,7 +85,7 @@ func (e *Endpoint) Provision(app oauth2.App) error {
 	if e.Options == nil {
 		return fmt.Errorf("no options found for endpoint %s", e.Name())
 	}
-	e.opts = e.Options.oauth2proxyOptions(app.GetReplacer())
+	e.opts = e.Options.oauth2proxyOptions(app.Replacer())
 	if e.opts.Cookie.Secret == "" {
 		secret, err := secretutils.GenerateRandomASCIIString(32)
 		if err != nil {

@@ -7,12 +7,12 @@ import (
 	"context"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/quara-dev/beyond"
 )
 
 // App is the interface implemented by the secrets caddy app module.
 type App interface {
-	beyond.App
+	// GetContext returns the app context.
+	Context() caddy.Context
 	// GetStore returns the store with the given name.
 	GetStore(store string) Store
 	// GetSource returns the source with the given name.
@@ -21,10 +21,10 @@ type App interface {
 	GetSecret(key string) (*Secret, error)
 	// AddAutomation adds an automation to the app and provisions it.
 	AddAutomation(automation ...Automation) error
-	// AddSecretsReplacerVars adds replacer variables to the given replacer.
+	// UpdateReplacer adds replacer variables to the given replacer.
 	// It is used by other caddy modules to add secrets replacer variables to their own replacer.
 	// It makes it possible to use secrets replacer variables in other caddy modules.
-	AddSecretsReplacerVars(repl *caddy.Replacer)
+	UpdateReplacer(repl *caddy.Replacer)
 }
 
 // Store is a secret store.

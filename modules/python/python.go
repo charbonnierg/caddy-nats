@@ -3,8 +3,12 @@
 
 package python
 
-import "github.com/quara-dev/beyond"
+import (
+	"github.com/caddyserver/caddy/v2"
+	"github.com/quara-dev/beyond"
+)
 
 type App interface {
 	beyond.App
+	Replacer() *caddy.Replacer
 }

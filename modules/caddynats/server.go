@@ -187,11 +187,11 @@ func (s *Server) Start() error {
 		return nil
 	}
 	if collectorIsAlreadyRunning() {
-		if err := s.createNewCollector(); err != nil {
+		if err := s.reuseExistingCollector(); err != nil {
 			return err
 		}
 	} else {
-		if err := s.reuseExistingCollector(); err != nil {
+		if err := s.createNewCollector(); err != nil {
 			return err
 		}
 	}

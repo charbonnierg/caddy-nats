@@ -60,14 +60,11 @@ func (a *App) Provision(ctx caddy.Context) error {
 		return err
 	}
 	a.beyond = b
-	// Load the secrets app
-	secretsApp, err := secrets.LoadBeyondApp(b)
-	if err != nil {
-		return err
-	}
 	// Add the secrets replacer vars in order to resolve the API token
 	repl := caddy.NewReplacer()
-	secretsApp.AddSecretsReplacerVars(repl)
+	if err := secrets.UpdateReplacer(ctx, repl); err != nil {
+		return err
+	}
 	a.repl = repl
 	// Endpoints present in the config at this point are the ones that were configured in the Caddyfile/JSON config.
 	// They were not added using .GetOrAddEndpoint() because this method can only be called after the app is provisioned.

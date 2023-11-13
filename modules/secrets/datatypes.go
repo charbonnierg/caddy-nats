@@ -12,6 +12,12 @@ type Sources = []*Source
 // Secrets is a list of secrets.
 type Secrets = []*Secret
 
+// Secret is used to pass secret values to functions.
+type Secret struct {
+	Source *Source
+	Value  string
+}
+
 // Source is used to retrieve a secret from a store.
 type Source struct {
 	Store     Store
@@ -27,10 +33,4 @@ func (s *Source) String() string {
 // Get returns the value of the secret.
 func (s *Source) Get() (string, error) {
 	return s.Store.Get(s.Key)
-}
-
-// Secret is used to pass secret values to functions.
-type Secret struct {
-	Source *Source
-	Value  string
 }

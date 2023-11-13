@@ -104,20 +104,9 @@ func (o *App) Provision(ctx caddy.Context) error {
 	default:
 		return fmt.Errorf("config_uri and service are mutually exclusive")
 	}
-	// Register beyond module
-	b, err := beyond.Register(o.ctx, o)
-	if err != nil {
+	if err := secrets.UpdateReplacer(ctx, repl); err != nil {
 		return err
 	}
-	unm, err := b.LoadApp("secrets")
-	if err != nil {
-		return err
-	}
-	secretApp, ok := unm.(secrets.App)
-	if !ok {
-		return fmt.Errorf("expected secrets module")
-	}
-	secretApp.AddSecretsReplacerVars(repl)
 	raw, err := o.config.Marshal(repl)
 	if err != nil {
 		return err
@@ -187,7 +176,7 @@ func (a *App) loadRawConfig(dest *config.Config) error {
 		for id, raw := range a.Receivers {
 			unm, err := a.ctx.LoadModuleByID("otelcol.receivers."+string(id.Type()), raw)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to load  receiver module: %v", err)
 			}
 			_, ok := unm.(config.Receiver)
 			if !ok {

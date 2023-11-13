@@ -19,7 +19,7 @@ type App interface {
 	beyond.BeyondAppLoader
 	GetEndpoint(name string) (Endpoint, error)
 	GetOrAddEndpoint(endpoint Endpoint) (Endpoint, error)
-	GetReplacer() *caddy.Replacer
+	Replacer() *caddy.Replacer
 }
 
 type Endpoint interface {

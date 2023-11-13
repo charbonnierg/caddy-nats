@@ -42,6 +42,45 @@ func (OtlpReceiver) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+func (e *OtlpReceiver) ReplaceAll(repl *caddy.Replacer) error {
+	if e.Protocols == nil {
+		return nil
+	}
+	if e.Protocols.GRPC != nil {
+		if e.Protocols.GRPC.Endpoint == "" {
+			ep, err := repl.ReplaceOrErr(e.Protocols.GRPC.Endpoint, true, true)
+			if err != nil {
+				return err
+			}
+			e.Protocols.GRPC.Endpoint = ep
+		}
+	}
+	if e.Protocols.HTTP != nil {
+		if e.Protocols.HTTP.TracesURLPath != "" {
+			tracesURLPath, err := repl.ReplaceOrErr(e.Protocols.HTTP.TracesURLPath, true, true)
+			if err != nil {
+				return err
+			}
+			e.Protocols.HTTP.TracesURLPath = tracesURLPath
+		}
+		if e.Protocols.HTTP.MetricsURLPath != "" {
+			metricsURLPath, err := repl.ReplaceOrErr(e.Protocols.HTTP.MetricsURLPath, true, true)
+			if err != nil {
+				return err
+			}
+			e.Protocols.HTTP.MetricsURLPath = metricsURLPath
+		}
+		if e.Protocols.HTTP.LogsURLPath != "" {
+			logsURLPath, err := repl.ReplaceOrErr(e.Protocols.HTTP.LogsURLPath, true, true)
+			if err != nil {
+				return err
+			}
+			e.Protocols.HTTP.LogsURLPath = logsURLPath
+		}
+	}
+	return nil
+}
+
 // Interface guards
 var (
 	_ config.Receiver = (*OtlpReceiver)(nil)

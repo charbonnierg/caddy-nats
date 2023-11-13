@@ -9,7 +9,6 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
-	"github.com/quara-dev/beyond"
 	"github.com/quara-dev/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
@@ -53,11 +52,6 @@ func (a *App) Provision(ctx caddy.Context) error {
 	a.ctx = ctx
 	a.logger = ctx.Logger()
 	a.stores = secrets.Stores{}
-	// This will load the beyond module and register the "secrets" app within beyond module
-	_, err := beyond.Register(ctx, a)
-	if err != nil {
-		return err
-	}
 	// Let's load and provision all stores
 	if err := a.loadStoresRaw(); err != nil {
 		return err
@@ -141,8 +135,6 @@ func (a *App) loadAutomations() error {
 
 // Interface guards
 var (
-	// Make sure app implements the beyond.App interface
-	_ beyond.App = (*App)(nil)
 	// Only methods exposed by the secrets.SecretApp interface will be accessible
 	// to other apps.
 	_ secrets.App = (*App)(nil)

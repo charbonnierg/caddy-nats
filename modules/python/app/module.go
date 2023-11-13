@@ -9,6 +9,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/quara-dev/beyond/modules/python"
+	"github.com/quara-dev/beyond/modules/secrets"
 	"go.uber.org/zap"
 )
 
@@ -19,6 +20,7 @@ func init() {
 
 type App struct {
 	ctx       caddy.Context
+	repl      *caddy.Replacer
 	Processes []*PythonProcess `json:"processes,omitempty"`
 }
 
@@ -37,7 +39,17 @@ func (a *App) Logger() *zap.Logger {
 	return a.ctx.Logger(a)
 }
 
+func (a *App) Replacer() *caddy.Replacer {
+	return a.repl
+}
+
 func (a *App) Provision(ctx caddy.Context) error {
+	a.ctx = ctx
+	repl := caddy.NewReplacer()
+	if err := secrets.UpdateReplacer(ctx, repl); err != nil {
+		return err
+	}
+	a.repl = repl
 	for _, process := range a.Processes {
 		if err := process.Provision(a); err != nil {
 			return err

@@ -97,7 +97,7 @@ type Options struct {
 func (o *Options) Provision(ctx caddy.Context) error {
 	o.ctx = ctx
 	o.automateSubjects = []string{}
-	o.logger = ctx.Logger().Named("nats")
+	o.logger = ctx.Logger()
 	if o.AutomationPolicyTemplate == nil {
 		o.AutomationPolicyTemplate = &caddytls.AutomationPolicy{}
 	}
@@ -1284,7 +1284,6 @@ func (o *Options) setLeafnodeOpts(opts *server.Options) error {
 	if opts.LeafNode.Remotes == nil {
 		opts.LeafNode.Remotes = []*server.RemoteLeafOpts{}
 	}
-	opts.LeafNode.Remotes = []*server.RemoteLeafOpts{}
 	for _, remote := range o.Leafnode.Remotes {
 		urls := []*url.URL{}
 		for _, r := range remote.Urls {

@@ -160,9 +160,81 @@ func (r *FileLogReceiver) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				r.Operators = append(r.Operators, o)
 			case "filter":
 				return d.Err("filter is not supported yet")
+			case "move":
+				o := &Operator{
+					MoveOperator: &MoveOperator{},
+				}
+				if err := ParseMoveOperator(d, o.MoveOperator); err != nil {
+					return fmt.Errorf("move operator: %w", err)
+				}
+				r.Operators = append(r.Operators, o)
 			case "remove":
-				return d.Err("remove is not supported yet")
+				o := &Operator{
+					RemoveOperator: &RemoveOperator{},
+				}
+				if err := ParseRemoveOperator(d, o.RemoveOperator); err != nil {
+					return fmt.Errorf("remove operator: %w", err)
+				}
+				r.Operators = append(r.Operators, o)
+			default:
+				return d.Errf("unknown operator '%s'", name)
 			}
+		}
+	}
+	return nil
+}
+
+func ParseMoveOperator(d *caddyfile.Dispenser, r *MoveOperator) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		switch d.Val() {
+		case "from":
+			if err := parser.ParseString(d, &r.From); err != nil {
+				return err
+			}
+		case "to":
+			if err := parser.ParseString(d, &r.To); err != nil {
+				return err
+			}
+		case "output":
+			if err := parser.ParseString(d, &r.Output); err != nil {
+				return err
+			}
+		case "if":
+			if err := parser.ParseString(d, &r.If); err != nil {
+				return err
+			}
+		case "on_error":
+			if err := parser.ParseString(d, &r.OnError); err != nil {
+				return err
+			}
+		default:
+			return d.Errf("unknown move operator property '%s'", d.Val())
+		}
+	}
+	return nil
+}
+
+func ParseRemoveOperator(d *caddyfile.Dispenser, r *RemoveOperator) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		switch d.Val() {
+		case "field":
+			if err := parser.ParseString(d, &r.Field); err != nil {
+				return err
+			}
+		case "output":
+			if err := parser.ParseString(d, &r.Output); err != nil {
+				return err
+			}
+		case "if":
+			if err := parser.ParseString(d, &r.If); err != nil {
+				return err
+			}
+		case "on_error":
+			if err := parser.ParseString(d, &r.OnError); err != nil {
+				return err
+			}
+		default:
+			return d.Errf("unknown remove operator property '%s'", d.Val())
 		}
 	}
 	return nil

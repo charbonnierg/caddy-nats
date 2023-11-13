@@ -6,6 +6,7 @@ package azure_keyvault
 import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/quara-dev/beyond/pkg/azutils"
+	"github.com/quara-dev/beyond/pkg/caddyutils/parser"
 )
 
 func (s *AzureKeyvault) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -22,6 +23,10 @@ func (s *AzureKeyvault) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			case "creds":
 				s.CredentialConfig = new(azutils.CredentialConfig)
 				if err := s.CredentialConfig.UnmarshalCaddyfile(d); err != nil {
+					return err
+				}
+			case "ttl":
+				if err := parser.ParseDuration(d, &s.TTL); err != nil {
 					return err
 				}
 			default:

@@ -4,8 +4,6 @@
 package zpages
 
 import (
-	"encoding/json"
-
 	"github.com/caddyserver/caddy/v2"
 	"github.com/quara-dev/beyond/modules/otelcol/app/config"
 )
@@ -24,8 +22,8 @@ func (ZpagesExtension) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (e *ZpagesExtension) Marshal(*caddy.Replacer) ([]byte, error) {
-	return json.Marshal(e)
+func (e *ZpagesExtension) ReplaceAll(repl *caddy.Replacer) error {
+	return nil
 }
 
 // Interface guards

@@ -15,19 +15,22 @@ import (
 
 type Receiver interface {
 	UnmarshalCaddyfile(d *caddyfile.Dispenser) error
+	ReplaceAll(repl *caddy.Replacer) error
 }
 
 type Processor interface {
 	UnmarshalCaddyfile(d *caddyfile.Dispenser) error
+	ReplaceAll(repl *caddy.Replacer) error
 }
 
 type Exporter interface {
 	UnmarshalCaddyfile(d *caddyfile.Dispenser) error
+	ReplaceAll(repl *caddy.Replacer) error
 }
 
 type Extension interface {
 	UnmarshalCaddyfile(d *caddyfile.Dispenser) error
-	Marshal(repl *caddy.Replacer) ([]byte, error)
+	ReplaceAll(repl *caddy.Replacer) error
 }
 
 type Config struct {
@@ -43,7 +46,14 @@ func (c *Config) Marshal(repl *caddy.Replacer) ([]byte, error) {
 	if c.Receivers != nil {
 		values["receivers"] = map[string]any{}
 		for name, receiver := range c.Receivers {
-			raw, err := json.Marshal(receiver)
+			rec, ok := receiver.(Receiver)
+			if !ok {
+				return nil, errors.New("expected exporter module")
+			}
+			if err := rec.ReplaceAll(repl); err != nil {
+				return nil, err
+			}
+			raw, err := json.Marshal(rec)
 			if err != nil {
 				return nil, err
 			}
@@ -57,7 +67,14 @@ func (c *Config) Marshal(repl *caddy.Replacer) ([]byte, error) {
 	if c.Processors != nil {
 		values["processors"] = map[string]any{}
 		for name, processor := range c.Processors {
-			raw, err := json.Marshal(processor)
+			pro, ok := processor.(Processor)
+			if !ok {
+				return nil, errors.New("expected exporter module")
+			}
+			if err := pro.ReplaceAll(repl); err != nil {
+				return nil, err
+			}
+			raw, err := json.Marshal(pro)
 			if err != nil {
 				return nil, err
 			}
@@ -71,7 +88,14 @@ func (c *Config) Marshal(repl *caddy.Replacer) ([]byte, error) {
 	if c.Exporters != nil {
 		values["exporters"] = map[string]any{}
 		for name, exporter := range c.Exporters {
-			raw, err := json.Marshal(exporter)
+			exp, ok := exporter.(Exporter)
+			if !ok {
+				return nil, errors.New("expected exporter module")
+			}
+			if err := exp.ReplaceAll(repl); err != nil {
+				return nil, err
+			}
+			raw, err := json.Marshal(exp)
 			if err != nil {
 				return nil, err
 			}
@@ -89,7 +113,10 @@ func (c *Config) Marshal(repl *caddy.Replacer) ([]byte, error) {
 			if !ok {
 				return nil, errors.New("expected extension module")
 			}
-			raw, err := ext.Marshal(repl)
+			if err := ext.ReplaceAll(repl); err != nil {
+				return nil, err
+			}
+			raw, err := json.Marshal(ext)
 			if err != nil {
 				return nil, err
 			}

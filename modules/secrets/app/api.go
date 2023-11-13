@@ -8,14 +8,10 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/quara-dev/beyond/modules/secrets"
-	"go.uber.org/zap"
 )
 
 // Context returns the caddy context for the secrets app.
 func (a *App) Context() caddy.Context { return a.ctx }
-
-// Logger returns the logger for the secrets app.
-func (a *App) Logger() *zap.Logger { return a.logger }
 
 // GetStore returns the store with the given name.
 func (a *App) GetStore(name string) secrets.Store { return a.stores[name] }
@@ -95,9 +91,9 @@ func (a *App) AddStore(name string, store secrets.Store) error {
 	return nil
 }
 
-// AddSecretsReplacerVars adds replacer variables to the given replacer.
+// UpdateReplacer adds replacer variables to the given replacer.
 // It is used by other caddy modules to add secrets replacer variables to their own replacer.
-func (a *App) AddSecretsReplacerVars(repl *caddy.Replacer) {
+func (a *App) UpdateReplacer(repl *caddy.Replacer) {
 	repl.Map(func(key string) (any, bool) {
 		secretsPrefix := "secret."
 		if !strings.HasPrefix(key, secretsPrefix) {

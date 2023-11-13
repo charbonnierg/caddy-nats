@@ -56,19 +56,6 @@ type BasicAuthExtension struct {
 	Htpasswd   *ServerAuth `json:"htpasswd,omitempty"`
 }
 
-func (b *BasicAuthExtension) Clone() *BasicAuthExtension {
-	other := &BasicAuthExtension{}
-	if b.ClientAuth != nil {
-		otherAuth := *b.ClientAuth
-		other.ClientAuth = &otherAuth
-	}
-	if b.Htpasswd != nil {
-		otherHtpasswd := *b.Htpasswd
-		other.Htpasswd = &otherHtpasswd
-	}
-	return other
-}
-
 func (BasicAuthExtension) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "otelcol.extensions.basicauth",
@@ -76,21 +63,29 @@ func (BasicAuthExtension) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (e *BasicAuthExtension) Marshal(repl *caddy.Replacer) ([]byte, error) {
-	ext := e.Clone()
-	if ext.ClientAuth != nil {
-		pwd, err := repl.ReplaceOrErr(ext.ClientAuth.Password, true, true)
+func (e *BasicAuthExtension) ReplaceAll(repl *caddy.Replacer) error {
+	if e.ClientAuth != nil {
+		pwd, err := repl.ReplaceOrErr(e.ClientAuth.Password, true, true)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		ext.ClientAuth.Password = pwd
-		usr, err := repl.ReplaceOrErr(ext.ClientAuth.Username, true, true)
+		e.ClientAuth.Password = pwd
+		usr, err := repl.ReplaceOrErr(e.ClientAuth.Username, true, true)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		ext.ClientAuth.Username = usr
+		e.ClientAuth.Username = usr
 	}
-	return json.Marshal(ext)
+	if e.Htpasswd != nil {
+		if e.Htpasswd.File != "" {
+			file, err := repl.ReplaceOrErr(e.Htpasswd.File, true, true)
+			if err != nil {
+				return err
+			}
+			e.Htpasswd.File = file
+		}
+	}
+	return nil
 }
 
 // Interface guards
