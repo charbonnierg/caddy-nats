@@ -1,5 +1,6 @@
 {
 	cert_issuer internal
+	admin off
 	broker {
 		port 4223
 		jetstream {

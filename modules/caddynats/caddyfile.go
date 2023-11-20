@@ -595,6 +595,13 @@ func ParseAccount(d *caddyfile.Dispenser, acc *Account) error {
 				return err
 			}
 			acc.ObjectStores = append(acc.ObjectStores, &store)
+		case "kv_store":
+			acc.KeyValueStores = fnutils.DefaultIfEmpty(acc.KeyValueStores, []*natsclient.KeyValueStore{})
+			store := natsclient.KeyValueStore{}
+			if err := store.UnmarshalCaddyfile(d); err != nil {
+				return err
+			}
+			acc.KeyValueStores = append(acc.KeyValueStores, &store)
 		default:
 			return d.Errf("unrecognized account subdirective: %s", d.Val())
 		}

@@ -1,5 +1,7 @@
 {
 	cert_issuer internal
+	admin off
+	http_port 81
 	https_port 444
 	broker {
 		port 4224

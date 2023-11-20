@@ -1,0 +1,92 @@
+{
+	order authorize_with before handle
+	admin off
+	cert_issuer internal
+	http_port 81
+	https_port 444
+	secrets {
+		store az-kv-srv-01 azure_keyvault https://kv-srv-01.vault.azure.net
+	}
+	oauth2 {
+		az-oidc-endpoint {
+			store jetstream {
+				name OAUTH2-SESSIONS
+				account OAUTH2
+			}
+			display_debug
+			cookie_secure
+			cookie_name _oauth2_session
+			cookie_http_only no
+			cookie_domains .local.quara-dev.com
+			email_domains *
+			whitelist_domains .local.quara-dev.com
+			extra_jwt_issuers https://sts.windows.net/96bdcf75-3f33-4995-966b-d8eddb861f9b/=4a224c79-38e2-487f-96e0-5f4febfa4ce1
+			provider oidc {
+				id azure-ad
+				name "Azure AD"
+				client_id "4a224c79-38e2-487f-96e0-5f4febfa4ce1"
+				client_secret "{secret.oauth2-client-secret@az-kv-srv-01}"
+				scope openid email profile
+				login_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/authorize
+				redeem_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0/oauth2/token
+				profile_url https://graph.microsoft.com/v1.0/me
+				oidc_issuer_url https://login.microsoftonline.com/96bdcf75-3f33-4995-966b-d8eddb861f9b/v2.0
+				oidc_jwks_url https://login.microsoftonline.com/common/discovery/keys
+				oidc_audience_claims aud
+				oidc_email_claim email
+				oidc_user_id_claim email
+			}
+		}
+	}
+	broker {
+		cert_issuer internal
+		port 4224
+		websocket_server {
+			port 10445
+			tls peripheral2.local.quara-dev.com
+			advertise peripheral2.local.quara-dev.com:10445
+		}
+		jetstream {
+			domain peripheral2
+		}
+		auth_account AUTH
+		account OAUTH2 {
+			jetstream
+			authorize {
+				match username OAUTH2
+				callout allow
+			}
+		}
+		account websites-peripheral2 {
+			leafnode_connect wss://peripheral2@nats.local.quara-dev.com:10443
+			jetstream
+		}
+		account APP {
+			jetstream
+			leafnode_connect wss://peripheral2:app@nats.local.quara-dev.com:10443
+			authorize {
+				match type websocket
+				match username APP
+				callout oauth2 {
+					endpoint az-oidc-endpoint
+				}
+			}
+		}
+	}
+}
+
+static.local.quara-dev.com {
+	log
+	authorize_with oauth2 az-oidc-endpoint
+    rewrite / /index.html
+    file_server {
+        fs jetstream {
+			account websites-peripheral2
+            store static-app
+            sync_dir ./cache/peripheral2/static-app
+			client {
+				domain central
+			}
+        }
+    }
+}

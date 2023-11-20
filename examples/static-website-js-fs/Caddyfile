@@ -15,12 +15,12 @@
 }
 
 static.local.quara-dev.com {
-    rewrite / /index.html
+	try_files {path} {path}.html /index.html
     file_server {
         fs jetstream {
 			account websites
             store static-app
-            sync_dir ./var/www/html
+            sync_dir ./cache/static-app
         }
     }
 }

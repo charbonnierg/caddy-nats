@@ -1,5 +1,6 @@
 {
 	order authorize_with before handle
+	admin off
 	cert_issuer internal
 	secrets {
 		store az-kv-srv-01 azure_keyvault https://kv-srv-01.vault.azure.net
@@ -41,6 +42,13 @@
 			domain peripheral1
 		}
 		auth_account AUTH
+		account OAUTH2 {
+			jetstream
+			authorize {
+				match username OAUTH2
+				callout allow
+			}
+		}
 		account websites-peripheral1 {
 			leafnode_connect wss://peripheral1@nats.local.quara-dev.com:10443
 			jetstream

@@ -26,6 +26,12 @@ func (s *JetStreamStore) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if err := s.Client.UnmarshalCaddyfile(d); err != nil {
 					return err
 				}
+			case "account":
+				if err := parser.ParseString(d, &s.Account); err != nil {
+					return err
+				}
+			default:
+				return d.Errf("unknown property '%s'", d.Val())
 			}
 		}
 	}

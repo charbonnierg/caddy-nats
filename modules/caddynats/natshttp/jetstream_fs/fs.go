@@ -220,7 +220,11 @@ func (f *JetStreamFS) download(name string) (fs.File, error) {
 	if err != nil {
 		file.Close()
 		os.Remove(file.Name())
-		return nil, fmt.Errorf("failed to download file %s: %s", name, err.Error())
+		if err == nats.ErrObjectNotFound {
+			return nil, fs.ErrNotExist
+		} else {
+			return nil, err
+		}
 	}
 	// Close object on exit
 	defer result.Close()
