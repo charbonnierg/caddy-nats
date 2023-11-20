@@ -22,7 +22,7 @@ func init() {
 
 func (OAuth2ProxyAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.callouts.oauth2",
+		ID:  "nats.callouts.oauth2",
 		New: func() caddy.Module { return new(OAuth2ProxyAuthCallout) },
 	}
 }

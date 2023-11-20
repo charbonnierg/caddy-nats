@@ -30,7 +30,7 @@ type Server struct {
 	clients            []*natsclient.NatsClient
 	currentConfigIndex int
 	dontStart          bool
-
+	logger             *zap.Logger
 	*Options
 	Disabled bool `json:"disabled,omitempty"`
 }
@@ -100,13 +100,9 @@ func (s *Server) GetServer() (*server.Server, error) {
 func (s *Server) Provision(ctx caddy.Context) error {
 	// Increment last counter
 	s.incrementConfigIndex()
+	s.logger = ctx.Logger()
 	// Save context
-	ctx, cancel := caddy.NewContext(ctx)
 	s.ctx = ctx
-	go func() {
-		<-ctx.Done()
-		cancel()
-	}()
 	// Initialize properties which are not valid when empty
 	s.clients = []*natsclient.NatsClient{}
 	// Parse desired server state
@@ -256,7 +252,7 @@ func (s *Server) incrementConfigIndex() {
 // helper method used to create a new NATS server
 func (s *Server) createNewServer() error {
 	s.logger.Info("creating nats server", zap.String("name", s.serverOpts.ServerName), zap.Int("port", s.serverOpts.Port))
-	srv, err := s.Options.CreateServer()
+	srv, err := s.Options.CreateServer(s.logger)
 	if err != nil {
 		return err
 	}
@@ -325,6 +321,7 @@ func (s *Server) setupAuthService() error {
 	if s.authService == nil {
 		return nil
 	}
+	s.authService.logger = s.logger.Named("auth")
 	s.authService.policies = natsauth.AuthorizationPolicies{}
 	for _, acc := range s.Options.Accounts {
 		for _, pol := range acc.AuthorizationPolicies {

@@ -15,7 +15,7 @@ import (
 
 func (ConnectionTypeMatcher) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.matchers.type",
+		ID:  "nats.matchers.type",
 		New: func() caddy.Module { return new(ConnectionTypeMatcher) },
 	}
 }

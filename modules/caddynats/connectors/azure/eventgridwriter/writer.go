@@ -22,7 +22,7 @@ func init() {
 
 func (AzureEventGridWriter) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.writers.azure_eventgrid",
+		ID:  "nats.writers.azure_eventgrid",
 		New: func() caddy.Module { return new(AzureEventGridWriter) },
 	}
 }

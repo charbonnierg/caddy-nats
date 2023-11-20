@@ -14,7 +14,7 @@ import (
 
 func (NKeyMatcher) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.matchers.nkey",
+		ID:  "nats.matchers.nkey",
 		New: func() caddy.Module { return new(NKeyMatcher) },
 	}
 }

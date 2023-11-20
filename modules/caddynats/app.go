@@ -15,12 +15,12 @@ import (
 
 func init() {
 	caddy.RegisterModule(App{})
-	httpcaddyfile.RegisterGlobalOption("nats_server", parseGlobalOption)
+	httpcaddyfile.RegisterGlobalOption("nats", parseGlobalOption)
 	httpcaddyfile.RegisterGlobalOption("broker", parseGlobalOption)
 }
 
 func Load(ctx caddy.Context) (*App, error) {
-	unm, err := ctx.App("nats_server")
+	unm, err := ctx.App("nats")
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func ProvisionClientConnection(ctx caddy.Context, account string, client *natscl
 }
 
 func ProvisionClientConnectionBeyond(ctx caddy.Context, account string, client *natsclient.NatsClient) error {
-	unm, err := beyond.Load(ctx, "nats_server")
+	unm, err := beyond.Load(ctx, "nats")
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ type App struct {
 
 func (App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server",
+		ID:  "nats",
 		New: func() caddy.Module { return new(App) },
 	}
 }

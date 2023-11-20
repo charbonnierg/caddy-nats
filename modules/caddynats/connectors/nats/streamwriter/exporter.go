@@ -27,7 +27,7 @@ type StreamExporter struct {
 
 func (StreamExporter) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.writers.stream",
+		ID:  "nats.writers.stream",
 		New: func() caddy.Module { return new(StreamExporter) },
 	}
 }

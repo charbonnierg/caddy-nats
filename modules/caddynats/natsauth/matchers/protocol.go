@@ -15,7 +15,7 @@ import (
 
 func (ProtocolMatcher) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.matchers.protocol",
+		ID:  "nats.matchers.protocol",
 		New: func() caddy.Module { return new(ProtocolMatcher) },
 	}
 }

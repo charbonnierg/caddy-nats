@@ -109,7 +109,7 @@ func LoadRawServiceProvider(d *caddyfile.Dispenser, field string) (json.RawMessa
 	if err := parser.ParseString(d, &service); err != nil {
 		return nil, err
 	}
-	unm, err := caddyfile.UnmarshalModule(d, "nats_server.services."+service)
+	unm, err := caddyfile.UnmarshalModule(d, "nats.services."+service)
 	if err != nil {
 		return nil, err
 	}

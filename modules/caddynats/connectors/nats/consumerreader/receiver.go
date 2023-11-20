@@ -28,7 +28,7 @@ type StreamConsumerReader struct {
 
 func (StreamConsumerReader) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.readers.stream_consumer",
+		ID:  "nats.readers.stream_consumer",
 		New: func() caddy.Module { return new(StreamConsumerReader) },
 	}
 }

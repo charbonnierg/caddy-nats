@@ -39,7 +39,7 @@ type AuthorizationPolicy struct {
 	callout  AuthorizationCallout
 	matchers []AuthorizationMatcher
 
-	CalloutRaw  json.RawMessage            `json:"callout,omitempty" caddy:"namespace=nats_server.callouts inline_key=module"`
+	CalloutRaw  json.RawMessage            `json:"callout,omitempty" caddy:"namespace=nats.callouts inline_key=module"`
 	MatchersRaw map[string]json.RawMessage `json:"match,omitempty"`
 }
 
@@ -58,7 +58,7 @@ func (p *AuthorizationPolicy) Provision(ctx caddy.Context, account string) error
 	}
 	p.callout = callout
 	for matcher, matcherRaw := range p.MatchersRaw {
-		unm, err := ctx.LoadModuleByID("nats_server.matchers."+matcher, matcherRaw)
+		unm, err := ctx.LoadModuleByID("nats.matchers."+matcher, matcherRaw)
 		if err != nil {
 			return err
 		}

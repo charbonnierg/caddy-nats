@@ -18,7 +18,7 @@ func init() {
 
 func (AllowAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.callouts.allow",
+		ID:  "nats.callouts.allow",
 		New: func() caddy.Module { return new(AllowAuthCallout) },
 	}
 }

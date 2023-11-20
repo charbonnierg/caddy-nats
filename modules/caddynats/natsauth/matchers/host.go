@@ -14,7 +14,7 @@ import (
 
 func (HostMatcher) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.matchers.host",
+		ID:  "nats.matchers.host",
 		New: func() caddy.Module { return new(HostMatcher) },
 	}
 }

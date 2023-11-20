@@ -25,7 +25,7 @@ func init() {
 
 func (ChangeStreamReader) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.readers.mongodb_change_stream",
+		ID:  "nats.readers.mongodb_change_stream",
 		New: func() caddy.Module { return new(ChangeStreamReader) },
 	}
 }

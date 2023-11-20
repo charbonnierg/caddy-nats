@@ -215,7 +215,7 @@
                 }
             }
         },
-        "nats_server": {
+        "nats": {
             "name": "srv-01",
             "tags": {
                 "region": "eu-west-3"
@@ -323,6 +323,56 @@
                                 "database": "test2",
                                 "type": "mongodb_change_stream",
                                 "uri": "mongodb://localhost:27017"
+                            }
+                        },
+                        {
+                            "source": {
+                                "credentials": {
+                                    "access_key": "{env.{env.AZ_EVENT_GRID_ACCOUNT_KEY}}"
+                                },
+                                "endpoint": "https://beyond-ms-grid.westeurope-1.eventgrid.azure.net",
+                                "subscription_name": "test",
+                                "topic_name": "demo-az-storage-account-feed",
+                                "type": "azure_eventgrid"
+                            },
+                            "transform": "root.payload = this.payload.data_base64.decode(\"base64\").parse_json()\nroot.subject = this.subject\nroot.headers = this.headers",
+                            "destination": {
+                                "allow_direct": false,
+                                "compression": "none",
+                                "consumer_limits": {},
+                                "discard": "old",
+                                "max_age": 0,
+                                "max_bytes": 0,
+                                "max_consumers": 0,
+                                "max_msgs": 0,
+                                "max_msgs_per_subject": 0,
+                                "mirror_direct": false,
+                                "name": "AZ-STORAGE-ACCOUNT",
+                                "num_replicas": 0,
+                                "prefix": "azstorage",
+                                "retention": "limits",
+                                "storage": "file",
+                                "type": "stream"
+                            }
+                        },
+                        {
+                            "source": {
+                                "ack_policy": "explicit",
+                                "deliver_policy": "all",
+                                "durable_name": "storage-sync",
+                                "num_replicas": 0,
+                                "replay_policy": "instant",
+                                "stream": "AZ-STORAGE-ACCOUNT",
+                                "type": "stream_consumer"
+                            },
+                            "destination": {
+                                "credentials": {
+                                    "access_key": "{env.AZ_EVENT_GRID_ACCOUNT_KEY}"
+                                },
+                                "endpoint": "https://beyond-ms-grid.westeurope-1.eventgrid.azure.net",
+                                "event_type": "CloudEventSchemaV1_0",
+                                "topic_name": "demo-custom",
+                                "type": "azure_eventgrid"
                             }
                         }
                     ],

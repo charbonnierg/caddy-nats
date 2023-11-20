@@ -14,7 +14,7 @@ import (
 
 func (PasswordMatcher) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.matchers.password",
+		ID:  "nats.matchers.password",
 		New: func() caddy.Module { return new(PasswordMatcher) },
 	}
 }

@@ -42,7 +42,6 @@ type Options struct {
 	ctx              caddy.Context
 	automateSubjects []string
 	tlsApp           *caddytls.TLS
-	logger           *zap.Logger
 	systemAccount    *jwt.AccountClaims
 	collectorOpts    *natsmetrics.CollectorOptions
 	serverOpts       *server.Options
@@ -97,7 +96,6 @@ type Options struct {
 func (o *Options) Provision(ctx caddy.Context) error {
 	o.ctx = ctx
 	o.automateSubjects = []string{}
-	o.logger = ctx.Logger()
 	if o.AutomationPolicyTemplate == nil {
 		o.AutomationPolicyTemplate = &caddytls.AutomationPolicy{}
 	}
@@ -204,7 +202,7 @@ func (o *Options) Provision(ctx caddy.Context) error {
 }
 
 // Server returns a NATS server.
-func (o *Options) CreateServer() (*server.Server, error) {
+func (o *Options) CreateServer(logger *zap.Logger) (*server.Server, error) {
 	if o.serverOpts == nil {
 		return nil, errors.New("server options have not been provisioned yet")
 	}
@@ -212,7 +210,7 @@ func (o *Options) CreateServer() (*server.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	natslogger.New(o.logger, o.serverOpts).Attach(srv)
+	natslogger.New(logger, o.serverOpts).Attach(srv)
 	return srv, nil
 }
 
@@ -275,7 +273,7 @@ type Account struct {
 	LeafnodeConnections   []*Remote                       `json:"leafnode_connections,omitempty"`
 	AuthorizationPolicies []*natsauth.AuthorizationPolicy `json:"authorization_policies,omitempty"`
 	Flows                 []*Flow                         `json:"flows,omitempty"`
-	Services              []json.RawMessage               `json:"services,omitempty" caddy:"namespace=nats_server.services inline_key=type"`
+	Services              []json.RawMessage               `json:"services,omitempty" caddy:"namespace=nats.services inline_key=type"`
 	Streams               []*natsclient.Stream            `json:"streams,omitempty"`
 	Consumers             []*natsclient.Consumer          `json:"consumers,omitempty"`
 	ObjectStores          []*natsclient.ObjectStore       `json:"object_stores,omitempty"`
@@ -293,7 +291,7 @@ type SubjectMapping struct {
 type AuthCalloutMap struct {
 	Issuer          string                 `json:"issuer,omitempty"`
 	SigningKey      string                 `json:"signing_key,omitempty"`
-	SigningKeyStore json.RawMessage        `json:"signing_key_store,omitempty" caddy:"namespace=nats_server.signing_key_stores inline_key=type"`
+	SigningKeyStore json.RawMessage        `json:"signing_key_store,omitempty" caddy:"namespace=nats.signing_key_stores inline_key=type"`
 	QueueGroup      string                 `json:"queue_group,omitempty"`
 	AuthUsers       []string               `json:"auth_users,omitempty"`
 	Account         string                 `json:"account,omitempty"`
@@ -1087,7 +1085,6 @@ func (o *Options) setAuthCallout(opts *server.Options) error {
 	if privateKey != nil || store != nil {
 		o.authService = &authService{
 			ctx:        o.ctx,
-			logger:     o.logger.Named("auth_service"),
 			queueGroup: o.AuthCallout.QueueGroup,
 			account:    acc,
 			issuer:     publicKey,

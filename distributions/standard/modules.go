@@ -25,7 +25,6 @@ import (
 	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/jetstream_kv_put"
 	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/jetstream_publish"
 	_ "github.com/quara-dev/beyond/modules/caddynats/natshttp/nats_publish"
-	_ "github.com/quara-dev/beyond/modules/testapp"
 
 	// Logging modules
 	_ "github.com/quara-dev/beyond/modules/logs"

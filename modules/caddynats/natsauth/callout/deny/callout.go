@@ -18,7 +18,7 @@ func init() {
 
 func (DenyAuthCallout) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.callouts.deny",
+		ID:  "nats.callouts.deny",
 		New: func() caddy.Module { return new(DenyAuthCallout) },
 	}
 }

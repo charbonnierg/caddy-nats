@@ -144,10 +144,10 @@
 					}
 				}
 				transform <<EOF
-					root.payload = this.payload.data_base64.decode("base64").parse_json()
-					root.subject = this.subject
-					root.headers = this.headers
-					EOF
+				root.payload = this.payload.data_base64.decode("base64").parse_json()
+				root.subject = this.subject
+				root.headers = this.headers
+				EOF
 				destination stream {
 					name "AZ-STORAGE-ACCOUNT"
 					prefix "azstorage"

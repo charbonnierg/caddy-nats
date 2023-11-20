@@ -14,7 +14,7 @@ import (
 
 func (NameMatcher) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.matchers.name",
+		ID:  "nats.matchers.name",
 		New: func() caddy.Module { return new(NameMatcher) },
 	}
 }

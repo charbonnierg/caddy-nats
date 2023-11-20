@@ -24,7 +24,7 @@ func init() {
 
 func (AzureEventGridReader) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.readers.azure_eventgrid",
+		ID:  "nats.readers.azure_eventgrid",
 		New: func() caddy.Module { return new(AzureEventGridReader) },
 	}
 }

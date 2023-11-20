@@ -209,9 +209,9 @@ type Flow struct {
 	source      Reader
 	destination Writer
 
-	Source      json.RawMessage `json:"source,omitempty" caddy:"namespace=nats_server.readers inline_key=type"`
+	Source      json.RawMessage `json:"source,omitempty" caddy:"namespace=nats.readers inline_key=type"`
 	Transform   string          `json:"transform,omitempty"`
-	Destination json.RawMessage `json:"destination,omitempty" caddy:"namespace=nats_server.writers inline_key=type"`
+	Destination json.RawMessage `json:"destination,omitempty" caddy:"namespace=nats.writers inline_key=type"`
 	Disabled    bool            `json:"disabled,omitempty"`
 }
 
@@ -220,6 +220,7 @@ type Flow struct {
 func (c *Flow) Provision(server *Server, account *Account) error {
 	c.account = account
 	c.server = server
+	c.logger = server.logger.Named("flow")
 	ctx, cancel := caddy.NewContext(server.ctx)
 	c.client = &natsclient.NatsClient{Internal: true}
 	if _, err := c.server.createInternalClientForAccount(c.account, c.client); err != nil {
@@ -228,7 +229,6 @@ func (c *Flow) Provision(server *Server, account *Account) error {
 	c.ctx = ctx
 	c.cancel = cancel
 	c.done = make(chan struct{})
-	c.logger = server.logger.Named("flow")
 	sunm, err := c.ctx.LoadModule(c, "Source")
 	if err != nil {
 		return err
@@ -393,7 +393,7 @@ func (flow *Flow) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := parser.ParseString(d, &module); err != nil {
 				return err
 			}
-			unm, err := caddyfile.UnmarshalModule(d, "nats_server.readers."+module)
+			unm, err := caddyfile.UnmarshalModule(d, "nats.readers."+module)
 			if err != nil {
 				return err
 			}
@@ -403,7 +403,7 @@ func (flow *Flow) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := parser.ParseString(d, &module); err != nil {
 				return err
 			}
-			unm, err := caddyfile.UnmarshalModule(d, "nats_server.writers."+module)
+			unm, err := caddyfile.UnmarshalModule(d, "nats.writers."+module)
 			if err != nil {
 				return err
 			}

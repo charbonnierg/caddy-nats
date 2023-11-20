@@ -32,7 +32,7 @@ type ChangeStreamWriter struct {
 
 func (ChangeStreamWriter) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "nats_server.writers.mongodb_change_stream",
+		ID:  "nats.writers.mongodb_change_stream",
 		New: func() caddy.Module { return new(ChangeStreamWriter) },
 	}
 }

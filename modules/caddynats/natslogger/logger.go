@@ -76,5 +76,5 @@ func New(parent *zap.Logger, opts *server.Options) *Logger {
 	case opts.Debug:
 		debug = true
 	}
-	return &Logger{parent.WithOptions(zap.AddCallerSkip(4), zap.AddStacktrace(zap.DPanicLevel)), debug, trace, traceVerbose}
+	return &Logger{parent.WithOptions(zap.AddCallerSkip(4), zap.AddStacktrace(zap.DPanicLevel)).Named("server"), debug, trace, traceVerbose}
 }

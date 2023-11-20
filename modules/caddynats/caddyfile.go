@@ -33,7 +33,7 @@ func parseGlobalOption(d *caddyfile.Dispenser, existingVal interface{}) (interfa
 	}
 	err := a.UnmarshalCaddyfile(d)
 	return httpcaddyfile.App{
-		Name:  "nats_server",
+		Name:  "nats",
 		Value: caddyconfig.JSON(a, nil),
 	}, err
 }
@@ -60,7 +60,7 @@ func (o *Options) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	// Do not expect any argument but o block instead
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
-		case "nats_server":
+		case "nats", "nats_server", "server":
 			if err := o.UnmarshalCaddyfile(d); err != nil {
 				return err
 			}
@@ -297,7 +297,7 @@ func (o *Options) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		case "resolver":
 			return d.Err("resolver directive has been removed, use full_resolver, cache_resolver or memory_resolver instead")
 		default:
-			return d.Errf("unrecognized nats_server subdirective: %s", d.Val())
+			return d.Errf("unrecognized nats subdirective: %s", d.Val())
 		}
 	}
 	return nil
@@ -511,7 +511,7 @@ func ParseAccount(d *caddyfile.Dispenser, acc *Account) error {
 						if err := parser.ParseString(d, &module); err != nil {
 							return err
 						}
-						unm, err := caddyfile.UnmarshalModule(d, "nats_server.matchers."+module)
+						unm, err := caddyfile.UnmarshalModule(d, "nats.matchers."+module)
 						if err != nil {
 							return err
 						}
@@ -523,7 +523,7 @@ func ParseAccount(d *caddyfile.Dispenser, acc *Account) error {
 					} else {
 						for nesting := d.Nesting(); d.NextBlock(nesting); {
 							module := d.Val()
-							unm, err := caddyfile.UnmarshalModule(d, "nats_server.matchers."+module)
+							unm, err := caddyfile.UnmarshalModule(d, "nats.matchers."+module)
 							if err != nil {
 								return err
 							}
@@ -540,7 +540,7 @@ func ParseAccount(d *caddyfile.Dispenser, acc *Account) error {
 					if err := parser.ParseString(d, &module); err != nil {
 						return err
 					}
-					unm, err := caddyfile.UnmarshalModule(d, "nats_server.callouts."+module)
+					unm, err := caddyfile.UnmarshalModule(d, "nats.callouts."+module)
 					if err != nil {
 						return err
 					}
@@ -601,7 +601,7 @@ func ParseAccount(d *caddyfile.Dispenser, acc *Account) error {
 	return nil
 }
 
-// ParseAccounts parses the "accounts" directive found in the Caddyfile "nats_server" option block.
+// ParseAccounts parses the "accounts" directive found in the Caddyfile "nats" option block.
 func ParseAccounts(d *caddyfile.Dispenser, accounts *[]*Account) error {
 	if accounts == nil {
 		return d.Err("internal error: accounts is nil. Please open a bug report.")
@@ -680,7 +680,7 @@ func parseAuthCallout(d *caddyfile.Dispenser, dest *AuthCalloutMap) error {
 	return nil
 }
 
-// parseAuthUsers parses the "users" directive found in the Caddyfile "nats_server" option block.
+// parseAuthUsers parses the "users" directive found in the Caddyfile "nats" option block.
 func parseAuthUsers(d *caddyfile.Dispenser, auth *AuthorizationMap) error {
 	if auth == nil {
 		return d.Err("internal error: authorization map is nil. Please open a bug report.")
@@ -706,7 +706,7 @@ func parseAuthUsers(d *caddyfile.Dispenser, auth *AuthorizationMap) error {
 	return nil
 }
 
-// parseJetStream parses the "jetstream" directive found in the Caddyfile "nats_server" option block.
+// parseJetStream parses the "jetstream" directive found in the Caddyfile "nats" option block.
 func ParseJetStream(d *caddyfile.Dispenser, jsopts *JetStream) error {
 	// Make sure we have o JetStream config
 	if jsopts == nil {
@@ -752,7 +752,7 @@ func ParseJetStream(d *caddyfile.Dispenser, jsopts *JetStream) error {
 	return nil
 }
 
-// ParseMqtt parses the "mqtt" directive found in the Caddyfile "nats_server" option block.
+// ParseMqtt parses the "mqtt" directive found in the Caddyfile "nats" option block.
 func ParseMqtt(d *caddyfile.Dispenser, mqttopts *MQTT) error {
 	// Make sure we have o MQTT config
 	if mqttopts == nil {
@@ -815,7 +815,7 @@ func ParseMqtt(d *caddyfile.Dispenser, mqttopts *MQTT) error {
 	return nil
 }
 
-// ParseWebsocket parses the "websocket" directive found in the Caddyfile "nats_server" option block.
+// ParseWebsocket parses the "websocket" directive found in the Caddyfile "nats" option block.
 func ParseWebsocket(d *caddyfile.Dispenser, wsopts *Websocket) error {
 	// Make sure we have o Websocket config
 	if wsopts == nil {
@@ -889,7 +889,7 @@ func ParseWebsocket(d *caddyfile.Dispenser, wsopts *Websocket) error {
 	return nil
 }
 
-// ParseLeafnodes parse the "leafnodes" directive found in the Caddyfile "nats_server" option block.
+// ParseLeafnodes parse the "leafnodes" directive found in the Caddyfile "nats" option block.
 func ParseLeafnodes(d *caddyfile.Dispenser, leafopts *Leafnode) error {
 	// Make sure we have o LeafNode config
 	if leafopts == nil {
@@ -938,7 +938,7 @@ func ParseLeafnodes(d *caddyfile.Dispenser, leafopts *Leafnode) error {
 	return nil
 }
 
-// ParseRemoteLeafnodes parse the "remote_leafnodes" directive found in the Caddyfile "nats_server" option block.
+// ParseRemoteLeafnodes parse the "remote_leafnodes" directive found in the Caddyfile "nats" option block.
 func ParseRemoteLeafnodes(d *caddyfile.Dispenser, remotes *[]*Remote) error {
 	if remotes == nil {
 		return d.Err("internal error: remotes is nil. Please open a bug report.")
@@ -1007,7 +1007,7 @@ func ParseRemoteLeafnode(d *caddyfile.Dispenser, remote *Remote) error {
 	return nil
 }
 
-// parseCacheResolver parses the "cache_resolver" directive found in the Caddyfile "nats_server" option block.
+// parseCacheResolver parses the "cache_resolver" directive found in the Caddyfile "nats" option block.
 func parseCacheResolver(d *caddyfile.Dispenser, resolveropts *CacheAccountResolver) error {
 	// Make sure we have o CacheAccountResolver config
 	if resolveropts == nil {
@@ -1049,7 +1049,7 @@ func parseCacheResolver(d *caddyfile.Dispenser, resolveropts *CacheAccountResolv
 	return nil
 }
 
-// parseFullResolver parses the "full_resolver" directive found in the Caddyfile "nats_server" option block.
+// parseFullResolver parses the "full_resolver" directive found in the Caddyfile "nats" option block.
 func parseFullResolver(d *caddyfile.Dispenser, resolveropts *FullAccountResolver) error {
 	// Make sure we have o FullAccountResolver config
 	if resolveropts == nil {
@@ -1099,7 +1099,7 @@ func parseFullResolver(d *caddyfile.Dispenser, resolveropts *FullAccountResolver
 	return nil
 }
 
-// parseMemoryResolver parses the "memory_resolver" directive found in the Caddyfile "nats_server" option block.
+// parseMemoryResolver parses the "memory_resolver" directive found in the Caddyfile "nats" option block.
 func parseMemoryResolver(d *caddyfile.Dispenser, resolveropts *MemoryAccountResolver) error {
 	// Make sure we have o MemoryAccountResolver config
 	if resolveropts == nil {
@@ -1125,7 +1125,7 @@ func parseMemoryResolver(d *caddyfile.Dispenser, resolveropts *MemoryAccountReso
 	return nil
 }
 
-// parseTLS parses the "tls" directive found in the Caddyfile "nats_server" option block.
+// parseTLS parses the "tls" directive found in the Caddyfile "nats" option block.
 func parseTLS(d *caddyfile.Dispenser, tlsOpts *TLSMap) error {
 	if tlsOpts == nil {
 		return d.Err("internal error: tlsOpts is nil. Please open a bug report.")
@@ -1198,7 +1198,7 @@ func parseTLS(d *caddyfile.Dispenser, tlsOpts *TLSMap) error {
 	return nil
 }
 
-// ParseMetrics parses the "metrics" directive found in the Caddyfile "nats_server" option block.
+// ParseMetrics parses the "metrics" directive found in the Caddyfile "nats" option block.
 func ParseMetrics(d *caddyfile.Dispenser, metricopts *Metrics) error {
 	// Make sure we have o Metrics config
 	if metricopts == nil {

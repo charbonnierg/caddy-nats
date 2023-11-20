@@ -33,7 +33,7 @@ type JetStreamStore struct {
 
 func (s *JetStreamStore) Provision(app oauth2.App, opts *options.Cookie) error {
 	s.ctx = app.Context()
-	s.logger = app.Logger().Named("oauth2-jetstream")
+	s.logger = app.Logger().Named("store.jetstream")
 	if s.Client == nil {
 		s.Client = &natsclient.NatsClient{Internal: true}
 	}

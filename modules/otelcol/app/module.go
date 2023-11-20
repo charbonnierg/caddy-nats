@@ -132,7 +132,7 @@ func (o *App) Provision(ctx caddy.Context) error {
 		ConfigProvider:          provider,
 		LoggingOptions: []zap.Option{zap.WrapCore(func(core zapcore.Core) zapcore.Core {
 			return o.logger.Core()
-		})},
+		}), zap.WithCaller(false)},
 	}
 	col, err := otelcol.NewCollector(settings)
 	if err != nil {
