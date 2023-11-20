@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/caddyserver/caddy/v2"
 	caddycmd "github.com/caddyserver/caddy/v2/cmd"
 	"github.com/nats-io/nats.go"
 	"github.com/quara-dev/beyond/modules/caddynats/natsclient"
@@ -119,6 +120,9 @@ func connect(fs caddycmd.Flags) (*natsclient.NatsClient, error) {
 		JSPrefix:    fs.String("js-prefix"),
 		InboxPrefix: fs.String("inbox-prefix"),
 		Servers:     servers,
+	}
+	if err := client.Provision(caddy.Context{}, nil); err != nil {
+		return nil, fmt.Errorf("failed to provision client: %s", err.Error())
 	}
 	err := client.Connect()
 	if err != nil {

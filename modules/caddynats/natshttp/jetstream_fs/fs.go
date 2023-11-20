@@ -160,7 +160,7 @@ func (f *JetStreamFS) startWatcher() {
 			return
 		case update := <-updates:
 			if update == nil {
-				f.logger.Warn("object store successfully loaded most recent data", zap.String("store", f.Store))
+				f.logger.Warn("object store finished rewinding most recent data", zap.String("store", f.Store))
 				continue
 			}
 			switch update.Deleted {

@@ -1,0 +1,28 @@
+{
+	cert_issuer internal
+	broker {
+		port 4223
+		jetstream {
+			domain peripheral1
+		}
+		auth_account AUTH
+		account websites-peripheral1 {
+			leafnode_connect wss://peripheral1@nats.local.quara-dev.com:10443
+			jetstream
+		}
+	}
+}
+
+static.local.quara-dev.com {
+    rewrite / /index.html
+    file_server {
+        fs jetstream {
+			account websites-peripheral1
+            store static-app
+            sync_dir ./cache/peripheral1/static-app
+			client {
+				domain central
+			}
+        }
+    }
+}

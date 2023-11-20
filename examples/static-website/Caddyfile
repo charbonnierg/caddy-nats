@@ -1,0 +1,9 @@
+{
+	cert_issuer internal
+}
+
+static.local.quara-dev.com {
+    rewrite / /index.html
+    root * ./var/www/html
+    file_server
+}

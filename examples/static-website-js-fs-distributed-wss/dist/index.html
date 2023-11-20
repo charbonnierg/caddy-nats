@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NATS Dashboard</title>
+  <meta name="title" content="NATS Dashboard">
+  <meta name="description" content="A web dashboard for monitoring NATS servers.">
+  <meta name="keywords" content="NATS Dashboard, NATS Server Monitoring, NATS JetStream Monitoring">
+  <meta name="generator" content="Astro v3.4.0"><!-- Open Graph Meta Tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="NATS Dashboard">
+  <meta property="og:description" content="A web dashboard for monitoring NATS servers.">
+  <meta property="og:site_name" content="NATS Dashboard">
+  <meta property="og:locale" content="en_US"><!-- Twitter Meta Tags -->
+  <meta property="twitter:card" content="summary">
+  <meta property="twitter:title" content="NATS Dashboard">
+  <meta property="twitter:description" content="A web dashboard for monitoring NATS servers."><!-- Site Theme -->
+  <script>
+    try {
+      if (
+        localStorage.darkMode === 'true' ||
+        (!('darkMode' in localStorage) &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (_) { }
+  </script><!-- Font -->
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="stylesheet" href="/app/about.30273b0b.css" />
+  <script type="module">async function o() { if ("serviceWorker" in navigator) try { const e = await navigator.serviceWorker.register("/sw.js", { scope: "/" }); e.addEventListener("updatefound", () => { const r = e.installing; r?.addEventListener("statechange", () => { r.state === "installed" && navigator.serviceWorker.controller && confirm("New version available! Do you want to reload to update?") && window.location.reload() }) }) } catch (e) { console.error(`Service worker registration failed with ${e}`) } else console.warn("Service workers are not supported.") } o();
+  </script>
+  <link rel="icon" href="/favicon-32x32.png" type="image/png">
+  <meta name="theme-color" content="#0284c7">
+  <link rel="manifest" href="/manifest.webmanifest" crossorigin="anonymous">
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="256x256" href="/icons/icon-256x256.png">
+  <link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384x384.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png">
+  <link rel="apple-touch-icon" sizes="1024x1024" href="/icons/icon-1024x1024.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-maskable-512x512.png">
+  <link rel="apple-touch-icon" sizes="1024x1024" href="/icons/icon-maskable-1024x1024.png">
+</head>
+
+<body class="h-full bg-white dark:bg-gray-900">
+  <div>
+    <style>
+      astro-island,
+      astro-slot,
+      astro-static-slot {
+        display: contents
+      }
+    </style>
+    <script>(() => { var e = async t => { await (await t())() }; (self.Astro || (self.Astro = {})).load = e; window.dispatchEvent(new Event("astro:load")); })();; (() => { var b = Object.defineProperty; var f = (c, o, i) => o in c ? b(c, o, { enumerable: !0, configurable: !0, writable: !0, value: i }) : c[o] = i; var l = (c, o, i) => (f(c, typeof o != "symbol" ? o + "" : o, i), i); var p; { let c = { 0: t => m(t), 1: t => i(t), 2: t => new RegExp(t), 3: t => new Date(t), 4: t => new Map(i(t)), 5: t => new Set(i(t)), 6: t => BigInt(t), 7: t => new URL(t), 8: t => new Uint8Array(t), 9: t => new Uint16Array(t), 10: t => new Uint32Array(t) }, o = t => { let [e, r] = t; return e in c ? c[e](r) : void 0 }, i = t => t.map(o), m = t => typeof t != "object" || t === null ? t : Object.fromEntries(Object.entries(t).map(([e, r]) => [e, o(r)])); customElements.get("astro-island") || customElements.define("astro-island", (p = class extends HTMLElement { constructor() { super(...arguments); l(this, "Component"); l(this, "hydrator"); l(this, "hydrate", async () => { var d; if (!this.hydrator || !this.isConnected) return; let e = (d = this.parentElement) == null ? void 0 : d.closest("astro-island[ssr]"); if (e) { e.addEventListener("astro:hydrate", this.hydrate, { once: !0 }); return } let r = this.querySelectorAll("astro-slot"), a = {}, h = this.querySelectorAll("template[data-astro-template]"); for (let n of h) { let s = n.closest(this.tagName); s != null && s.isSameNode(this) && (a[n.getAttribute("data-astro-template") || "default"] = n.innerHTML, n.remove()) } for (let n of r) { let s = n.closest(this.tagName); s != null && s.isSameNode(this) && (a[n.getAttribute("name") || "default"] = n.innerHTML) } let u; try { u = this.hasAttribute("props") ? m(JSON.parse(this.getAttribute("props"))) : {} } catch (n) { let s = this.getAttribute("component-url") || "<unknown>", y = this.getAttribute("component-export"); throw y && (s += ` (export ${y})`), console.error(`[hydrate] Error parsing props for component ${s}`, this.getAttribute("props"), n), n } await this.hydrator(this)(this.Component, u, a, { client: this.getAttribute("client") }), this.removeAttribute("ssr"), this.dispatchEvent(new CustomEvent("astro:hydrate")) }); l(this, "unmount", () => { this.isConnected || this.dispatchEvent(new CustomEvent("astro:unmount")) }) } disconnectedCallback() { document.removeEventListener("astro:after-swap", this.unmount), document.addEventListener("astro:after-swap", this.unmount, { once: !0 }) } connectedCallback() { if (!this.hasAttribute("await-children") || document.readyState === "interactive" || document.readyState === "complete") this.childrenConnectedCallback(); else { let e = () => { document.removeEventListener("DOMContentLoaded", e), r.disconnect(), this.childrenConnectedCallback() }, r = new MutationObserver(() => { var a; ((a = this.lastChild) == null ? void 0 : a.nodeType) === Node.COMMENT_NODE && this.lastChild.nodeValue === "astro:end" && (this.lastChild.remove(), e()) }); r.observe(this, { childList: !0 }), document.addEventListener("DOMContentLoaded", e) } } async childrenConnectedCallback() { let e = this.getAttribute("before-hydration-url"); e && await import(e), this.start() } start() { let e = JSON.parse(this.getAttribute("opts")), r = this.getAttribute("client"); if (Astro[r] === void 0) { window.addEventListener(`astro:${r}`, () => this.start(), { once: !0 }); return } Astro[r](async () => { let a = this.getAttribute("renderer-url"), [h, { default: u }] = await Promise.all([import(this.getAttribute("component-url")), a ? import(a) : () => () => { }]), d = this.getAttribute("component-export") || "default"; if (!d.includes(".")) this.Component = h[d]; else { this.Component = h; for (let n of d.split(".")) this.Component = this.Component[n] } return this.hydrator = u, this.hydrate }, e, this) } attributeChangedCallback() { this.hydrate() } }, l(p, "observedAttributes", ["props"]), p)) } })();</script>
+    <astro-island uid="Z1wpMgI" data-solid-render-id="s1" component-url="/app/Sidebar.77426aac.js"
+      component-export="default" renderer-url="/app/client.d665c371.js"
+      props="{&quot;activePage&quot;:[0,&quot;/&quot;]}" ssr="" client="load"
+      opts="{&quot;name&quot;:&quot;Sidebar&quot;,&quot;value&quot;:true}" await-children="">
+      <div data-hk="s10-0-0-1-0" class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
+        <div data-hk="s10-0-0-1-1-0"
+          class="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white dark:border-none dark:bg-black/10 dark:ring-1 dark:ring-white/5 px-6 pb-4">
+          <a href="/" class="flex gap-4 h-16 shrink-0 items-center"><img class="h-8 w-auto dark:hidden"
+              src="/app/nats-icon-black.65d09851.svg" alt="NATS"><img class="h-8 w-auto hidden dark:block"
+              src="/app/nats-icon-white.8cc9d248.svg" alt="NATS">
+            <h1 class="text-gray-900 dark:text-white font-bold">Dashboard<!--#--><span data-hk="s10-0-0-1-1-1-0"
+                class="inline-flex items-center px-2 py-1 text-xs font-medium ml-3 text-gray-600 dark:text-gray-400 dark:bg-gray-400/10 bg-gray-50  ring-1 ring-inset ring-gray-500/10 dark:ring-gray-400/20 rounded-md  ">v0.2.9</span><!--/-->
+            </h1>
+          </a>
+          <nav class="flex flex-1 flex-col">
+            <ul role="list" class="flex flex-1 flex-col gap-y-7">
+              <li>
+                <ul role="list" class="-mx-2 space-y-1">
+                  <li><a data-hk="s10-0-0-1-1-2-0" href="/"
+                      class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold bg-gray-50 text-sky-600 dark:bg-gray-800 dark:text-white  "><svg
+                        data-hk="s10-0-0-1-1-2-1-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor" class="h-6 w-6 shrink-0 ">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z">
+                        </path>
+                      </svg>Dashboard</a></li>
+                  <li><a data-hk="s10-0-0-1-1-3-0" href="/faq"
+                      class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold  text-gray-700 hover:text-sky-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 "><svg
+                        data-hk="s10-0-0-1-1-3-1-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor" class="h-6 w-6 shrink-0 ">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155">
+                        </path>
+                      </svg>FAQ</a></li>
+                  <li><a data-hk="s10-0-0-1-1-4-0" href="/about"
+                      class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold  text-gray-700 hover:text-sky-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 "><svg
+                        data-hk="s10-0-0-1-1-4-1-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor" class="h-6 w-6 shrink-0 ">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z">
+                        </path>
+                      </svg>About</a></li>
+                </ul>
+              </li>
+              <li>
+                <div class="text-xs font-semibold leading-6 text-gray-400">External Links</div>
+                <ul role="list" class="-mx-2 mt-2 space-y-1">
+                  <li data-hk="s10-0-0-1-1-5-0"><a data-hk="s10-0-0-1-1-5-1-0"
+                      href="https://github.com/mdawar/nats-dashboard"
+                      class="text-gray-700 hover:text-sky-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold "
+                      target="_blank"><span
+                        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-[0.625rem] font-medium bg-white text-gray-400 border-gray-200 group-hover:border-sky-600 group-hover:text-sky-600 dark:border-gray-700 dark:bg-gray-800 dark:group-hover:border-gray-700 dark:group-hover:text-white">G</span><span
+                        class="truncate">GitHub</span></a></li>
+                  <li data-hk="s10-0-0-1-1-5-2"><a data-hk="s10-0-0-1-1-5-3-0" href="https://nats.io/"
+                      class="text-gray-700 hover:text-sky-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold "><span
+                        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-[0.625rem] font-medium bg-white text-gray-400 border-gray-200 group-hover:border-sky-600 group-hover:text-sky-600 dark:border-gray-700 dark:bg-gray-800 dark:group-hover:border-gray-700 dark:group-hover:text-white">N</span><span
+                        class="truncate">NATS.io</span></a></li>
+                  <li data-hk="s10-0-0-1-1-5-4"><a data-hk="s10-0-0-1-1-5-5-0" href="https://docs.nats.io/"
+                      class="text-gray-700 hover:text-sky-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold "><span
+                        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-[0.625rem] font-medium bg-white text-gray-400 border-gray-200 group-hover:border-sky-600 group-hover:text-sky-600 dark:border-gray-700 dark:bg-gray-800 dark:group-hover:border-gray-700 dark:group-hover:text-white">D</span><span
+                        class="truncate">NATS Docs</span></a></li>
+                </ul>
+              </li><!--#--><!--/-->
+            </ul>
+          </nav>
+        </div>
+      </div><!--astro:end-->
+    </astro-island>
+    <div class="lg:pl-64"><astro-island uid="VEG1n" data-solid-render-id="s0" component-url="/app/App.2ae1d64e.js"
+        component-export="default" renderer-url="/app/client.d665c371.js" props="{&quot;url&quot;:[0,&quot;/&quot;]}"
+        ssr="" client="load" opts="{&quot;name&quot;:&quot;DashboardApp&quot;,&quot;value&quot;:true}"
+        await-children="">
+        <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-0"
+          class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white dark:border-white/5 dark:bg-gray-900 px-4 sm:gap-x-6 sm:px-6 lg:px-8">
+          <!--#--><button data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-1-0" type="button"
+            class="-m-2.5 p-2.5 text-gray-700 dark:text-white lg:hidden"><span class="sr-only">Open
+              sidebar</span><!--#--><svg data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-1-1-0" fill="none" viewBox="0 0 24 24"
+              stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="h-6 w-6 ">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5">
+              </path>
+            </svg><!--/--></button><!--/-->
+          <div class="h-6 w-px bg-gray-200 dark:bg-gray-600 lg:hidden" aria-hidden="true"></div>
+          <div class="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
+            <form class="relative flex flex-1"><label for="nats-url" class="sr-only">Server URL</label><!--#--><svg
+                data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-2-0" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                class="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-gray-400 dark:text-gray-500 ">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z">
+                </path>
+              </svg><!--/--><input id="nats-url"
+                class="block h-full w-full border-0 py-0 pl-8 pr-0 text-gray-900 placeholder:text-gray-400 dark:bg-transparent dark:text-white dark:placeholder:text-gray-500 focus:ring-0 sm:text-sm disabled:cursor-not-allowed disabled:text-gray-500 dark:disabled:text-gray-400"
+                placeholder="Enter a NATS monitoring server URL" type="url" spellcheck="false" list="url-list"
+                value=""><datalist id="url-list">
+                <option data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-3-0" value="http://localhost:8222"></option>
+                <option data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-3-1" value="https://demo.nats.io:8222"></option>
+              </datalist></form>
+            <div class="flex items-center gap-x-4 lg:gap-x-6"><button type="button"
+                class="relative text-gray-900 dark:text-white"><svg data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-4-0-0"
+                  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5 ">
+                  <path fill-rule="evenodd"
+                    d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z"
+                    clip-rule="evenodd"></path>
+                </svg><span data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-4-1" class="absolute -inset-2.5"></span></button>
+              <div class="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200 dark:lg:bg-white/10" aria-hidden="true"></div>
+              <button type="button" class="relative text-gray-900 dark:text-white"><!--#--><svg
+                  data-hk="s00-0-0-0-0-0-0-0-0-1-0-0-5-0" xmlns="http://www.w3.org/2000/svg" fill="none"
+                  viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 ">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z">
+                  </path>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg><!--/--><span class="absolute -inset-2.5"></span></button><!--#--><!--/-->
+            </div>
+          </div>
+        </div>
+        <main data-hk="s00-0-0-0-0-0-0-0-0-1-0-1"><!--#-->
+          <nav data-hk="s00-0-0-0-0-0-0-0-0-1-0-2-0"
+            class="flex overflow-x-auto border-b border-gray-200 dark:border-white/10 py-4">
+            <ul role="list"
+              class="flex min-w-full flex-none gap-x-6 px-4 text-sm font-semibold leading-6 text-gray-500 dark:text-gray-400 sm:px-6 lg:px-8">
+              <li><a data-hk="s00-0-0-0-0-0-0-0-0-1-0-2-1-0-0" link="true" href="/"
+                  class=" text-sky-600 dark:text-sky-400" aria-current="page">Overview</a></li>
+              <li><a data-hk="s00-0-0-0-0-0-0-0-0-1-0-2-2-0-0" link="true" href="/info" class="inactive">Info</a></li>
+              <li><a data-hk="s00-0-0-0-0-0-0-0-0-1-0-2-3-0-0" link="true" href="/connections"
+                  class="inactive">Connections</a></li>
+              <li><a data-hk="s00-0-0-0-0-0-0-0-0-1-0-2-4-0-0" link="true" href="/jetstream"
+                  class="inactive">JetStream</a></li>
+            </ul>
+          </nav><!--/--><!--#-->
+          <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-1"><!--#-->
+            <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-2-4-0"
+              class="text-center px-4 py-20 sm:py-32 sm:px-6 lg:px-8"><!--#--><svg
+                data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-2-4-1-0" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mx-auto h-12 w-12 text-gray-400 ">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z">
+                </path>
+              </svg><!--/-->
+              <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No data</h3>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by monitoring a new NATS server.</p>
+              <div class="flex flex-col sm:flex-row justify-center gap-6 mt-6"><button
+                  data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-2-4-2-0-0" type="button"
+                  class="inline-flex items-center justify-center font-semibold shadow-sm relative  bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:hover:bg-white/20 dark:ring-0 text-gray-900 dark:text-white  text-sm px-3 py-2 gap-3  rounded-md   "><!--#--><!--/--><!--#--><svg
+                    data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-2-4-2-0-2-0" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="-ml-0.5 h-5 w-5 "
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6"></path>
+                  </svg>localhost<!--/--></button><button data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-2-4-2-1-0"
+                  type="button"
+                  class="inline-flex items-center justify-center font-semibold shadow-sm relative  bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:hover:bg-white/20 dark:ring-0 text-gray-900 dark:text-white  text-sm px-3 py-2 gap-3  rounded-md   "><!--#--><!--/--><!--#--><svg
+                    data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-2-4-2-1-2-0" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="-ml-0.5 h-5 w-5 "
+                    aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6"></path>
+                  </svg>demo.nats.io<!--/--></button></div>
+            </div><!--/--><!--#-->
+            <section data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-0" class="tabular-nums slashed-zero ">
+              <header data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-0"
+                class="flex items-center justify-between border-b border-gray-200 dark:border-white/5 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 ">
+                <h2 data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-1-0"
+                  class="text-base font-semibold leading-7 text-gray-900 dark:text-white ">Connections<span
+                    data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-1-1-0"
+                    class="inline-flex items-center px-2 py-1 text-xs font-medium ml-3 text-gray-600 dark:text-gray-400 dark:bg-gray-400/10 bg-gray-50  ring-1 ring-inset ring-gray-500/10 dark:ring-gray-400/20  rounded-full ">0</span>
+                </h2>
+                <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-0" class="flex items-center gap-6 ">
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-2-0" class="relative hidden xl:block">
+                    <div><button data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-2-1-0" type="button"
+                        class="text-sm font-medium leading-6 text-gray-900 dark:text-white flex items-center gap-x-1 ">Limit<svg
+                          data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-2-1-1-0" xmlns="http://www.w3.org/2000/svg"
+                          fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                          class="h-4 w-4 text-gray-500 ">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+                        </svg></button></div><!--#--><!--/-->
+                  </div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-3-0"
+                    class="h-6 w-px bg-gray-300 dark:bg-white/10 hidden xl:block "></div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-4-0" class="relative hidden xl:block">
+                    <div><button data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-4-1-0" type="button"
+                        class="text-sm font-medium leading-6 text-gray-900 dark:text-white flex items-center gap-x-1 ">State<svg
+                          data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-4-1-1-0" xmlns="http://www.w3.org/2000/svg"
+                          fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                          class="h-4 w-4 text-gray-500 ">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+                        </svg></button></div><!--#--><!--/-->
+                  </div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-5-0"
+                    class="h-6 w-px bg-gray-300 dark:bg-white/10 hidden xl:block "></div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-6-0" class="relative hidden xl:block">
+                    <div><button data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-6-1-0" type="button"
+                        class="text-sm font-medium leading-6 text-gray-900 dark:text-white flex items-center gap-x-1 ">Subs<svg
+                          data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-6-1-1-0" xmlns="http://www.w3.org/2000/svg"
+                          fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                          class="h-4 w-4 text-gray-500 ">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+                        </svg></button></div><!--#--><!--/-->
+                  </div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-7-0"
+                    class="h-6 w-px bg-gray-300 dark:bg-white/10 hidden xl:block "></div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-8" class="hidden xl:flex items-center">
+                    <!--#--><button data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-9-0" type="button" role="switch"
+                      class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-200 dark:bg-gray-700 "
+                      aria-checked="false"><span class="sr-only">Use setting</span><span aria-hidden="true"
+                        class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-gray-50 shadow ring-0 transition duration-200 ease-in-out translate-x-0 "></span></button><!--/--><span
+                      class="ml-3 text-sm"><span class="text-gray-900 dark:text-white">Auth</span></span>
+                  </div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-10-0"
+                    class="h-6 w-px bg-gray-300 dark:bg-white/10 hidden xl:block "></div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-11-0" class="relative hidden xl:block">
+                    <div><button data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-11-1-0" type="button"
+                        class="text-sm font-medium leading-6 text-gray-900 dark:text-white flex items-center gap-x-1 ">Sort
+                        by<svg data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-11-1-1-0" viewBox="0 0 20 20"
+                          fill="currentColor" aria-hidden="true" class="h-5 w-5 text-gray-500 ">
+                          <path fill-rule="evenodd"
+                            d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z"
+                            clip-rule="evenodd"></path>
+                        </svg></button></div><!--#--><!--/-->
+                  </div>
+                  <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-12-0"
+                    class="h-6 w-px bg-gray-300 dark:bg-white/10 hidden xl:hidden "></div><button
+                    data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-13" type="button"
+                    class="xl:hidden relative text-gray-900 dark:text-white"><!--#--><svg
+                      data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-1-2-14-0" xmlns="http://www.w3.org/2000/svg"
+                      fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 ">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z">
+                      </path>
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg><!--/--><span class="absolute -inset-2.5"></span></button>
+                </div>
+              </header>
+              <div data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-2-4-0"
+                class="px-4 py-6 sm:px-6 lg:px-8 text-gray-900 dark:text-white  ">
+                <p data-hk="s00-0-0-0-0-0-0-0-0-1-0-3-4-0-0-3-1-2-4-1">🍔 Start monitoring to display connections 🍔</p>
+              </div>
+            </section><!--/-->
+          </div><!--/-->
+        </main><!--astro:end-->
+      </astro-island></div>
+  </div>
+</body>
+
+</html>

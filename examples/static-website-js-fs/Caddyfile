@@ -1,0 +1,26 @@
+{
+	cert_issuer internal
+	broker {
+		jetstream
+		auth_account AUTH
+		account websites {
+			jetstream
+			object_store static-app
+			authorize {
+				match username test
+				callout allow
+			}
+		}
+	}
+}
+
+static.local.quara-dev.com {
+    rewrite / /index.html
+    file_server {
+        fs jetstream {
+			account websites
+            store static-app
+            sync_dir ./var/www/html
+        }
+    }
+}

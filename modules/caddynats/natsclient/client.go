@@ -387,7 +387,6 @@ func (c *sdk) JetStreamContext() nats.JetStreamContext {
 }
 
 func (c *NatsClient) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	d.Next() // skip "client"
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		switch d.Val() {
 		case "in_process", "internal":
@@ -426,7 +425,7 @@ func (c *NatsClient) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			if err := parser.ParseString(d, &c.Jwt); err != nil {
 				return err
 			}
-		case "jetstream_domain", "js_domain":
+		case "jetstream_domain", "js_domain", "domain":
 			if err := parser.ParseString(d, &c.JSDomain); err != nil {
 				return err
 			}

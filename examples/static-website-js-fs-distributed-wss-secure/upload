@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+
+../.././caddy nats upload-dir ./dist --store static-app --token admin

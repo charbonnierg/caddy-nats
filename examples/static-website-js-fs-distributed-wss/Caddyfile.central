@@ -1,0 +1,40 @@
+{
+	broker {
+		host 127.0.0.1
+		cert_issuer internal
+		leafnode_server {
+			host 127.0.0.1
+			port 7422
+		}
+		websocket_server {
+			tls nats.local.quara-dev.com
+			advertise nats.local.quara-dev.com:443
+		}
+		jetstream {
+			domain central
+		}
+		auth_account AUTH
+		account websites {
+			jetstream
+			object_store static-app
+			authorize {
+				match kind leafnode
+				match host 127.0.0.1
+				match username peripheral1
+				callout allow
+			}
+			authorize {
+				match kind leafnode
+				match host 127.0.0.1
+				match username peripheral2
+				callout allow
+			}
+			authorize {
+				match kind client
+				match host 127.0.0.1
+				match username admin
+				callout allow
+			}
+		}
+	}
+}

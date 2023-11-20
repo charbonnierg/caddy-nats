@@ -594,6 +594,7 @@ func ParseAccount(d *caddyfile.Dispenser, acc *Account) error {
 			if err := store.UnmarshalCaddyfile(d); err != nil {
 				return err
 			}
+			acc.ObjectStores = append(acc.ObjectStores, &store)
 		default:
 			return d.Errf("unrecognized account subdirective: %s", d.Val())
 		}

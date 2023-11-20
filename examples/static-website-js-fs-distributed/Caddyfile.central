@@ -1,0 +1,34 @@
+{
+	cert_issuer internal
+	broker {
+		leafnode_server {
+			port 7422
+		}
+		jetstream {
+			domain central
+		}
+		auth_account AUTH
+		account websites {
+			jetstream
+			object_store static-app
+			authorize {
+				match kind leafnode
+				match host 127.0.0.1
+				match username peripheral1
+				callout allow
+			}
+			authorize {
+				match kind leafnode
+				match host 127.0.0.1
+				match username peripheral2
+				callout allow
+			}
+			authorize {
+				match kind client
+				match host 127.0.0.1
+				match username admin
+				callout allow
+			}
+		}
+	}
+}
